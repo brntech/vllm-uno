@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses a compact release-candidate suffix for pre-release versions.
 
+## [0.1.0] - 2026-09-08
+
+- Prebuilt NVIDIA containers for Linux AMD64 and ARM64, using the same pinned Uno implementation.
+- Native build-platform selection and an explicit `PLATFORM` override.
+- Direct pull-and-run instructions, with source builds and validation details in their own sections.
+- Versioned per-platform image identities and hardware integration records.
+
 ## [0.1.0rc1] - 2026-09-08
 
 First public research pre-release of Uno for vLLM.
@@ -31,3 +38,5 @@ First public research pre-release of Uno for vLLM.
 - Historical H100 research results are documented in the companion paper. ARM64/Blackwell packaging and multi-GPU execution are outside this release.
 
 [0.1.0rc1]: https://github.com/brntech/vllm-uno/releases/tag/v0.1.0rc1
+
+[0.1.0]: https://github.com/brntech/vllm-uno/releases/tag/v0.1.0

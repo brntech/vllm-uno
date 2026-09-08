@@ -1,6 +1,6 @@
 # Configuration
 
-`0.1.0rc1` provides one reproducible serving profile for single-GPU Linux AMD64. The defaults target Qwen3-8B in BF16 with IFM's original Uno adapter and keep the base-model verifier free of the draft adapter.
+`0.1.0` provides one reproducible serving profile for single-GPU Linux AMD64 and ARM64. The defaults target Qwen3-8B in BF16 with IFM's original Uno adapter and keep the base-model verifier free of the draft adapter.
 
 ## Pinned inputs
 
@@ -12,7 +12,7 @@
 | Uno adapter | `s-sahoo/uno-qwen3-8B` |
 | Adapter revision | `8819e09ac901e7290d8d89d62c98b9f756c602fe` |
 | Adapter subdirectory | `adapter/` |
-| Distribution platform | `linux/amd64` |
+| Distribution platforms | `linux/amd64`, `linux/arm64` |
 
 `release/stack.py audit` validates the consolidated patch against the pinned upstream commit. `release/apply.sh` can apply it to a clean exact-base checkout, and a second invocation verifies the already-applied tree without creating a source commit.
 
@@ -51,10 +51,10 @@ The adapter is active only for Uno's draft noise rows. Passing it as a conventio
 
 ## Build settings
 
-Build the image locally:
+Build natively on either supported CPU architecture, or set `PLATFORM` explicitly:
 
 ```bash
-PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.1.0rc1
+PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.1.0
 ```
 
 `BASE_IMAGE` may select a different immutable image only when it contains the pinned upstream commit and a compatible dependency stack. It must use an `@sha256:` digest. The release build overlays Python source and preserves the commit-matched compiled vLLM/CUDA libraries in that image.
@@ -62,7 +62,7 @@ PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.1.0rc1
 ```bash
 BASE_IMAGE='vllm/vllm-openai@sha256:89dd8f442a3f4c08c6b3cd634c4f735cd709160651c296596673cf974ea6ee39' \
   PLATFORM=linux/amd64 \
-  bash release/build.sh vllm-uno:0.1.0rc1
+  bash release/build.sh vllm-uno:0.1.0
 ```
 
 ## Runtime settings
@@ -100,7 +100,7 @@ bash release/serve.sh Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B -- \
 
 Apply the same override to both the plain reference and Uno candidate when validating Ampere. The RTX 3090 integration run used this setting.
 
-Hopper was used for the separate research measurements described in the paper. Blackwell/GB10 requires a distinct ARM64 base image and validation record; this AMD64 bundle does not provide it.
+Hopper was used for the research measurements described in the paper. For Blackwell GB10, use the ARM64 image and the same explicit FlashAttention 2 setting above. Each image uses the matching architecture from the pinned upstream base.
 
 ## Model compatibility boundary
 

@@ -7,7 +7,7 @@ USER root
 WORKDIR /opt/uno-kit
 LABEL org.opencontainers.image.title="Uno for vLLM" \
       org.opencontainers.image.source="https://github.com/brntech/vllm-uno" \
-      org.opencontainers.image.version="0.1.0rc1" \
+      org.opencontainers.image.version="0.1.0" \
       org.opencontainers.image.licenses="Apache-2.0" \
       ai.uno.upstream.commit="e962733e08d10f7ca65dac4df99e116460b8b174"
 # build.sh supplies only files named in release/assets.json.

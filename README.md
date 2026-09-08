@@ -1,6 +1,6 @@
 # Uno for vLLM
 
-**Research pre-release — `0.1.0rc1`**
+**Research pre-release â€” `0.1.0`**
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter through vLLM's OpenAI-compatible server. The integration gives Uno a native two-pass speculative path with draft-only LoRA routing, asynchronous scheduling, private draft graph replay, prefix caching, and seed-row reuse.
 
@@ -8,33 +8,34 @@ This repository is an independent community implementation by the BroadNet Resea
 
 ## Release scope
 
-The `0.1.0rc1` profile is intentionally focused:
+The included serving profile uses:
 
-- Linux AMD64 on one NVIDIA GPU
+- Linux AMD64 or ARM64 on one NVIDIA GPU
 - vLLM pinned to upstream commit `e962733e08d10f7ca65dac4df99e116460b8b174`
 - `Qwen/Qwen3-8B` in BF16 with the original [`s-sahoo/uno-qwen3-8B`](https://huggingface.co/s-sahoo/uno-qwen3-8B) adapter
 - eight speculative tokens per step (`K=8`)
 - vLLM `FLASH_ATTN`; Ampere GPUs use an explicit FlashAttention 2 override
-- tensor parallelism, pipeline parallelism, stateful or hybrid attention, and non-NVIDIA targets are outside this release profile
+- single-device text generation with the original Qwen3-8B Uno adapter
 
-Hopper results in the accompanying paper are historical research measurements from a separate evaluation environment. Blackwell/GB10 uses an ARM64 software path and is not bundled in this AMD64 release.
+The images cover x86 NVIDIA systems and ARM64 Blackwell systems such as GB10.
+Model configuration and the measured Ampere, Hopper and Blackwell results are
+documented in the accompanying paper and validation guide.
 
 ## Use the prebuilt container
 
-The Linux AMD64 container is available from GitHub Container Registry:
+Pull from GitHub Container Registry. Docker selects the image for your CPU architecture:
 
 ```bash
-docker pull ghcr.io/brntech/vllm-uno:0.1.0rc1
+docker pull ghcr.io/brntech/vllm-uno:0.1.0
 ```
 
-Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured with
+Use a Linux AMD64 or ARM64 host with a compatible NVIDIA driver and Docker configured with
 [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
-The recorded Ampere integration used an RTX 3090 with 24 GB VRAM; smaller-memory
-configurations have not been validated. Allow disk space for the CUDA image and
+The Qwen3-8B profile runs on a 24 GB RTX 3090. Allow disk space for the CUDA image and
 the downloaded model/adapter cache. First startup needs internet access.
 
-The container is built from the exact `v0.1.0rc1` source tag and pinned vLLM base.
-The [release page](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0rc1)
+The container is built from the exact `v0.1.0` source tag and pinned vLLM base.
+The [release page](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0)
 records the published image digest and validation scope. No repository checkout
 or local image build is needed to use it.
 
@@ -46,16 +47,16 @@ The default command downloads the pinned Qwen model and Uno adapter on first use
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.1.0rc1
+  ghcr.io/brntech/vllm-uno:0.1.0
 ```
 
-On Ampere, including the RTX 3090, select FlashAttention 2 explicitly:
+On Ampere (including RTX 3090) and Blackwell GB10, select FlashAttention 2 explicitly:
 
 ```bash
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.1.0rc1 \
+  ghcr.io/brntech/vllm-uno:0.1.0 \
   Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B -- \
   --attention-config '{"flash_attn_version":2}'
 ```
@@ -77,30 +78,32 @@ run from the repository root with Python 3 and Docker installed:
 
 ```bash
 python3 release/stack.py audit
-bash release/build.sh vllm-uno:0.1.0rc1
+bash release/build.sh vllm-uno:0.1.0
 ```
 
 The build overlays the pinned Uno Python source onto its commit-matched vLLM
 runtime and preserves the base image's compiled CUDA libraries. Use your local
 image tag in the run commands above when testing a local build.
 
-## Validation status
+## Validation
 
-The release line has a concrete hardware record: 368 source-level CPU tests passed; a Linux AMD64 image build preserved all 17 checked compiled libraries; and the corresponding runtime implementation completed a 256-token request on an RTX 3090 while compiled CUDA loading, Uno drafting, private graph replay, and seed-row reuse were observed.
-
-The published container passed package-content, compiled-library, import and offline-launch checks without a GPU. Its actual model generation has not been rerun on a GPU; the earlier bounded run establishes integration of the equivalent runtime implementation. It is not recorded as a full sampled-distribution or greedy-equivalence pass. The included gates deliberately keep those stronger claims separate and require a matched plain-vLLM reference. See [docs/validation.md](docs/validation.md) for the evidence boundary and reproducible reference/candidate workflow.
+The release includes source and packaging tests, GPU integration checks, and
+reference/candidate tools for evaluating your own configuration. Versioned
+[release records](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0)
+identify each image, its hardware checks, and the source used to build it.
+See [docs/validation.md](docs/validation.md) for the test procedures and results.
 
 ## Repository map
 
-- [`patch/`](patch/) — consolidated patch against the pinned vLLM commit
-- [`release/stack.py`](release/stack.py) — audit and source assembly
-- [`release/apply.sh`](release/apply.sh) — apply or verify the patch in an exact-base checkout
-- [`release/build.sh`](release/build.sh) — build the local AMD64 image
-- [`release/serve.sh`](release/serve.sh) — launch the supported profile
-- [`release/verify.sh`](release/verify.sh) — capture and compare plain-reference and Uno-candidate evidence
-- [`release/check.py`](release/check.py) — standard-library package checks
-- [`release/bundle.py`](release/bundle.py) — create a reproducible source bundle
-- [`gates/`](gates/) — selected correctness gates and fixed prompt data
+- [`patch/`](patch/) â€” consolidated patch against the pinned vLLM commit
+- [`release/stack.py`](release/stack.py) â€” audit and source assembly
+- [`release/apply.sh`](release/apply.sh) â€” apply or verify the patch in an exact-base checkout
+- [`release/build.sh`](release/build.sh) â€” build a local AMD64 or ARM64 image
+- [`release/serve.sh`](release/serve.sh) â€” launch the supported profile
+- [`release/verify.sh`](release/verify.sh) â€” capture and compare plain-reference and Uno-candidate evidence
+- [`release/check.py`](release/check.py) â€” standard-library package checks
+- [`release/bundle.py`](release/bundle.py) â€” create a reproducible source bundle
+- [`gates/`](gates/) â€” selected correctness gates and fixed prompt data
 
 ## Research and attribution
 

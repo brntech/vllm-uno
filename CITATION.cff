@@ -4,7 +4,7 @@ title: "Uno for vLLM"
 type: software
 authors:
   - name: "BroadNet Research Team"
-version: 0.1.0rc1
+version: 0.1.0
 date-released: 2026-09-08
 repository-code: "https://github.com/brntech/vllm-uno"
 url: "https://github.com/brntech/vllm-uno"
