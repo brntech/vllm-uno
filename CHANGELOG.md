@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Native build-platform selection and an explicit `PLATFORM` override.
 - Direct pull-and-run instructions, with source builds and validation details in their own sections.
 - Versioned per-platform image identities and hardware integration records.
+- GPU serving checks passed on RTX 3090 (Ampere) and GB10 (Blackwell), including streaming, shared-prefix requests and batches of 8 and 32 concurrent requests.
 
 ## [0.1.0rc1] - 2026-09-08
 

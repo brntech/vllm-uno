@@ -4,8 +4,8 @@ The v0.1.0 record includes source and package tests and serving checks on Ampere
 
 ## Public package checks
 
-The consolidated public source passed all **368 focused CPU tests** with no skips
-under Python 3.12 in an isolated Linux container. The **16 packaging and HTTP-gate
+The consolidated public source passed **368 CPU tests across the four focused
+modules listed below**, with no skips under Python 3.12 in an isolated Linux container. The **16 packaging and HTTP-gate
 regressions** cover altered patch checksums, missing or unsafe assets, deterministic
 archives, and failed or malformed mixed-load background requests.
 
@@ -20,6 +20,10 @@ The [release](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0) records
 per-platform digests, the source commit, hardware configuration and actual test
 outcomes. Build and hardware records describe their exact tested artifacts.
 
+In the record, `final_image_id` is the value reported by each build host's Docker
+engine. Use the explicit `manifest_digest` and `config_digest` fields when
+verifying registry content.
+
 ## Recorded evidence
 
 | Check | Recorded result | What it establishes |
@@ -27,13 +31,17 @@ outcomes. Build and hardware records describe their exact tested artifacts.
 | Source-level CPU suite | **PASS:** 368 tests, no skips | Core Uno state, draft-graph, configuration, and LoRA-overlap behavior under CPU models and stand-ins |
 | Linux AMD64 v0.1.0 image build | **PASS:** all 17 checked compiled libraries preserved | The Python overlay retained the commit-matched binary runtime |
 | RTX 3090 v0.1.0 image integration | **PASS:** compiled CUDA, model and adapter load, HTTP health, greedy and sampled completion, streaming, shared-prefix reuse, and concurrent batches of 8 and 32 requests | The supported Qwen/Uno profile executed on Ampere across the tested request modes |
-| Uno engagement on RTX 3090 | **PASS:** draft and accepted-token counters advanced | Uno generated and accepted candidate tokens during the final-image run |
-| GB10 ARM64 v0.1.0 image integration | **PASS:** HTTP health, greedy and sampled completion, SSE streaming, shared-prefix reuse, and concurrent batches of 8 and 32 requests | The supported Qwen/Uno profile executed on ARM64 Blackwell across the tested request modes |
+| Uno engagement on RTX 3090 | **PASS:** 517 drafts, 4,136 draft tokens and 1,361 accepted tokens; graph replay and seed-row reuse observed | Uno generated and accepted candidate tokens during the final-image run |
+| GB10 ARM64 v0.1.0 image integration | **PASS:** compiled CUDA, model and adapter load, HTTP health, greedy and sampled completion, SSE streaming, shared-prefix reuse, and concurrent batches of 8 and 32 requests | The supported Qwen/Uno profile executed on ARM64 Blackwell across the tested request modes |
 | Uno engagement on GB10 | **PASS:** 102 drafts, 816 draft tokens, 190 accepted tokens; graph replay and seed-row reuse observed at batch 32 | Uno generated and accepted candidate tokens during the ARM64 run |
 
 The GPU runs used runtime built at commit `c4175a5397578f3761152c0463be62286a47f089`. The released images retain that runtime and include updated documentation. The RTX 3090 used the supported profile with FlashAttention 2. The GB10 used the same model profile on ARM64 with `--gpu-memory-utilization 0.30` so the server could coexist with other loaded models.
 
 The H100 numbers in the [paper](https://doi.org/10.5281/zenodo.22652610) are historical measurements from a separate research configuration. Versioned release records identify validation performed on each newly built image, including the separate AMD64/RTX 3090 and ARM64/GB10 hardware records.
+
+The recorded hardware checks exercise live serving. Matched statistical and
+strict greedy reference comparisons were not rerun for v0.1.0; the procedures
+below are available for those comparisons.
 
 ## Run the standard-library package checks
 

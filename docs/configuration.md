@@ -122,4 +122,4 @@ Publish the service on loopback unless you have added authentication and an inte
 -p 127.0.0.1:8000:8000
 ```
 
-For an offline run, populate a Hugging Face cache first, mount it into the container, and set `HF_HUB_OFFLINE=1`. Keep snapshot-relative links intact when moving a cache.
+For an offline run, populate a Hugging Face cache first, mount it into the container, and add `-e HF_HUB_OFFLINE=1` to `docker run`. Pass the cached adapter snapshot directory as the launcher's `ADAPTER` argument: use the directory containing `adapter_config.json` inside the container. This avoids a repository-tree lookup when resolving an adapter repository ID. Keep snapshot-relative links intact when moving a cache.

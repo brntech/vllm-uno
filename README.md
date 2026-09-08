@@ -34,7 +34,7 @@ Use a Linux AMD64 or ARM64 host with a compatible NVIDIA driver and Docker confi
 The Qwen3-8B profile runs on a 24 GB RTX 3090. Allow disk space for the CUDA image and
 the downloaded model/adapter cache. First startup needs internet access.
 
-The container is built from the exact `v0.1.0` source tag and pinned vLLM base.
+The container's packaged files match the `v0.1.0` source archive and use the pinned vLLM base.
 The [release page](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0)
 records the published image digest and validation scope. No repository checkout
 or local image build is needed to use it.
