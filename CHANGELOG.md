@@ -26,7 +26,7 @@ First public research pre-release of Uno for vLLM.
 
 ### Release scope
 
-- Research pre-release distributed as source for local image builds; no registry image is published.
+- Research pre-release with source and a prebuilt Linux AMD64 container at `ghcr.io/brntech/vllm-uno:0.1.0rc1`; local image builds remain available.
 - Full matched sampled-distribution and strict greedy reference/candidate passes are not claimed for this version. The included verifier keeps these gates explicit and reproducible.
 - Historical H100 research results are documented in the companion paper. ARM64/Blackwell packaging and multi-GPU execution are outside this release.
 

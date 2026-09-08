@@ -13,6 +13,18 @@ A fresh exact-base checkout reconstructed the tree recorded in the
 [patch manifest](../release/series.json); applying it again verified the
 whole staged tree as a no-op. These checks require no GPU.
 
+## Published container
+
+The prebuilt Linux AMD64 image is `ghcr.io/brntech/vllm-uno:0.1.0rc1`.
+Its digest and container verification record are attached to the
+[release](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0rc1).
+The image contains the exact tagged source kit; the current repository README
+also documents the subsequent addition of registry distribution.
+
+Package-content, compiled-library, import and offline-launch checks ran without
+GPU access. The published image's model generation was not rerun on a GPU;
+the prior integration evidence below remains accurately scoped to its runtime.
+
 ## Recorded evidence
 
 | Check | Recorded result | What it establishes |
@@ -67,13 +79,13 @@ The verifier starts or stops no server. It records results from already-running 
 
 Use the same image, model revision, BF16 precision, attention backend, prefix caching, asynchronous scheduling, API-process count, context, admission limit, and prefill budget as the Uno candidate. Enable LoRA support with the same rank and slot capacity, but do not pass `--speculative-config` and do not apply the Uno adapter to requests.
 
-For Ampere, append `--attention-config '{"flash_attn_version":2}'` to both launches. A plain launch from the locally built image can override its Uno entrypoint:
+For Ampere, append `--attention-config '{"flash_attn_version":2}'` to both launches. A plain launch from the published image can override its Uno entrypoint:
 
 ```bash
 docker run --rm --name vllm-uno-reference --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  --entrypoint python3 vllm-uno:0.1.0rc1 \
+  --entrypoint python3 ghcr.io/brntech/vllm-uno:0.1.0rc1 \
   -m vllm.entrypoints.cli.main serve Qwen/Qwen3-8B \
   --revision b968826d9c46dd6066d109eabc6255188de91218 \
   --served-model-name uno-qwen3-8b \
@@ -106,7 +118,7 @@ Stop the reference server, then start the candidate on the same GPU and port. Fo
 docker run --rm --name vllm-uno-candidate --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  vllm-uno:0.1.0rc1 \
+  ghcr.io/brntech/vllm-uno:0.1.0rc1 \
   Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B -- \
   --attention-config '{"flash_attn_version":2}'
 ```

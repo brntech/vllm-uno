@@ -19,18 +19,24 @@ The `0.1.0rc1` profile is intentionally focused:
 
 Hopper results in the accompanying paper are historical research measurements from a separate evaluation environment. Blackwell/GB10 uses an ARM64 software path and is not bundled in this AMD64 release.
 
-## Build locally
+## Use the prebuilt container
 
-The release is distributed as source. There is no registry image for this pre-release, so build it locally from the repository root.
-
-Prerequisites are Linux AMD64, Python 3, Docker with NVIDIA GPU support, and enough disk space for the image and model cache.
+The Linux AMD64 container is available from GitHub Container Registry:
 
 ```bash
-python3 release/stack.py audit
-bash release/build.sh vllm-uno:0.1.0rc1
+docker pull ghcr.io/brntech/vllm-uno:0.1.0rc1
 ```
 
-The audit checks the pinned upstream base and the consolidated patch before the build overlays the Python source onto its commit-matched vLLM runtime. The build does not rebuild or replace the base image's compiled CUDA libraries.
+Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured with
+[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+The recorded Ampere integration used an RTX 3090 with 24 GB VRAM; smaller-memory
+configurations have not been validated. Allow disk space for the CUDA image and
+the downloaded model/adapter cache. First startup needs internet access.
+
+The container is built from the exact `v0.1.0rc1` source tag and pinned vLLM base.
+The [release page](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0rc1)
+records the published image digest and validation scope. No repository checkout
+or local image build is needed to use it.
 
 ## Start the server
 
@@ -40,7 +46,7 @@ The default command downloads the pinned Qwen model and Uno adapter on first use
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  vllm-uno:0.1.0rc1
+  ghcr.io/brntech/vllm-uno:0.1.0rc1
 ```
 
 On Ampere, including the RTX 3090, select FlashAttention 2 explicitly:
@@ -49,7 +55,7 @@ On Ampere, including the RTX 3090, select FlashAttention 2 explicitly:
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  vllm-uno:0.1.0rc1 \
+  ghcr.io/brntech/vllm-uno:0.1.0rc1 \
   Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B -- \
   --attention-config '{"flash_attn_version":2}'
 ```
@@ -64,11 +70,25 @@ curl --fail-with-body http://127.0.0.1:8000/v1/chat/completions \
 
 Configuration overrides and a complete profile table are in [docs/configuration.md](docs/configuration.md).
 
+## Build from source
+
+A local build remains available for development. Check out the release tag and
+run from the repository root with Python 3 and Docker installed:
+
+```bash
+python3 release/stack.py audit
+bash release/build.sh vllm-uno:0.1.0rc1
+```
+
+The build overlays the pinned Uno Python source onto its commit-matched vLLM
+runtime and preserves the base image's compiled CUDA libraries. Use your local
+image tag in the run commands above when testing a local build.
+
 ## Validation status
 
 The release line has a concrete hardware record: 368 source-level CPU tests passed; a Linux AMD64 image build preserved all 17 checked compiled libraries; and the corresponding runtime implementation completed a 256-token request on an RTX 3090 while compiled CUDA loading, Uno drafting, private graph replay, and seed-row reuse were observed.
 
-That bounded run establishes hardware integration. It is not recorded as a full sampled-distribution or greedy-equivalence pass. The included gates deliberately keep those stronger claims separate and require a matched plain-vLLM reference. See [docs/validation.md](docs/validation.md) for the evidence boundary and reproducible reference/candidate workflow.
+The published container passed package-content, compiled-library, import and offline-launch checks without a GPU. Its actual model generation has not been rerun on a GPU; the earlier bounded run establishes integration of the equivalent runtime implementation. It is not recorded as a full sampled-distribution or greedy-equivalence pass. The included gates deliberately keep those stronger claims separate and require a matched plain-vLLM reference. See [docs/validation.md](docs/validation.md) for the evidence boundary and reproducible reference/candidate workflow.
 
 ## Repository map
 
