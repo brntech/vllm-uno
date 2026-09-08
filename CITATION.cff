@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the preferred paper below."
+title: "Uno for vLLM"
+type: software
+authors:
+  - name: "BroadNet Research Team"
+version: 0.1.0rc1
+date-released: 2026-09-08
+repository-code: "https://github.com/brntech/vllm-uno"
+url: "https://github.com/brntech/vllm-uno"
+license: Apache-2.0
+abstract: >-
+  An independent vLLM integration of IFM's Uno diffusion adapter for
+  single-GPU speculative serving, with reproducible build, configuration,
+  and validation tooling.
+keywords:
+  - speculative decoding
+  - vLLM
+  - Uno
+  - large language model serving
+preferred-citation:
+  type: report
+  title: "Uno in vLLM: An Independent Implementation and Empirical Serving Study"
+  authors:
+    - family-names: "Al Zubaidi"
+      given-names: "Mohammad"
+      affiliation: "BroadNet"
+      orcid: "https://orcid.org/0009-0006-4690-1623"
+  year: 2026
+  date-released: "2026-09-08"
+  doi: "10.5281/zenodo.22652610"
+  url: "https://zenodo.org/records/22652610"
+  publisher:
+    name: "Zenodo"
+  notes: "Preprint"

@@ -1,0 +1,18 @@
+[
+ {
+  "id": "math-1",
+  "prompt": "<|im_start|>user\nNatalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?<|im_end|>\n<|im_start|>assistant\n<think>\n"
+ },
+ {
+  "id": "math-2",
+  "prompt": "<|im_start|>user\nA train leaves a station at 09:15 travelling at 72 km/h. A second train leaves the same station at 10:00 at 96 km/h on the same track. At what time does the second train catch the first?<|im_end|>\n<|im_start|>assistant\n<think>\n"
+ },
+ {
+  "id": "math-3",
+  "prompt": "<|im_start|>user\nFind all real solutions of x^4 - 5x^2 + 4 = 0 and show your work.<|im_end|>\n<|im_start|>assistant\n<think>\n"
+ },
+ {
+  "id": "math-4",
+  "prompt": "<|im_start|>user\nA rectangle's length is 3 more than twice its width. Its perimeter is 48. Find its area.<|im_end|>\n<|im_start|>assistant\n<think>\n"
+ }
+]
