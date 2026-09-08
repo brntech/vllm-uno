@@ -76,6 +76,20 @@ The build overlays the pinned Uno Python source onto its commit-matched vLLM
 runtime and preserves the base image's compiled CUDA libraries. Use your local
 image tag in the run commands above when testing a local build.
 
+## Upstream contribution
+
+BroadNet is contributing native Uno support to vLLM through
+[PR #55947](https://github.com/vllm-project/vllm/pull/55947), as part of
+[RFC #55267](https://github.com/vllm-project/vllm/issues/55267). The PR is open
+and not yet merged; it gives developers a focused implementation to inspect,
+test and extend: two-pass drafting, draft-only LoRA routing, and integration
+with vLLM's existing target verifier and rejection sampler.
+
+For deployment with asynchronous scheduling, private draft graph replay and
+seed-row reuse, use the released container or source build above. These optimizations
+are planned as separate upstream contributions; the current PR covers the
+core two-pass path.
+
 ## Validation
 
 The release includes source and packaging tests, GPU integration checks, and
