@@ -1,12 +1,12 @@
 # Uno for vLLM
 
-**Research pre-release â€” `0.1.0`**
+**v0.1.0**
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter through vLLM's OpenAI-compatible server. The integration gives Uno a native two-pass speculative path with draft-only LoRA routing, asynchronous scheduling, private draft graph replay, prefix caching, and seed-row reuse.
 
 This repository is an independent community implementation by the BroadNet Research Team. The Uno method and trained adapters are the work of IFM and the [Uno authors](https://arxiv.org/abs/2609.04010).
 
-## Release scope
+## Supported profile
 
 The included serving profile uses:
 
@@ -41,16 +41,7 @@ or local image build is needed to use it.
 
 ## Start the server
 
-The default command downloads the pinned Qwen model and Uno adapter on first use and retains them in a named Hugging Face cache. The API is published only on loopback.
-
-```bash
-docker run --rm --name vllm-uno --gpus all --ipc=host \
-  -p 127.0.0.1:8000:8000 \
-  -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.1.0
-```
-
-On Ampere (including RTX 3090) and Blackwell GB10, select FlashAttention 2 explicitly:
+This command downloads the pinned Qwen model and Uno adapter on first use, retains them in a named Hugging Face cache, and uses the FlashAttention 2 profile validated on RTX 3090 and GB10. The API is published only on loopback.
 
 ```bash
 docker run --rm --name vllm-uno --gpus all --ipc=host \
@@ -88,22 +79,22 @@ image tag in the run commands above when testing a local build.
 ## Validation
 
 The release includes source and packaging tests, GPU integration checks, and
-reference/candidate tools for evaluating your own configuration. Versioned
+reference/candidate tools for validating your own configuration. Versioned
 [release records](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0)
 identify each image, its hardware checks, and the source used to build it.
 See [docs/validation.md](docs/validation.md) for the test procedures and results.
 
 ## Repository map
 
-- [`patch/`](patch/) â€” consolidated patch against the pinned vLLM commit
-- [`release/stack.py`](release/stack.py) â€” audit and source assembly
-- [`release/apply.sh`](release/apply.sh) â€” apply or verify the patch in an exact-base checkout
-- [`release/build.sh`](release/build.sh) â€” build a local AMD64 or ARM64 image
-- [`release/serve.sh`](release/serve.sh) â€” launch the supported profile
-- [`release/verify.sh`](release/verify.sh) â€” capture and compare plain-reference and Uno-candidate evidence
-- [`release/check.py`](release/check.py) â€” standard-library package checks
-- [`release/bundle.py`](release/bundle.py) â€” create a reproducible source bundle
-- [`gates/`](gates/) â€” selected correctness gates and fixed prompt data
+- [`patch/`](patch/) — consolidated patch against the pinned vLLM commit
+- [`release/stack.py`](release/stack.py) — audit and source assembly
+- [`release/apply.sh`](release/apply.sh) — apply or verify the patch in an exact-base checkout
+- [`release/build.sh`](release/build.sh) — build a local AMD64 or ARM64 image
+- [`release/serve.sh`](release/serve.sh) — launch the supported profile
+- [`release/verify.sh`](release/verify.sh) — capture and compare plain-reference and Uno-candidate evidence
+- [`release/check.py`](release/check.py) — standard-library package checks
+- [`release/bundle.py`](release/bundle.py) — create a reproducible source bundle
+- [`gates/`](gates/) — selected correctness gates and fixed prompt data
 
 ## Research and attribution
 

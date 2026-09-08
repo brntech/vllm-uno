@@ -1,6 +1,6 @@
 # Configuration
 
-`0.1.0` provides one reproducible serving profile for single-GPU Linux AMD64 and ARM64. The defaults target Qwen3-8B in BF16 with IFM's original Uno adapter and keep the base-model verifier free of the draft adapter.
+Uno for vLLM v0.1.0 supports one reproducible serving profile for single-GPU Linux AMD64 and ARM64. The defaults use Qwen3-8B in BF16 with IFM's original Uno adapter and keep the base-model verifier free of the draft adapter.
 
 ## Pinned inputs
 
@@ -87,7 +87,7 @@ The following environment variables adjust the supported launcher:
 | `PYTHON` | `python3` | Python executable used by the helpers |
 | `UNO_DRY_RUN` | unset | Set to `1` to print the launch command without importing vLLM or downloading weights |
 
-Changing `UNO_K`, the model, adapter, precision, backend, capacity, or scheduler creates a new experimental configuration. Run the validation gates again and preserve the exact launch record.
+Changing `UNO_K`, the model, adapter, precision, backend, capacity, or scheduler changes the serving profile. Run the validation gates again and preserve the exact launch record.
 
 ## NVIDIA architecture notes
 
@@ -100,11 +100,11 @@ bash release/serve.sh Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B -- \
 
 Apply the same override to both the plain reference and Uno candidate when validating Ampere. The RTX 3090 integration run used this setting.
 
-Hopper was used for the research measurements described in the paper. For Blackwell GB10, use the ARM64 image and the same explicit FlashAttention 2 setting above. Each image uses the matching architecture from the pinned upstream base.
+Hopper was used for the research measurements described in the paper. For Blackwell GB10, use the ARM64 image and the same explicit FlashAttention 2 setting above. The GB10 validation run also passed `--gpu-memory-utilization 0.30` so the server could coexist with other loaded models; dedicated deployments use the supported `0.90` default. Each image uses the matching architecture from the pinned upstream base.
 
-## Model compatibility boundary
+## Model compatibility
 
-The supplied profile is for Qwen3-8B and its matching Uno adapter. A different model requires a compatible trained adapter and the correct noise-vocabulary bound. `UNO_MASK_TOKEN_ID=auto` is provided for models whose target vocabulary convention is already implemented, but it is not a compatibility guarantee.
+The supported profile is Qwen3-8B with its matching Uno adapter. A different model requires a compatible trained adapter and the correct noise-vocabulary bound. Use `UNO_MASK_TOKEN_ID=auto` for models whose target vocabulary convention is already implemented.
 
 Seed-row reuse in this release is scoped to one-dimensional positions, ordinary text-only causal attention, supported Punica execution, and TP/PP/DP/context parallel dimensions of one. Stateful or hybrid attention, offloading, multimodal models, and multi-GPU execution need separate engineering and validation.
 

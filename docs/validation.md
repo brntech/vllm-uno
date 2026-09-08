@@ -1,6 +1,6 @@
 # Validation
 
-This release separates implementation evidence from stronger statistical and exact-output claims. The existing record establishes that the Uno source assembles, its focused CPU checks pass, a Linux AMD64 image preserves the pinned runtime, and the selected path executes on an RTX 3090. The repository also includes matched reference/candidate gates for users who need to validate a particular image, GPU, or configuration.
+The v0.1.0 record includes source and package tests and serving checks on Ampere and ARM64 Blackwell. This page also provides matched plain/Uno comparison tools for evaluating another configuration.
 
 ## Public package checks
 
@@ -25,17 +25,15 @@ outcomes. Build and hardware records describe their exact tested artifacts.
 | Check | Recorded result | What it establishes |
 |---|---|---|
 | Source-level CPU suite | **PASS:** 368 tests, no skips | Core Uno state, draft-graph, configuration, and LoRA-overlap behavior under CPU models and stand-ins |
-| Linux AMD64 development image build | **PASS:** all 17 checked compiled libraries preserved | The corresponding Python overlay retained the commit-matched binary runtime |
-| RTX 3090 bounded integration | **PASS:** compiled CUDA import, CUDA tensor, model and adapter load, HTTP health, and a 256-token completion | The corresponding runtime implementation executed the supported Qwen/Uno path on Ampere |
-| Uno engagement on RTX 3090 | **PASS:** drafting counters advanced; private draft graph replay and seed-row reuse were observed | The response did not silently fall back to plain autoregressive generation |
-| Final sampled-distribution comparison | See the versioned release record | Run the reference/candidate procedure below for the image and configuration being evaluated |
-| Final greedy reference comparison | See the versioned release record | Greedy output differences remain failures and require retained artifacts plus investigation |
+| Linux AMD64 v0.1.0 image build | **PASS:** all 17 checked compiled libraries preserved | The Python overlay retained the commit-matched binary runtime |
+| RTX 3090 v0.1.0 image integration | **PASS:** compiled CUDA, model and adapter load, HTTP health, greedy and sampled completion, streaming, shared-prefix reuse, and concurrent batches of 8 and 32 requests | The supported Qwen/Uno profile executed on Ampere across the tested request modes |
+| Uno engagement on RTX 3090 | **PASS:** draft and accepted-token counters advanced | Uno generated and accepted candidate tokens during the final-image run |
+| GB10 ARM64 v0.1.0 image integration | **PASS:** HTTP health, greedy and sampled completion, SSE streaming, shared-prefix reuse, and concurrent batches of 8 and 32 requests | The supported Qwen/Uno profile executed on ARM64 Blackwell across the tested request modes |
+| Uno engagement on GB10 | **PASS:** 102 drafts, 816 draft tokens, 190 accepted tokens; graph replay and seed-row reuse observed at batch 32 | Uno generated and accepted candidate tokens during the ARM64 run |
 
-The RTX 3090 run used frozen source tree `73b0a21b198e2b6af29240f4dcef7cd3140c3996`. The public release consolidates and sanitizes that work; its current reconstructed tree identity is authoritative in [`release/series.json`](../release/series.json). After documentation, comment, and test-only removals, executable ASTs for all 38 runtime Python files were verified equivalent between the two trees.
+The GPU runs used runtime built at commit `c4175a5397578f3761152c0463be62286a47f089`. The released images retain that runtime and include updated documentation. The RTX 3090 used the supported profile with FlashAttention 2. The GB10 used the same model profile on ARM64 with `--gpu-memory-utilization 0.30` so the server could coexist with other loaded models.
 
-The run used Qwen3-8B BF16, `K=8`, BF16 KV cache, prefix caching, two API processes, and FlashAttention 2. It returned HTTP 200, reached the requested 256-token cap, recorded 41 drafts and 328 draft tokens, and observed both graph replay and one-request seed-row reuse. This is an integration result, not a throughput benchmark or a general answer-quality result.
-
-The H100 numbers in the [paper](https://doi.org/10.5281/zenodo.22652610) are historical measurements from a separate research configuration. They are not substituted for validation of a newly built image. The ARM64/GB10 image has its own platform-specific build and hardware record.
+The H100 numbers in the [paper](https://doi.org/10.5281/zenodo.22652610) are historical measurements from a separate research configuration. Versioned release records identify validation performed on each newly built image, including the separate AMD64/RTX 3090 and ARM64/GB10 hardware records.
 
 ## Run the standard-library package checks
 
@@ -45,7 +43,7 @@ From the repository root:
 python3 release/check.py
 ```
 
-This checks release structure and metadata without third-party dependencies. It does not run the source-level pytest suite, require a GPU, or establish CUDA execution.
+This checks release structure and metadata without third-party dependencies or a GPU. The focused CPU suite and GPU integration checks are separate procedures below.
 
 To reproduce the recorded focused CPU suite from a reconstructed vLLM source tree, use its test environment and run:
 
@@ -140,8 +138,8 @@ The candidate passes only when all of the following pass together:
 - mixed chunk-8 comparison against the plain reference
 - evidence that Uno drafting actually ran
 
-An ordinary statistical failure is not retried into a pass. If the requested permutation count cannot resolve the adjusted threshold, the verifier increases the permutation budget; this changes resolution, not the acceptance rule.
+If the requested permutation count cannot resolve the adjusted threshold, the verifier increases the permutation budget while keeping the acceptance rule fixed. A statistical failure remains a failure.
 
-A greedy difference remains a failure even when the sampled gates pass. Preserve the reference and candidate outputs, commands, image digests, and logs for a position-level investigation. A sampled pass describes the tested prompts, positions, sample budget, and configuration; it does not prove equality for every possible input or runtime setting.
+A greedy difference remains a failure even when the sampled gates pass. Preserve the reference and candidate outputs, commands, image digests, and logs for a position-level investigation. Report a sampled pass with the tested prompts, positions, sample budget, and configuration.
 
 For release reporting, retain the complete `runs/reference` and `runs/candidate` directories together with server logs showing the configured Uno layout, private-graph replay, seed-row reuse, and any fallback reason.

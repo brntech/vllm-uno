@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses a compact release-candidate suffix for pre-release versions.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.1.0] - 2026-09-08
 
@@ -13,7 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [0.1.0rc1] - 2026-09-08
 
-First public research pre-release of Uno for vLLM.
+First public tagged version of Uno for vLLM.
 
 ### Added
 
@@ -31,11 +31,11 @@ First public research pre-release of Uno for vLLM.
 - A Linux AMD64 image build preserved all 17 checked compiled libraries.
 - A bounded RTX 3090 integration run loaded compiled CUDA, the pinned Qwen model, and the Uno adapter; served a 256-token completion; and observed active drafting, private graph replay, and seed-row reuse.
 
-### Release scope
+### Scope
 
-- Research pre-release with source and a prebuilt Linux AMD64 container at `ghcr.io/brntech/vllm-uno:0.1.0rc1`; local image builds remain available.
-- Full matched sampled-distribution and strict greedy reference/candidate passes are not claimed for this version. The included verifier keeps these gates explicit and reproducible.
-- Historical H100 research results are documented in the companion paper. ARM64/Blackwell packaging and multi-GPU execution are outside this release.
+- Published source and a prebuilt Linux AMD64 container at `ghcr.io/brntech/vllm-uno:0.1.0rc1`; local image builds remain available.
+- Included matched sampled-distribution and strict greedy reference/candidate verification tools.
+- Historical H100 research results are documented in the companion paper. ARM64/Blackwell packaging was added in `0.1.0`; multi-GPU execution requires separate engineering and validation.
 
 [0.1.0rc1]: https://github.com/brntech/vllm-uno/releases/tag/v0.1.0rc1
 
