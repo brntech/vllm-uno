@@ -3,28 +3,12 @@
 ## vLLM
 
 This project distributes modifications for
-[vLLM](https://github.com/vllm-project/vllm/tree/e962733e08d10f7ca65dac4df99e116460b8b174),
-based on commit `e962733e08d10f7ca65dac4df99e116460b8b174`.
+[vLLM](https://github.com/vllm-project/vllm/tree/b87339888d29329c42c42573e34cc2beebdcc48b),
+based on commit `b87339888d29329c42c42573e34cc2beebdcc48b`.
 vLLM is licensed under the Apache License, Version 2.0. Copyright and
 attribution notices in the modified upstream source are retained. See the
 repository `LICENSE` file and the
-[license at the pinned revision](https://github.com/vllm-project/vllm/blob/e962733e08d10f7ca65dac4df99e116460b8b174/LICENSE).
-
-## SGLang
-
-Portions of `vllm/v1/spec_decode/uno_sampler.py`,
-`vllm/v1/spec_decode/uno_lora_overlap.py`, and
-`vllm/v1/spec_decode/uno_nosync.py` are adapted from or follow the SGLang Uno
-implementation at commit `2c05ed4e7776c876478f4b2db61acb12b9a27d01`,
-including compact-support sampling, draft LoRA overlap, and cached LoRA graph
-state.
-
-SGLang is licensed under the Apache License, Version 2.0.
-
-Copyright 2023-2024 SGLang Team
-
-See the [pinned SGLang source](https://github.com/sgl-project/sglang/tree/2c05ed4e7776c876478f4b2db61acb12b9a27d01)
-and its [license](https://github.com/sgl-project/sglang/blob/2c05ed4e7776c876478f4b2db61acb12b9a27d01/LICENSE).
+[license at the pinned revision](https://github.com/vllm-project/vllm/blob/b87339888d29329c42c42573e34cc2beebdcc48b/LICENSE).
 
 ## Uno and IFM
 

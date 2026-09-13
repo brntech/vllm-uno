@@ -15,7 +15,7 @@ import sys
 import uuid
 
 HERE = Path(__file__).resolve().parent
-BASE = "e962733e08d10f7ca65dac4df99e116460b8b174"
+BASE = "b87339888d29329c42c42573e34cc2beebdcc48b"
 
 
 @contextmanager
@@ -60,7 +60,8 @@ def manifest():
         paths = re.findall(rb"^diff --git a/(\S+) b/\S+$", raw, re.M)
         if [p.decode() for p in paths] != entry["files"]:
             raise RuntimeError(f"Patch path inventory mismatch: {path}")
-        if any(not p.endswith((b".py", b".md")) for p in paths):
+        allowed_metadata = {b".buildkite/test_areas/spec_decode.yaml"}
+        if any(not p.endswith((b".py", b".md")) and p not in allowed_metadata for p in paths):
             raise RuntimeError(f"Overlay requires a new compiled-code audit: {path}")
     return data
 
@@ -132,7 +133,7 @@ def overlay(source):
     dist = importlib.metadata.distribution("vllm")
     version = dist.version
     package = Path(dist.locate_file("vllm")).resolve()
-    # e962733e0 is the build's SCM version, not a tag guessed from its date.
+    # b87339888 is the build's SCM version, not a tag guessed from its date.
     import vllm
     commit = getattr(vllm, "__commit__", None)
     if not (re.search(r"(?:\+|\.)g" + BASE[:8] + r"[0-9a-f]*(?:\.|$)", version)
@@ -172,7 +173,7 @@ def main():
     args = parser.parse_args()
     if args.action == "audit":
         data = manifest()
-        print(f"AUDIT_PASS: {len(data['patches'])} patch files; Python + Markdown only")
+        print(f"AUDIT_PASS: {len(data['patches'])} patch files; Python, Markdown, and approved Buildkite metadata only")
     elif not args.checkout:
         parser.error("checkout is required")
     elif args.action == "apply":

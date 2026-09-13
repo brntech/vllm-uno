@@ -4,8 +4,8 @@ set -euo pipefail
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 KIT=$(cd -- "$HERE/.." && pwd)
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
-  echo 'Usage: bash release/build.sh [IMAGE_TAG=vllm-uno:0.1.0]'
-  echo 'Builds linux/amd64 or linux/arm64; defaults to the host architecture.'
+  echo 'Usage: bash release/build.sh [IMAGE_TAG=vllm-uno:0.2.0]'
+  echo 'Builds linux/amd64 only.'
   echo 'BASE_IMAGE must be commit-matched and digest-pinned.'
   echo 'BUILD_DRY_RUN=1 audits and prints the build without invoking Docker.'
   exit 0
@@ -14,21 +14,14 @@ if (($# > 1)) || [[ ${1:-} == -* ]]; then
   echo 'Expected one image tag; use --help for usage.' >&2
   exit 2
 fi
-image=${1:-vllm-uno:0.1.0}
-base=${BASE_IMAGE:-vllm/vllm-openai@sha256:89dd8f442a3f4c08c6b3cd634c4f735cd709160651c296596673cf974ea6ee39}
+image=${1:-vllm-uno:0.2.0}
+base=${BASE_IMAGE:-public.ecr.aws/q9t5s3a7/vllm-ci-postmerge-repo:b87339888d29329c42c42573e34cc2beebdcc48b@sha256:e3ab6a1f24248420800ceeede9f14e605e72f4e2ebd48a91821db8c07708e0f5}
 [[ $base =~ @sha256:[0-9a-f]{64}$ ]] || { echo 'BASE_IMAGE must pin a complete sha256 digest.' >&2; exit 2; }
-platform=${PLATFORM:-}
-if [[ -z $platform ]]; then
-  case $(uname -m) in
-    x86_64|amd64) platform=linux/amd64 ;;
-    aarch64|arm64) platform=linux/arm64 ;;
-    *) echo 'Set PLATFORM to linux/amd64 or linux/arm64.' >&2; exit 2 ;;
-  esac
+platform=${PLATFORM:-linux/amd64}
+if [[ $platform != linux/amd64 ]]; then
+  echo 'v0.2.0 is AMD64 only: PLATFORM must be linux/amd64.' >&2
+  exit 2
 fi
-case $platform in
-  linux/amd64|linux/arm64) ;;
-  *) echo 'PLATFORM must be linux/amd64 or linux/arm64.' >&2; exit 2 ;;
-esac
 py=${PYTHON:-python3}
 "$py" "$HERE/check.py"
 cmd=(docker build --platform "$platform" --build-arg "BASE_IMAGE=$base" --tag "$image" --file release/Dockerfile -)
