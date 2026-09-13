@@ -80,15 +80,25 @@ image tag in the run commands above when testing a local build.
 
 BroadNet is contributing native Uno support to vLLM through
 [PR #55947](https://github.com/vllm-project/vllm/pull/55947), as part of
-[RFC #55267](https://github.com/vllm-project/vllm/issues/55267). The PR is open
-and not yet merged; it gives developers a focused implementation to inspect,
-test and extend: two-pass drafting, draft-only LoRA routing, and integration
-with vLLM's existing target verifier and rejection sampler.
+[RFC #55267](https://github.com/vllm-project/vllm/issues/55267). The PR now
+carries the **Model Runner V2** implementation agreed in the RFC, rebased onto
+vLLM main at `b87339888d`: a native MRV2 speculator that shares the target
+model, attention layers and KV cache with the drafter, applies the adapter only
+to noise rows, fused draft-input preparation, native Gumbel sampling and
+verification, async scheduling, draft CUDA graphs, tensor parallelism, and
+fail-closed validation of unsupported configurations. It replaces the earlier
+Model Runner V1 revision of the PR.
 
-For deployment with asynchronous scheduling, private draft graph replay and
-seed-row reuse, use the released container or source build above. These optimizations
-are planned as separate upstream contributions; the current PR covers the
-core two-pass path.
+The PR revision has been run end-to-end on NVIDIA Ampere (RTX 3090), Hopper
+(H100) and Blackwell (GB10 and RTX 5090, including tensor-parallel 2), with a
+continuous-batching preemption test that forces a real KV-pool crossing and
+checks the resumed request's tokens against its solo run. Performance is
+reported in the PR description from one dedicated card. The PR is open and not
+yet merged.
+
+This release (`0.1.0`) is the Model Runner V1 implementation and remains the
+supported container. The V1 code is preserved on the `uno-core-upstream`
+branch; an MRV2-based container follows once the upstream review settles.
 
 ## Validation
 
