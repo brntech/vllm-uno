@@ -1,6 +1,6 @@
 # Uno for vLLM
 
-**v0.1.0**
+**v0.2.0**
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter through vLLM's OpenAI-compatible server. The integration gives Uno a native two-pass speculative path with draft-only LoRA routing, asynchronous scheduling, private draft graph replay, prefix caching, and seed-row reuse.
 
@@ -10,34 +10,36 @@ This repository is an independent community implementation by the BroadNet Resea
 
 The included serving profile uses:
 
-- Linux AMD64 or ARM64 on one NVIDIA GPU
-- vLLM pinned to upstream commit `e962733e08d10f7ca65dac4df99e116460b8b174`
+- Linux AMD64 on one NVIDIA GPU
+- vLLM pinned to upstream commit `b87339888d29329c42c42573e34cc2beebdcc48b`
 - `Qwen/Qwen3-8B` in BF16 with the original [`s-sahoo/uno-qwen3-8B`](https://huggingface.co/s-sahoo/uno-qwen3-8B) adapter
 - eight speculative tokens per step (`K=8`)
-- vLLM `FLASH_ATTN`; Ampere GPUs use an explicit FlashAttention 2 override
-- single-device text generation with the original Qwen3-8B Uno adapter
+- vLLM `FLASH_ATTN` with the FlashAttention 2 override used on the RTX 3090
+- Model Runner V2 with asynchronous scheduling and the original Qwen3-8B Uno adapter
 
-The images cover x86 NVIDIA systems and ARM64 Blackwell systems such as GB10.
-Model configuration and the measured Ampere, Hopper and Blackwell results are
-documented in the accompanying paper and validation guide.
+v0.2.0 is AMD64-only. Its pinned vLLM base is the digest-pinned per-commit CI
+image for `b87339888d`; an ARM64 image follows when vLLM tags a release image
+containing that base. The `v0.29.1rc0` tag is 53 commits past this base and has
+no image.
 
 ## Use the prebuilt container
 
-Pull from GitHub Container Registry. Docker selects the image for your CPU architecture:
+Pull the AMD64 image from GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/brntech/vllm-uno:0.1.0
+docker pull ghcr.io/brntech/vllm-uno:0.2.0
 ```
 
-Use a Linux AMD64 or ARM64 host with a compatible NVIDIA driver and Docker configured with
+Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured with
 [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 The Qwen3-8B profile runs on a 24 GB RTX 3090. Allow disk space for the CUDA image and
 the downloaded model/adapter cache. First startup needs internet access.
 
-The container's packaged files match the `v0.1.0` source archive and use the pinned vLLM base.
-The [release page](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0)
-records the published image digest and validation scope. No repository checkout
-or local image build is needed to use it.
+The container's packaged files match the `v0.2.0` source archive and use the
+digest-pinned commit-matched vLLM base. The
+[release page](https://github.com/brntech/vllm-uno/releases/tag/v0.2.0) records
+the image identity and validation scope. No repository checkout or local image
+build is needed to use it.
 
 ## Start the server
 
@@ -47,9 +49,8 @@ This command downloads the pinned Qwen model and Uno adapter on first use, retai
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.1.0 \
-  Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B -- \
-  --attention-config '{"flash_attn_version":2}'
+  ghcr.io/brntech/vllm-uno:0.2.0 \
+  Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B
 ```
 
 Model loading and the first graph capture can take several minutes. When `/health` is ready, send an OpenAI-compatible request:
@@ -69,7 +70,7 @@ run from the repository root with Python 3 and Docker installed:
 
 ```bash
 python3 release/stack.py audit
-bash release/build.sh vllm-uno:0.1.0
+PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.2.0
 ```
 
 The build overlays the pinned Uno Python source onto its commit-matched vLLM
@@ -99,15 +100,16 @@ H100 and GB10; output is lossless and first-token latency is level with plain.
 The tables and receipts are in the PR description. The PR is open and not yet
 merged.
 
-This release (`0.1.0`) is the Model Runner V1 implementation and remains the
-supported container. The V1 code is preserved on the `uno-core-upstream`
-branch; an MRV2-based container follows once the upstream review settles.
+This release (`0.2.0`) packages that Model Runner V2 implementation on
+`b87339888d`. The Model Runner V1 implementation remains preserved on the
+`uno-core-upstream` branch. This release records functional serving validation,
+not new performance cells.
 
 ## Validation
 
 The release includes source and packaging tests, GPU integration checks, and
 reference/candidate tools for validating your own configuration. Versioned
-[release records](https://github.com/brntech/vllm-uno/releases/tag/v0.1.0)
+[release records](https://github.com/brntech/vllm-uno/releases/tag/v0.2.0)
 identify each image, its hardware checks, and the source used to build it.
 See [docs/validation.md](docs/validation.md) for the test procedures and results.
 

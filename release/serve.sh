@@ -6,7 +6,7 @@ if [[ ${1:-} == --help ]]; then
   cat <<'HELP'
 Usage: bash release/serve.sh [MODEL [LOCAL_ADAPTER_OR_HF_REPO]] [-- VLLM_ARGS...]
 Defaults: Qwen/Qwen3-8B; s-sahoo/uno-qwen3-8B (adapter/ subdirectory).
-Environment: UNO_K=8, UNO_MASK_TOKEN_ID=151669 (auto omits for K2),
+Environment: UNO_K=8, UNO_MASK_TOKEN_ID=151669, UNO_NOISE_SEED=0,
   MODEL_REVISION / UNO_ADAPTER_REVISION (recorded Qwen pins by default),
   SERVED_MODEL_NAME=uno-qwen3-8b, HOST=0.0.0.0, PORT=8000, PYTHON=python3.
 UNO_DRY_RUN=1 prints the command without importing vLLM/downloading weights.
@@ -47,25 +47,24 @@ PY
 elif [[ $adapter == s-sahoo/uno-qwen3-8B ]]; then
   adapter="<HF_CACHE>/models--s-sahoo--uno-qwen3-8B/snapshots/$adapter_rev/adapter"
 fi
-spec=$("$py" - "$adapter" "${UNO_K:-8}" "${UNO_MASK_TOKEN_ID:-151669}" <<'PY'
+spec=$("$py" - "$adapter" "${UNO_K:-8}" "${UNO_MASK_TOKEN_ID:-151669}" "${UNO_NOISE_SEED:-0}" <<'PY'
 import json,sys
 k=int(sys.argv[2])
 if k < 1: raise SystemExit('UNO_K must be positive')
-c=dict(method='uno', uno_lora_path=sys.argv[1], num_speculative_tokens=k,
-       uno_no_host_sync=True, uno_draft_full_graph=True,
-       uno_lora_overlap=True, uno_fused_draft_prep=True,
-       uno_first_draft_replay=True, uno_seedrow_verify=True, uno_lora_fold=False)
-# Explicit release profile: first-draft replay and seed reuse on; fold off.
-# Single-stream-only example (requires overlap, already enabled above):
-# c['uno_lora_fold'] = True  # Optional research control; validate separately.
-if sys.argv[3] != 'auto': c['uno_mask_token_id']=int(sys.argv[3])
+mask_token_id=int(sys.argv[3])
+if mask_token_id <= 1: raise SystemExit('UNO_MASK_TOKEN_ID must be greater than 1')
+noise_seed=int(sys.argv[4])
+c=dict(method='uno', uno_lora_path=sys.argv[1],
+       uno_mask_token_id=mask_token_id, uno_noise_seed=noise_seed,
+       num_speculative_tokens=k)
 print(json.dumps(c,separators=(',',':')))
 PY
 )
-cmd=("$py" -m vllm.entrypoints.cli.main serve "$model"
+cmd=(env VLLM_USE_V2_MODEL_RUNNER=1 VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_LORA_ENABLE_DUAL_STREAM=1
+  "$py" -m vllm.entrypoints.cli.main serve "$model"
   --served-model-name "${SERVED_MODEL_NAME:-uno-qwen3-8b}"
   --host "${HOST:-0.0.0.0}" --port "${PORT:-8000}"
-  --attention-backend FLASH_ATTN --enable-prefix-caching
+  --attention-backend FLASH_ATTN --attention-config '{"flash_attn_version":2}' --enable-prefix-caching
   --tensor-parallel-size 1 --api-server-count 2
   --max-model-len 4096 --max-num-seqs 32 --max-num-batched-tokens 8192
   --gpu-memory-utilization 0.90 --trust-remote-code --dtype bfloat16
