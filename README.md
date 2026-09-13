@@ -43,7 +43,9 @@ build is needed to use it.
 
 ## Start the server
 
-This command downloads the pinned Qwen model and Uno adapter on first use, retains them in a named Hugging Face cache, and uses the FlashAttention 2 profile validated on RTX 3090 and GB10. The API is published only on loopback.
+This command downloads the pinned Qwen model and Uno adapter on first use,
+retains them in a named Hugging Face cache, and uses the FlashAttention 2
+profile validated on RTX 3090. The API is published only on loopback.
 
 ```bash
 docker run --rm --name vllm-uno --gpus all --ipc=host \

@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -89,6 +90,19 @@ class ReleaseTests(unittest.TestCase):
         self.write_manifest()
         with self.assertRaises(RuntimeError):
             stack.manifest()
+
+    def test_c32_profile_captures_full_draft_rows(self):
+        launcher = (ROOT / "release/serve.sh").read_text(encoding="utf-8")
+        self.assertIn("--max-num-seqs 32", launcher)
+        self.assertIn("${UNO_K:-8}", launcher)
+        match = re.search(
+            r"--compilation-config '(\{[^']+\})'", launcher
+        )
+        self.assertIsNotNone(match)
+        config = json.loads(match.group(1))
+        self.assertGreaterEqual(
+            max(config["cudagraph_capture_sizes"]), 32 * 8
+        )
 
     def test_missing_asset_refused(self):
         (self.root / "release/assets.json").write_text(json.dumps(["missing.md"]))

@@ -70,7 +70,7 @@ cmd=(env VLLM_USE_V2_MODEL_RUNNER=1 VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_LORA
   --gpu-memory-utilization 0.90 --trust-remote-code --dtype bfloat16
   --async-scheduling --enable-log-requests --jit-monitor-verbose
   --enable-lora --max-lora-rank 128 --max-loras 2
-  --compilation-config '{"cudagraph_capture_sizes":[1,2,4,8,16,32,64,128,144]}'
+  --compilation-config '{"cudagraph_capture_sizes":[1,2,4,8,16,32,64,128,144,256]}'
   --generation-config vllm --speculative-config "$spec")
 [[ -z $model_rev ]] || cmd+=(--revision "$model_rev")
 cmd+=("$@")

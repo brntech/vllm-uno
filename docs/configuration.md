@@ -107,7 +107,9 @@ bash release/serve.sh [MODEL [ADAPTER]] [-- VLLM_ARGUMENTS...]
 The launcher always invokes the engine with
 `VLLM_USE_V2_MODEL_RUNNER=1`, `VLLM_WORKER_MULTIPROC_METHOD=spawn`, and
 `VLLM_LORA_ENABLE_DUAL_STREAM=1`, plus `--async-scheduling`, request logging,
-the JIT monitor, and CUDA-graph capture sizes `[1,2,4,8,16,32,64,128,144]`.
+the JIT monitor, and CUDA-graph capture sizes
+`[1,2,4,8,16,32,64,128,144,256]`. The final `256` captures the bounded
+32-request × K=8 draft-row shape rather than falling back to eager drafting.
 Changing `UNO_K`, the noise fields, model, adapter, precision, backend,
 capacity, scheduler, or compilation profile changes the serving profile. Run
 the validation gates again and preserve the exact launch record.
