@@ -118,7 +118,7 @@ See [docs/validation.md](docs/validation.md) for the test procedures and results
 - [`patch/`](patch/) — consolidated patch against the pinned vLLM commit
 - [`release/stack.py`](release/stack.py) — audit and source assembly
 - [`release/apply.sh`](release/apply.sh) — apply or verify the patch in an exact-base checkout
-- [`release/build.sh`](release/build.sh) — build a local AMD64 or ARM64 image
+- [`release/build.sh`](release/build.sh) — build the supported AMD64 image
 - [`release/serve.sh`](release/serve.sh) — launch the supported profile
 - [`release/verify.sh`](release/verify.sh) — capture and compare plain-reference and Uno-candidate evidence
 - [`release/check.py`](release/check.py) — standard-library package checks
