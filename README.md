@@ -92,9 +92,10 @@ Model Runner V1 revision of the PR.
 The PR revision has been run end-to-end on NVIDIA Ampere (RTX 3090), Hopper
 (H100) and Blackwell (GB10 and RTX 5090, including tensor-parallel 2), with a
 continuous-batching preemption test that forces a real KV-pool crossing and
-checks the resumed request's tokens against its solo run. Performance is
-reported in the PR description from one dedicated card. The PR is open and not
-yet merged.
+checks the resumed request's tokens against its solo run. Draft kernels are
+warmed at startup, so first-token latency is level with plain vLLM from the
+first request; throughput and first-token latency are reported in the PR
+description from one dedicated card. The PR is open and not yet merged.
 
 This release (`0.1.0`) is the Model Runner V1 implementation and remains the
 supported container. The V1 code is preserved on the `uno-core-upstream`
