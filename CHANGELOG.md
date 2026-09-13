@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Upstream PR #55947 updated to the Model Runner V2 implementation agreed in RFC #55267, rebased onto vLLM main `b87339888d` (tensor parallelism supported; pipeline, data and context parallelism, KV transfer and KV-sharing fast prefill refuse at startup). The Model Runner V1 revision is preserved on `uno-core-upstream`; this package's `0.1.0` container is unchanged.
-- Documented the PR revision's compatibility runs: Ampere (RTX 3090), Hopper (H100, FlashAttention 2 ⟦PENDING: and 3⟧), Blackwell (GB10, RTX 5090 at tensor-parallel 2).
+- Documented the PR revision's compatibility runs: Ampere (RTX 3090), Hopper (H100, FlashAttention 3 and 2), Blackwell (GB10, RTX 5090 at tensor-parallel 2).
 - The PR revision warms every draft-input kernel shape at startup and reports draft CUDA-graph coverage per request count, removing the first-request latency the earlier revision paid to Triton compilation at each new batch size (about 120 ms per size). ⟦PENDING: first-token numbers from the dedicated RTX 3090 measurement.⟧
 - The PR's continuous-batching test now forces a real preemption under a pinned KV pool and checks the resumed request's tokens against its solo run; the greedy exact-token comparison carries a plain-vs-plain control with a tie-aware verdict, since a CUDA-graph engine on Ampere does not reproduce itself bit-exactly across processes.
 
