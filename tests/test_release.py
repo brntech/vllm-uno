@@ -75,6 +75,21 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             stack.manifest()
 
+    def test_unapproved_patch_metadata_refused(self):
+        path = self.root / "patch" / self.data["patches"][0]["file"]
+        raw = path.read_bytes().replace(
+            b".buildkite/test_areas/spec_decode.yaml",
+            b".buildkite/test_areas/spec_decode.txt",
+        )
+        path.write_bytes(raw)
+        self.data["patches"][0]["files"][0] = ".buildkite/test_areas/spec_decode.txt"
+        self.data["patches"][0]["sha256_lf"] = hashlib.sha256(
+            raw.replace(b"\r\n", b"\n")
+        ).hexdigest()
+        self.write_manifest()
+        with self.assertRaises(RuntimeError):
+            stack.manifest()
+
     def test_missing_asset_refused(self):
         (self.root / "release/assets.json").write_text(json.dumps(["missing.md"]))
         with mock.patch.object(bundle, "ROOT", self.root):

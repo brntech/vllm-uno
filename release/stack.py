@@ -61,7 +61,10 @@ def manifest():
         if [p.decode() for p in paths] != entry["files"]:
             raise RuntimeError(f"Patch path inventory mismatch: {path}")
         allowed_metadata = {b".buildkite/test_areas/spec_decode.yaml"}
-        if any(not p.endswith((b".py", b".md")) and p not in allowed_metadata for p in paths):
+        if any(
+            not p.endswith((b".py", b".md")) and p not in allowed_metadata
+            for p in paths
+        ):
             raise RuntimeError(f"Overlay requires a new compiled-code audit: {path}")
     return data
 
