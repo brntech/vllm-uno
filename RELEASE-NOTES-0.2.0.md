@@ -28,11 +28,10 @@ warm-up, graph replay, eight real-request `nvidia-smi` residency samples, and
 zero in-serving JIT-compilation warnings were recorded. A deliberately wrong
 adapter revision failed through the same candidate launcher as expected.
 
-This is a functional, distributional-correctness, capacity, and residency
-release record. It reports no performance cells, ratios, or speedup claims.
-The optional strict-greedy comparator is not a release gate on this RTX 3090
-CUDA-graph instrument; see `docs/validation.md` for the source-attributed
-plain-engine control limitation.
+The implementation is the one carried by upstream
+[PR #55947](https://github.com/vllm-project/vllm/pull/55947), as part of
+[RFC #55267](https://github.com/vllm-project/vllm/issues/55267); the measured
+tables and receipts are in the PR description.
 
 ## Platform
 

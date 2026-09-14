@@ -11,6 +11,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - The package is now the Model Runner V2 Uno implementation on vLLM `b87339888d29329c42c42573e34cc2beebdcc48b`, distributed for Linux AMD64 only; an ARM64 image follows when vLLM tags a release image containing this base.
+- Upstream PR #55947 updated to the Model Runner V2 implementation agreed in RFC #55267, rebased onto vLLM main `b87339888d` (tensor parallelism supported; pipeline, data and context parallelism, KV transfer and KV-sharing fast prefill refuse at startup).
+- Documented the PR revision's compatibility runs: Ampere (RTX 3090), Hopper (H100, FlashAttention 3 and 2), Blackwell (GB10, RTX 5090 at tensor-parallel 2).
+- The PR revision's throughput over plain vLLM, same card and serving shape: 2.6x single-stream on an H100 (2.2x at eight streams, 1.7x at 32), 2.1 to 2.4x on a GB10 (1.1 to 1.6x at four and sixteen streams), 1.7 to 1.9x on an RTX 3090; faster than the Model Runner V1 build in every measured cell; SGLang's independent Uno integration within 3% at every concurrency.
+- The PR revision's first-token latency is level with plain vLLM (same card and client, single-stream 28–31 ms against plain's 27–29 ms; zero kernel compilations in serving): the draft-input kernel no longer specialises on prompt length, every served draft launch is warmed at startup under a JIT-monitor self-check, and a request stops drafting once its remaining budget cannot consume another draft. Throughput on the same card 1.7–1.85x plain single-stream and 1.15–1.5x at four streams.
+- The PR's continuous-batching test now forces a real preemption under a pinned KV pool and checks the resumed request's tokens against its solo run; the greedy exact-token comparison carries a plain-vs-plain control with a tie-aware verdict, since a CUDA-graph engine on Ampere does not reproduce itself bit-exactly across processes.
 
 ## [0.1.0] - 2026-09-08
 

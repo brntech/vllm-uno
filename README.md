@@ -86,26 +86,31 @@ libraries and does not clone vLLM from GitHub during the image build.
 
 BroadNet is contributing native Uno support to vLLM through
 [PR #55947](https://github.com/vllm-project/vllm/pull/55947), as part of
-[RFC #55267](https://github.com/vllm-project/vllm/issues/55267). The PR carries
-the Model Runner V2 implementation rebased onto `b87339888d`: a native MRV2
-speculator that shares the target model, attention layers, and KV cache with the
-drafter; applies the adapter only to noise rows; and supports fused draft-input
-preparation, native Gumbel sampling and verification, async scheduling, draft
-CUDA graphs, and fail-closed configuration validation. It replaces the earlier
-Model Runner V1 revision.
+[RFC #55267](https://github.com/vllm-project/vllm/issues/55267). The PR now
+carries the **Model Runner V2** implementation agreed in the RFC, rebased onto
+vLLM main at `b87339888d`: a native MRV2 speculator that shares the target
+model, attention layers and KV cache with the drafter, applies the adapter only
+to noise rows, fused draft-input preparation, native Gumbel sampling and
+verification, async scheduling, draft CUDA graphs, tensor parallelism, and
+fail-closed validation of unsupported configurations. It replaces the earlier
+Model Runner V1 revision of the PR.
 
-This release records functional, lossless-distribution, capacity, and residency
-validation for its own image. It reports no performance cells, ratios, medians,
-or speedup claims. Historical research measurements belong to the separate
-[paper](https://doi.org/10.5281/zenodo.22652610).
+The PR revision has been run end-to-end on NVIDIA Ampere (RTX 3090), Hopper
+(H100) and Blackwell (GB10 and RTX 5090, including tensor-parallel 2), with a
+continuous-batching preemption test that forces a real KV-pool crossing and
+checks the resumed request's tokens against its solo run. Against plain vLLM on
+the same card and serving shape it measures 2.6x single-stream on an H100, 2.1 to
+2.4x on a GB10 and 1.7 to 1.9x on an RTX 3090, and stays ahead under load on the
+H100 and GB10; output is lossless and first-token latency is level with plain.
+The tables and receipts are in the PR description. The PR is open and not yet
+merged.
 
 ## Validation
 
 The release record identifies the exact image, source patch, RTX 3090 checks,
 and test receipts. See [docs/validation.md](docs/validation.md) and the concise
 [v0.2.0 lane record](docs/lanes/release-0.2.0.md). The default verifier uses
-sampled-distribution and mixed-chunk gates; its optional strict-greedy diagnostic
-is not a release gate on this RTX 3090 CUDA-graph instrument.
+sampled-distribution and mixed-chunk gates.
 
 ## Repository map
 
