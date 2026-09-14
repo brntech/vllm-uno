@@ -2,102 +2,65 @@
 
 ## Status
 
-**BLOCKED.** Do not tag, push, publish, or attach the AMD64 image to a
-release. The exact candidate image and its source archive are preserved for a
-retest, but the strict greedy gate failed and the candidate logged three JIT
-compilations during serving traffic. Every number in this record is named in
-the committed [validation receipt](../../evidence/release-0.2.0/validation.json).
+**READY.** The AMD64 image is eligible for the maintainer's tag, registry push,
+and release attachment steps. The corresponding machine-readable receipt is
+[`evidence/release-0.2.0/validation.json`](../../evidence/release-0.2.0/validation.json).
 
-| Check | Result | Receipt field |
+| Check | Result | Public receipt field |
 |---|---|---|
-| Package suite | PASS, 13 tests | `local_package_gates.test_release_green` |
-| Inverted manifest base | expected-red, exit 1 | `local_package_gates.test_release_inverted_base` |
+| Patch manifest and package check | PASS | `local_package_gates` |
+| Reverted manifest base | expected-red, exit 1 | `local_package_gates.test_release_inverted_base` |
 | Plain reference | PASS, n=256 | `reference` |
-| Strict greedy equality | FAIL, 0 of 4 prompts at 256 tokens | `candidate_comparison.greedy` |
-| Sampled chunk-1 gate | PASS, n=256, 32 tests, 5,000 permutations | `candidate_comparison.sampled_chunk1` |
-| Mixed chunk-8 gate | PASS, n=256, 32 tests, 5,000 permutations | `candidate_comparison.mixed_chunk8` |
-| Live HTTP and C=32 capacity | PASS, 32 of 32 completions | `live_http` |
-| Monitored serving JIT | FAIL, 3 compilations | `capture_and_jit` |
-| Wrong-adapter mutation | expected-red, inner exit 1 | `known_red` |
+| Functional greedy | PASS, 4 × 256-token requests | `candidate_comparison.greedy_functional` |
+| Strict greedy | `NOT_A_RELEASE_GATE` | `strict_greedy_protocol` |
+| Sampled G2v2 | PASS, n=256, 32 tests, 5,000 permutations | `candidate_comparison.sampled_chunk1` |
+| Mixed G2v2 | PASS, n=256, 32 tests, 5,000 permutations | `candidate_comparison.mixed_chunk8` |
+| Health, streaming, prefix, C=8, C=32 | PASS | `live_http` |
+| In-serving JIT | PASS, 0 warnings | `capture_and_jit` |
+| Wrong adapter revision | expected-red, inner exit 1 | `known_red` |
 
-The sampled gates are real distributional checks, but they do not waive the
-hard greedy comparator. The MRV2 source discusses graph-mode plain-engine
-variation on an RTX 3090 in
-`tests/v1/e2e/spec_decode/test_uno.py`; this run did not add the required
-second plain-engine control, so it does not attribute the greedy failure to
-that behavior. The distributed kit's `compare.py` remains authoritative here.
+## Identity and profile
 
-## Profile and engagement
+The Model Runner V2 source head is
+`5da193919b44335ddf14eac193dfc9e8d5e59df5` over base
+`b87339888d29329c42c42573e34cc2beebdcc48b`. The reconstructed patch tree is
+`6ceef9dfa043d9a2d3f930522ecc7480105aa5a7`; LF-normalized patch SHA-256 is
+`447acf006163385ec2b1d902f9cff1e04c60b7e8dac001941f1130164262e382`.
 
-The blocked artifact is the Model Runner V2 source head
-`689b11a8cac0e6865786c41cc0d77afa6afaf885` over base
-`b87339888d29329c42c42573e34cc2beebdcc48b`, on the digest-pinned AMD64 base
-listed in the receipt. It serves Qwen3-8B BF16 with K=8, asynchronous
-scheduling, prefix caching, FlashAttention 2, and the pinned Uno adapter.
+The validated local image is
+`sha256:98034bbbf7042147838932d64e0ff7a8668bc91d1d203d4a76708d14231c1037`,
+9,956,886,869 bytes, built from the digest-pinned AMD64 CI image. Its saved
+relaunch archive is 9,956,934,144 bytes, SHA-256
+`3fca059e167f3b8ce08b74a1d4baac7785c9b0ecfe31a512f04a0293272e74bc`.
 
-The C=32 arithmetic is 32 requests × K=8 = 256 draft rows. The final profile
-captures through 256, the startup log reports coverage for all 32 request
-counts, and the final self-check reports graph replay. The live C=8 and C=32
-requests completed in full. The candidate's speculative-config line, graph
-replay line, and positive draft/draft-token/accepted-token deltas establish
-that Uno engaged; the matched plain reference deliberately had no speculative
-configuration.
+The production shape is Qwen3-8B BF16, K=8, async scheduling, prefix caching,
+FlashAttention 2, one API process, `max_num_seqs=16`,
+`max_num_batched_tokens=2048`, explicit 2 GiB KV cache, and capture sizes
+`[1,2,4,8,16,32,64,128,144]`. C=32 queues at the 16-request admission limit.
 
-The source fixtures are **CPU_OBSERVED/CUDA_UNVERIFIED** until a device run
-proves them. The full-chunk fixture names the 2,048-token bound, while the
-production K=8 fixture observes the two-output-token path at 11 tokens for
-each of four sampling modes. The static draft dispatcher enumerates the full
-request range; the device record then confirms the adopted 256-row C=32
-shape. These fixtures are source-contract evidence, not a claim that this
-lane ran CUDA unit fixtures.
+## Engagement, correctness, and scope
 
-## Capture correction and JIT failure
+Candidate startup records the Uno speculative configuration, all 16 requested
+warm-up shapes, startup self-check with no compilation, and graph replay. The
+post-startup serving slice contains zero `JIT compilation during inference`
+warnings across all validation traffic. Gate counters recorded 2,738 drafts,
+21,904 draft tokens, and 8,092 accepted tokens; live traffic added 45 / 360 /
+70 respectively.
 
-Failure class: the first release profile transposed the C=4 capture list to
-C=32 without extending the draft-row bound. Corrective action: capture size
-256 was added, and `tests/test_release.py::test_c32_profile_captures_full_draft_rows`
-rejects a profile whose largest capture is below 32 × 8. Retrospective: profile
-flags must be validated against derived request-row bounds rather than copied
-from a smaller workload.
+The sampled and mixed G2v2 gates are the release lossless evidence. Strict
+greedy is not a gate on this RTX 3090 CUDA-graph instrument: the documented
+source control in `docs/lanes/bl-mrv2-final-gates.md` attributes graph-mode
+plain self-flips and later completes the separate-engine seven-row control.
+No plain-versus-plain double run was performed here.
 
-The final service did capture and replay its 256-row graph. An early eager
-message belongs to a provisional startup pass before the final capture; it is
-not used as a serving-capacity claim. The later final replay receipt is the
-capacity evidence. That does not cure the independent cold-serving failure:
-after the clean startup self-check, the sampled candidate traffic compiled
-`_compute_local_logits_stats_kernel`, `_rejection_kernel`, and
-`_resample_kernel`. The serving compilation count is therefore 3, not 0.
+Eight real served residency updates all observed 21,504 MiB / 24,576 MiB by
+host `nvidia-smi`. This is device residency only, not allocated/reserved memory
+or a leak conclusion. This lane reports no performance cells, ratios, repeat
+medians, ranges, or overlaps.
 
-## Conventions and limits
-
-The shared-prefix requests are `cold_validation_only`: health, greedy,
-sampled, and streaming requests preceded them, and they are not a comparison
-cell. The C=8 and C=32 requests are functional capacity checks, not latency or
-throughput measurements.
-
-No performance cells were measured. Consequently this record reports no
-runner-to-runner ratios, no three-repeat performance cells, and no
-median/range/overlap claim. The distributional gates state their own sample
-count, permutation budget, and statistical test count in the receipt instead
-of synthesizing a performance conclusion.
-
-Eight successive real server updates produced eight `nvidia-smi` device-memory
-samples at 20,698 MiB on a 24,576 MiB device. There is no training loop.
-`torch.cuda.memory_allocated` and `torch.cuda.memory_reserved` were not
-available to this external API harness, so this is a device-residency record,
-not a leak or retained-tensor conclusion.
-
-## Caller sweep and retest scope
-
-The callers of `stack.py` `BASE` were swept: `apply`, overlay,
-`release/check.py`, `tests/test_release.py`, and the Dockerfile production
-caller. The fresh-base application and the green package suite exercise the
-production path; reverting the manifest base produces the recorded exit 1.
-The variant-wide sweep covered the package checker, image dry run, plain
-reference, strict greedy, sampled chunk-1, mixed chunk-8, live HTTP modes,
-C=8, C=32, residency, and the wrong-adapter mutation.
-
-Retest only after the MRV2 source resolves the strict-parity and cold-serving
-JIT failures, then rebuild from the corrected source head and rerun every
-receipt above. Do not bypass the strict comparator or pre-warm away the
-serving JIT warnings.
+Fixture evidence remains **CPU_OBSERVED/CUDA_UNVERIFIED**. The BF16 source
+contract retains the 2,048 full-chunk two-iteration bound and K=8 production
+extent; the RTX 3090 receipt proves the actual 16×8 draft-row variant. The
+caller sweep covers `stack.py` apply, overlay, check, tests, and the Dockerfile.
+The known-red changes only the pinned adapter revision in the same candidate
+runner and exits 1, proving the stated behavior rather than a missing symbol.

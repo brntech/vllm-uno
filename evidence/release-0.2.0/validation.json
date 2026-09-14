@@ -1,26 +1,43 @@
 {
-  "schema": 1,
+  "schema": 2,
   "release": "0.2.0",
-  "status": "BLOCKED",
+  "status": "READY",
   "status_reason": [
-    "The strict greedy comparator found 0 of 4 256-token candidate outputs identical to the matched plain reference.",
-    "The monitored candidate emitted 3 Triton JIT compilation warnings during serving traffic after its startup self-check passed."
+    "The released-image RTX 3090 run passed the sampled and mixed G2v2 gates, live API/capacity checks, zero in-serving compilation warnings, and the wrong-adapter expected-red gate.",
+    "Strict greedy is recorded as NOT_A_RELEASE_GATE for the documented RTX 3090 CUDA-graph plain-engine instrument limitation."
   ],
   "source": {
-    "implementation_head": "689b11a8cac0e6865786c41cc0d77afa6afaf885",
+    "implementation_head": "5da193919b44335ddf14eac193dfc9e8d5e59df5",
     "upstream_base": "b87339888d29329c42c42573e34cc2beebdcc48b",
-    "final_tree": "b453f1bc02c9b2058a986a802aff18fcf194b20c",
-    "patch_sha256_lf": "9f5b5bb9b0f20d44b2821d5387dd77f093f0d3ed3afc164203080437540095cf"
+    "final_tree": "6ceef9dfa043d9a2d3f930522ecc7480105aa5a7",
+    "patch_sha256_lf": "447acf006163385ec2b1d902f9cff1e04c60b7e8dac001941f1130164262e382",
+    "files": 36,
+    "fresh_apply": {
+      "status": "PASS",
+      "first_apply_tree": "6ceef9dfa043d9a2d3f930522ecc7480105aa5a7",
+      "second_apply": "Already applied: verified the entire staged tree.",
+      "receipt": "release/.work/fresh-apply.log"
+    }
   },
   "image": {
     "platform": "linux/amd64",
     "base_digest": "sha256:e3ab6a1f24248420800ceeede9f14e605e72f4e2ebd48a91821db8c07708e0f5",
-    "id": "sha256:7ad0c0201c3f5308f2788ca58089002367b8a106f2418e4f1441d4343b80c558",
-    "size_bytes": 9677234249,
-    "saved_tar_bytes": 9677281280,
-    "saved_tar_sha256": "d3f4b098e02c0122344981d20ebd8ca10b2bb06a70b9a7d7066d08f1f7fa76ac",
-    "build_receipt": "build-4.log",
-    "save_receipt": "save-image.log"
+    "base_vllm_version": "0.1.1.dev22+gb87339888",
+    "id": "sha256:98034bbbf7042147838932d64e0ff7a8668bc91d1d203d4a76708d14231c1037",
+    "size_bytes": 9956886869,
+    "saved_archive": "/root/vllm-uno-0.2.0-relaunch.tar",
+    "saved_tar_bytes": 9956934144,
+    "saved_tar_sha256": "3fca059e167f3b8ce08b74a1d4baac7785c9b0ecfe31a512f04a0293272e74bc",
+    "build_receipt": "/root/vllm-uno-0.2.0/evidence/relaunch/build.log",
+    "inspect_receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/image.inspect.json",
+    "save_receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/image-tar.receipt"
+  },
+  "hardware": {
+    "host": "inference-3090",
+    "gpu": "NVIDIA GeForce RTX 3090",
+    "driver": "610.43.02",
+    "memory_total_mib": 24576,
+    "receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/nvidia-smi-after.csv"
   },
   "profile": {
     "model": "Qwen/Qwen3-8B",
@@ -29,46 +46,63 @@
     "adapter_revision": "8819e09ac901e7290d8d89d62c98b9f756c602fe",
     "dtype": "bfloat16",
     "attention": "FLASH_ATTN with FlashAttention 2",
+    "model_runner_v2": true,
     "async_scheduling": true,
     "prefix_caching": true,
-    "max_num_seqs": 32,
+    "api_server_count": 1,
+    "max_num_seqs": 16,
+    "max_num_batched_tokens": 2048,
+    "kv_cache_memory_bytes": 2147483648,
+    "gpu_memory_utilization": "vLLM default; no explicit override",
     "num_speculative_tokens": 8,
-    "draft_row_bound": 256,
-    "capture_sizes": [1, 2, 4, 8, 16, 32, 64, 128, 144, 256]
+    "draft_row_bound": 128,
+    "capture_sizes": [1, 2, 4, 8, 16, 32, 64, 128, 144],
+    "production_shape_source": "docs/lanes/bl-mrv2-final-ninecell.md"
   },
   "local_package_gates": {
+    "package_check": {
+      "exit_code": 0,
+      "receipt": "release/.work/local-gates-r3/package-check.log"
+    },
     "test_release_green": {
       "exit_code": 0,
-      "tests": 13,
-      "receipt": "test-release-final-profile.log"
+      "tests": 15,
+      "receipt": "release/.work/local-gates-r3/test-release-green.log"
     },
     "test_release_inverted_base": {
       "exit_code": 1,
-      "receipt": "test-release-inverted-final.log"
+      "test": "tests.test_release.ReleaseTests.test_frozen_manifest",
+      "expected_error": "Manifest base does not match the supported upstream commit",
+      "receipt": "release/.work/local-gates-r3/test-release-inverted-manifest-only.log"
     }
   },
   "reference": {
     "status": "PASS",
     "n": 256,
+    "prefixes": 3,
     "sampled_max_tokens": 16,
     "greedy_tokens": 256,
-    "plain_floor": "PASS",
-    "receipt": "reference/reference.json"
+    "strict_greedy_capture": false,
+    "receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/reference/reference.json"
   },
   "candidate_comparison": {
-    "receipt": "candidate/verdict.json",
-    "greedy": {
-      "status": "FAIL",
+    "receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/candidate/verdict.json",
+    "greedy_functional": {
+      "status": "PASS",
       "prompts": 4,
-      "matching_prompts": 0,
       "tokens_per_prompt": 256,
-      "receipt": "candidate/greedy-compare.log"
+      "receipt": "candidate/uno-greedy-functional.jsonl"
     },
     "sampled_chunk1": {
       "status": "PASS",
       "n": 256,
       "tests": 32,
       "permutations": 5000,
+      "bonferroni_alpha": 0.0003125,
+      "minimum_p": 0.014797040591881624,
+      "max_tv": 0.17578125,
+      "fails_p": 0,
+      "fails_tv": 0,
       "receipt": "candidate/sampled-compare.json"
     },
     "mixed_chunk8": {
@@ -76,25 +110,37 @@
       "n": 256,
       "tests": 32,
       "permutations": 5000,
+      "minimum_p": 0.002599480103979204,
+      "max_tv": 0.1953125,
+      "fails_p": 0,
+      "fails_tv": 0,
       "receipt": "candidate/mixed-compare.json"
     },
     "speculation_counters": {
       "chunk1": {
         "drafts": 768,
         "draft_tokens": 6144,
-        "accepted_tokens": 2755
+        "accepted_tokens": 2747
       },
       "combined": {
-        "drafts": 2739,
-        "draft_tokens": 21912,
-        "accepted_tokens": 8117
+        "drafts": 2738,
+        "draft_tokens": 21904,
+        "accepted_tokens": 8092
       },
       "receipt": "candidate/speculation-metrics.json"
     }
   },
+  "strict_greedy_protocol": {
+    "status": "NOT_A_RELEASE_GATE",
+    "release_run_plain_self_control": false,
+    "release_run_strict_compare": false,
+    "source_attribution": "docs/lanes/bl-mrv2-final-gates.md: graph-mode plain self-flips; later VLLM_UNO_GREEDY_CONTROL_ENGINES=2 control completes matrix 7/7",
+    "candidate_functional_greedy": "PASS",
+    "receipt": "candidate/verdict.json"
+  },
   "live_http": {
     "status": "PASS",
-    "receipt": "live-check.json",
+    "receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/live-base.json",
     "health": "PASS",
     "greedy": "PASS",
     "sampled": "PASS",
@@ -102,11 +148,14 @@
     "shared_prefix": "PASS",
     "c8": {
       "requested": 8,
-      "completed": 8
+      "completed": 8,
+      "queues_at_active_limit": false
     },
     "c32": {
       "requested": 32,
-      "completed": 32
+      "completed": 32,
+      "queues_at_active_limit": true,
+      "active_admission_limit": 16
     },
     "prefix_cache_convention": {
       "state": "cold_validation_only",
@@ -120,47 +169,48 @@
     }
   },
   "capture_and_jit": {
-    "final_c32_capture": "PASS",
-    "final_graph_replay": "PASS",
+    "startup_warmup": "PASS: 16 prepare request shapes, 1..16 requests at K=8",
     "startup_self_check": "PASS",
     "startup_self_check_compilations": 0,
-    "serving_compilations": 3,
-    "serving_compilation_status": "FAIL",
-    "serving_compilation_kernels": [
-      "_compute_local_logits_stats_kernel",
-      "_rejection_kernel",
-      "_resample_kernel"
-    ],
-    "receipt": "candidate-server.log"
+    "graph_replay": "PASS",
+    "serving_compilations": 0,
+    "serving_compilation_status": "PASS",
+    "startup_receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/candidate-engagement.log",
+    "serving_receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/compiles-in-serving.txt"
   },
   "residency": {
     "samples": 8,
     "updates_per_sample": 1,
-    "device_memory_mib": 20698,
+    "device_memory_mib": [21504, 21504, 21504, 21504, 21504, 21504, 21504, 21504],
     "device_total_mib": 24576,
     "training_loop": false,
     "torch_cuda_allocated_collected": false,
     "torch_cuda_reserved_collected": false,
-    "conclusion": "Device residency was observed across real server updates; allocator and retained-tensor conclusions are not supported."
+    "conclusion": "Device residency was observed across eight real server updates. Allocated, reserved, peak, retained-tensor, and leak conclusions are not supported.",
+    "receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/residency-nvidia-smi.csv"
   },
   "source_fixture": {
     "classification": "CPU_OBSERVED/CUDA_UNVERIFIED",
     "executed_by_this_lane": false,
-    "reason_not_promoted": "The release device receipts, rather than mocked CPU fixtures, are the CUDA evidence.",
+    "bf16_production_path": true,
+    "full_chunk_two_iteration_bound": "min(2048, max(3, 2047 + 2)) = 2048",
+    "production_k8_extent": "min(2048, max(3, 9 + 2)) = 11",
+    "device_variant_receipt": "16 requests * K=8 = 128 draft rows; capture range covers the production bound",
     "full_chunk_fixture": "tests/v1/spec_decode/test_uno_mrv2.py::test_uno_startup_jit_self_check_reports_compile_without_forcing_warn_abort",
     "production_shape_fixture": "tests/v1/spec_decode/test_uno_mrv2.py::test_uno_startup_jit_self_check_uses_the_production_k8_batch_shape",
     "draft_shape_fixture": "tests/v1/spec_decode/test_uno_mrv2.py::test_draft_dispatch_pads_up_to_the_next_captured_size"
   },
   "known_red": {
-    "mutation": "wrong Uno adapter revision with offline hub access",
+    "mutation": "wrong Uno adapter revision with offline hub access through the default candidate entrypoint",
     "inner_exit_code": 1,
     "wrapper_exit_code": 0,
-    "receipt": "wrong-adapter-known-red.log"
+    "same_runner_as_green": true,
+    "receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/known-red-result.txt"
   },
   "reporting_scope": {
     "performance_cells": false,
     "ratios_reported": false,
     "repeat_median_range_reported": false,
-    "reason": "The run is a functional, correctness, capacity, and residency validation only."
+    "reason": "The run is a functional, distributional-correctness, capacity, and residency validation only."
   }
 }

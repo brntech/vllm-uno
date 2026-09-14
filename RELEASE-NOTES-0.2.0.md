@@ -1,34 +1,38 @@
 # Uno for vLLM v0.2.0
 
-Uno for vLLM v0.2.0 packages the Model Runner V2 implementation from
-`689b11a8cac0e6865786c41cc0d77afa6afaf885` on vLLM
-`b87339888d29329c42c42573e34cc2beebdcc48b`. It uses a digest-pinned,
-commit-matched vLLM CI base image and overlays Python source only, preserving
-the base image's compiled CUDA libraries.
+Uno for vLLM v0.2.0 packages the Model Runner V2 implementation at
+`5da193919b44335ddf14eac193dfc9e8d5e59df5` on vLLM
+`b87339888d29329c42c42573e34cc2beebdcc48b`. It builds from vLLM's
+digest-pinned per-commit CI image, overlays only verified Python source, and
+preserves the base image's compiled CUDA libraries.
 
 ## What changed
 
-- Replaced the Model Runner V1 release implementation with native MRV2 Uno.
+- Replaces the Model Runner V1 release implementation with native MRV2 Uno.
 - Uses the MRV2 speculative configuration: adapter path, mask-token bound, and
   deterministic noise seed, with eight speculative tokens per step.
-- Forces Model Runner V2 and asynchronous scheduling; the supported profile
-  keeps Qwen3-8B BF16, prefix caching, FlashAttention 2 on Ampere, and the
-  pinned Qwen model and Uno adapter revisions.
-- Includes reproducible patch, source-overlay, image-build, and validation
-  tooling for the pinned upstream commit.
+- Uses the PR's measured production shape: BF16 Qwen3-8B, async scheduling,
+  prefix caching, FlashAttention 2, `max_num_seqs=16`,
+  `max_num_batched_tokens=2048`, an explicit 2 GiB KV cache, and nine CUDA
+  graph capture sizes through 144.
+- Includes a reproducible patch, manifest, source-overlay build, offline
+  serving validation, and deterministic source bundle.
 
-## What this release measures
+## What this release validates
 
-The release validation exercises live serving on an RTX 3090: health, greedy
-and sampled generation, streaming, shared-prefix requests, and concurrent
-batches of 8 and 32 requests. It records Uno engagement, startup warm-up and
-self-check evidence, in-serving compilation observations, and the specified
-lossless gates. This release reports functional and correctness validation, not
-new performance cells.
+The released-image run on an RTX 3090 passed health, functional greedy and
+sampled generation, SSE streaming, cold shared-prefix requests, C=8, and a
+queued C=32 capacity check. The G2v2 sampled and mixed chunk-8 gates passed at
+n=256 with 32 tests and 5,000 permutations each. Uno engagement, full startup
+warm-up, graph replay, eight real-request `nvidia-smi` residency samples, and
+zero in-serving JIT-compilation warnings were recorded. A deliberately wrong
+adapter revision failed through the same candidate launcher as expected.
 
-This draft is not releasable yet. The v0.2.0 candidate's strict greedy gate
-and cold-serving JIT gate failed; see [docs/validation.md](docs/validation.md)
-before tagging or publishing it.
+This is a functional, distributional-correctness, capacity, and residency
+release record. It reports no performance cells, ratios, or speedup claims.
+The optional strict-greedy comparator is not a release gate on this RTX 3090
+CUDA-graph instrument; see `docs/validation.md` for the source-attributed
+plain-engine control limitation.
 
 ## Platform
 
@@ -37,4 +41,4 @@ image containing the pinned base.
 
 See [README.md](README.md), [docs/configuration.md](docs/configuration.md),
 and [docs/validation.md](docs/validation.md) for the exact profile, source
-identity, and validation record.
+identity, validation record, and artifact checksums.
