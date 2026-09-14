@@ -65,12 +65,12 @@ cmd=(env VLLM_USE_V2_MODEL_RUNNER=1 VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_LORA
   --served-model-name "${SERVED_MODEL_NAME:-uno-qwen3-8b}"
   --host "${HOST:-0.0.0.0}" --port "${PORT:-8000}"
   --attention-backend FLASH_ATTN --attention-config '{"flash_attn_version":2}' --enable-prefix-caching
-  --tensor-parallel-size 1 --api-server-count 2
-  --max-model-len 4096 --max-num-seqs 32 --max-num-batched-tokens 8192
-  --gpu-memory-utilization 0.90 --trust-remote-code --dtype bfloat16
+  --tensor-parallel-size 1 --api-server-count 1
+  --max-model-len 4096 --max-num-seqs 16 --max-num-batched-tokens 2048
+  --kv-cache-memory-bytes 2147483648 --dtype bfloat16
   --async-scheduling --enable-log-requests --jit-monitor-verbose
   --enable-lora --max-lora-rank 128 --max-loras 2
-  --compilation-config '{"cudagraph_capture_sizes":[1,2,4,8,16,32,64,128,144,256]}'
+  --compilation-config '{"cudagraph_capture_sizes":[1,2,4,8,16,32,64,128,144]}'
   --generation-config vllm --speculative-config "$spec")
 [[ -z $model_rev ]] || cmd+=(--revision "$model_rev")
 cmd+=("$@")

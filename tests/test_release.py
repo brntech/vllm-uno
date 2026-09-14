@@ -91,18 +91,27 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             stack.manifest()
 
-    def test_c32_profile_captures_full_draft_rows(self):
+    def test_ninecell_profile_captures_full_draft_rows(self):
         launcher = (ROOT / "release/serve.sh").read_text(encoding="utf-8")
-        self.assertIn("--max-num-seqs 32", launcher)
+        self.assertIn("--max-num-seqs 16", launcher)
+        self.assertIn("--max-num-batched-tokens 2048", launcher)
+        self.assertIn("--kv-cache-memory-bytes 2147483648", launcher)
+        self.assertNotIn("--gpu-memory-utilization", launcher)
         self.assertIn("${UNO_K:-8}", launcher)
         match = re.search(
             r"--compilation-config '(\{[^']+\})'", launcher
         )
         self.assertIsNotNone(match)
         config = json.loads(match.group(1))
-        self.assertGreaterEqual(
-            max(config["cudagraph_capture_sizes"]), 32 * 8
-        )
+        self.assertEqual(config["cudagraph_capture_sizes"], [1, 2, 4, 8, 16, 32, 64, 128, 144])
+        self.assertGreaterEqual(max(config["cudagraph_capture_sizes"]), 16 * 8)
+
+    def test_mrv2_speculative_config_has_only_the_three_uno_fields(self):
+        launcher = (ROOT / "release/serve.sh").read_text(encoding="utf-8")
+        for field in ("uno_lora_path", "uno_mask_token_id", "uno_noise_seed"):
+            self.assertIn(field, launcher)
+        for retired in ("uno_graph", "uno_replay", "uno_overlap", "uno_fold"):
+            self.assertNotIn(retired, launcher)
 
     def test_missing_asset_refused(self):
         (self.root / "release/assets.json").write_text(json.dumps(["missing.md"]))
