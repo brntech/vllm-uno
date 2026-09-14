@@ -21,10 +21,14 @@ the base image's compiled CUDA libraries.
 
 The release validation exercises live serving on an RTX 3090: health, greedy
 and sampled generation, streaming, shared-prefix requests, and concurrent
-batches of 8 and 32 requests. It also records Uno engagement, startup
-warm-up/self-check evidence, zero in-serving compilations, and the specified
+batches of 8 and 32 requests. It records Uno engagement, startup warm-up and
+self-check evidence, in-serving compilation observations, and the specified
 lossless gates. This release reports functional and correctness validation, not
 new performance cells.
+
+This draft is not releasable yet. The v0.2.0 candidate's strict greedy gate
+and cold-serving JIT gate failed; see [docs/validation.md](docs/validation.md)
+before tagging or publishing it.
 
 ## Platform
 

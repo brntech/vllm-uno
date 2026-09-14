@@ -1,5 +1,33 @@
 # Validation
 
+## v0.2.0 release status: BLOCKED
+
+The v0.2.0 AMD64 candidate was built from MRV2 source
+`689b11a8cac0e6865786c41cc0d77afa6afaf885` on vLLM
+`b87339888d29329c42c42573e34cc2beebdcc48b` and exercised on an RTX 3090.
+It is not eligible for a tag, registry push, or release attachment.
+
+The fresh plain reference passed at n=256. The candidate passed the sampled
+chunk-1 and mixed chunk-8 distributional gates at n=256 with 32 tests and
+5,000 permutations each, and it completed health, greedy and sampled HTTP
+generation, streaming, shared-prefix requests, C=8, C=32, and eight
+residency updates. Uno engagement counters advanced in both gate and live
+traffic.
+
+Two hard checks block the release: `compare.py` found 0 of 4 strict
+256-token greedy outputs identical to the plain reference, and the monitored
+candidate logged 3 Triton JIT compilations during serving traffic after its
+startup self-check reported no compilation. The sampled passes do not waive
+either failure. The exact image, source archive, all private operational
+receipts, and a public summary are preserved in the
+[v0.2.0 validation record](lanes/release-0.2.0.md) and its
+[committed receipt](../evidence/release-0.2.0/validation.json).
+
+No performance cells are reported for v0.2.0: the C=8 and C=32 results are
+functional capacity checks, not throughput or latency comparisons. The
+residency series is device memory observed with `nvidia-smi`; it does not
+measure allocator allocated/reserved bytes or establish a leak conclusion.
+
 The v0.1.0 record includes source and package tests and serving checks on Ampere and ARM64 Blackwell. This page also provides matched plain/Uno comparison tools for evaluating another configuration.
 
 ## Public package checks

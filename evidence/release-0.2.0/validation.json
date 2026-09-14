@@ -1,0 +1,166 @@
+{
+  "schema": 1,
+  "release": "0.2.0",
+  "status": "BLOCKED",
+  "status_reason": [
+    "The strict greedy comparator found 0 of 4 256-token candidate outputs identical to the matched plain reference.",
+    "The monitored candidate emitted 3 Triton JIT compilation warnings during serving traffic after its startup self-check passed."
+  ],
+  "source": {
+    "implementation_head": "689b11a8cac0e6865786c41cc0d77afa6afaf885",
+    "upstream_base": "b87339888d29329c42c42573e34cc2beebdcc48b",
+    "final_tree": "b453f1bc02c9b2058a986a802aff18fcf194b20c",
+    "patch_sha256_lf": "9f5b5bb9b0f20d44b2821d5387dd77f093f0d3ed3afc164203080437540095cf"
+  },
+  "image": {
+    "platform": "linux/amd64",
+    "base_digest": "sha256:e3ab6a1f24248420800ceeede9f14e605e72f4e2ebd48a91821db8c07708e0f5",
+    "id": "sha256:7ad0c0201c3f5308f2788ca58089002367b8a106f2418e4f1441d4343b80c558",
+    "size_bytes": 9677234249,
+    "saved_tar_bytes": 9677281280,
+    "saved_tar_sha256": "d3f4b098e02c0122344981d20ebd8ca10b2bb06a70b9a7d7066d08f1f7fa76ac",
+    "build_receipt": "build-4.log",
+    "save_receipt": "save-image.log"
+  },
+  "profile": {
+    "model": "Qwen/Qwen3-8B",
+    "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "adapter": "s-sahoo/uno-qwen3-8B",
+    "adapter_revision": "8819e09ac901e7290d8d89d62c98b9f756c602fe",
+    "dtype": "bfloat16",
+    "attention": "FLASH_ATTN with FlashAttention 2",
+    "async_scheduling": true,
+    "prefix_caching": true,
+    "max_num_seqs": 32,
+    "num_speculative_tokens": 8,
+    "draft_row_bound": 256,
+    "capture_sizes": [1, 2, 4, 8, 16, 32, 64, 128, 144, 256]
+  },
+  "local_package_gates": {
+    "test_release_green": {
+      "exit_code": 0,
+      "tests": 13,
+      "receipt": "test-release-final-profile.log"
+    },
+    "test_release_inverted_base": {
+      "exit_code": 1,
+      "receipt": "test-release-inverted-final.log"
+    }
+  },
+  "reference": {
+    "status": "PASS",
+    "n": 256,
+    "sampled_max_tokens": 16,
+    "greedy_tokens": 256,
+    "plain_floor": "PASS",
+    "receipt": "reference/reference.json"
+  },
+  "candidate_comparison": {
+    "receipt": "candidate/verdict.json",
+    "greedy": {
+      "status": "FAIL",
+      "prompts": 4,
+      "matching_prompts": 0,
+      "tokens_per_prompt": 256,
+      "receipt": "candidate/greedy-compare.log"
+    },
+    "sampled_chunk1": {
+      "status": "PASS",
+      "n": 256,
+      "tests": 32,
+      "permutations": 5000,
+      "receipt": "candidate/sampled-compare.json"
+    },
+    "mixed_chunk8": {
+      "status": "PASS",
+      "n": 256,
+      "tests": 32,
+      "permutations": 5000,
+      "receipt": "candidate/mixed-compare.json"
+    },
+    "speculation_counters": {
+      "chunk1": {
+        "drafts": 768,
+        "draft_tokens": 6144,
+        "accepted_tokens": 2755
+      },
+      "combined": {
+        "drafts": 2739,
+        "draft_tokens": 21912,
+        "accepted_tokens": 8117
+      },
+      "receipt": "candidate/speculation-metrics.json"
+    }
+  },
+  "live_http": {
+    "status": "PASS",
+    "receipt": "live-check.json",
+    "health": "PASS",
+    "greedy": "PASS",
+    "sampled": "PASS",
+    "streaming": "PASS",
+    "shared_prefix": "PASS",
+    "c8": {
+      "requested": 8,
+      "completed": 8
+    },
+    "c32": {
+      "requested": 32,
+      "completed": 32
+    },
+    "prefix_cache_convention": {
+      "state": "cold_validation_only",
+      "requests_before_shared_prefix": ["health", "greedy", "sampled", "streaming"],
+      "comparison_cell": false
+    },
+    "speculation_delta": {
+      "drafts": 45,
+      "draft_tokens": 360,
+      "accepted_tokens": 70
+    }
+  },
+  "capture_and_jit": {
+    "final_c32_capture": "PASS",
+    "final_graph_replay": "PASS",
+    "startup_self_check": "PASS",
+    "startup_self_check_compilations": 0,
+    "serving_compilations": 3,
+    "serving_compilation_status": "FAIL",
+    "serving_compilation_kernels": [
+      "_compute_local_logits_stats_kernel",
+      "_rejection_kernel",
+      "_resample_kernel"
+    ],
+    "receipt": "candidate-server.log"
+  },
+  "residency": {
+    "samples": 8,
+    "updates_per_sample": 1,
+    "device_memory_mib": 20698,
+    "device_total_mib": 24576,
+    "training_loop": false,
+    "torch_cuda_allocated_collected": false,
+    "torch_cuda_reserved_collected": false,
+    "conclusion": "Device residency was observed across real server updates; allocator and retained-tensor conclusions are not supported."
+  },
+  "source_fixture": {
+    "classification": "CPU_OBSERVED/CUDA_UNVERIFIED",
+    "executed_by_this_lane": false,
+    "reason_not_promoted": "The release device receipts, rather than mocked CPU fixtures, are the CUDA evidence.",
+    "full_chunk_fixture": "tests/v1/spec_decode/test_uno_mrv2.py::test_uno_startup_jit_self_check_reports_compile_without_forcing_warn_abort",
+    "production_shape_fixture": "tests/v1/spec_decode/test_uno_mrv2.py::test_uno_startup_jit_self_check_uses_the_production_k8_batch_shape",
+    "draft_shape_fixture": "tests/v1/spec_decode/test_uno_mrv2.py::test_draft_dispatch_pads_up_to_the_next_captured_size"
+  },
+  "known_red": {
+    "mutation": "wrong Uno adapter revision with offline hub access",
+    "inner_exit_code": 1,
+    "wrapper_exit_code": 0,
+    "receipt": "wrong-adapter-known-red.log"
+  },
+  "reporting_scope": {
+    "performance_cells": false,
+    "ratios_reported": false,
+    "repeat_median_range_reported": false,
+    "reason": "The run is a functional, correctness, capacity, and residency validation only."
+  }
+}
