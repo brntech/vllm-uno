@@ -1,10 +1,10 @@
 {
   "base_commit": "b87339888d29329c42c42573e34cc2beebdcc48b",
-  "final_tree": "b453f1bc02c9b2058a986a802aff18fcf194b20c",
+  "final_tree": "6ceef9dfa043d9a2d3f930522ecc7480105aa5a7",
   "patches": [
     {
       "file": "0001-uno-vllm.patch",
-      "sha256_lf": "9f5b5bb9b0f20d44b2821d5387dd77f093f0d3ed3afc164203080437540095cf",
+      "sha256_lf": "447acf006163385ec2b1d902f9cff1e04c60b7e8dac001941f1130164262e382",
       "files": [
         ".buildkite/test_areas/spec_decode.yaml",
         "docs/features/speculative_decoding/README.md",
