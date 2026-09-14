@@ -113,6 +113,12 @@ class ReleaseTests(unittest.TestCase):
         for retired in ("uno_graph", "uno_replay", "uno_overlap", "uno_fold"):
             self.assertNotIn(retired, launcher)
 
+    def test_dockerfile_reconstructs_from_the_pinned_ci_workspace(self):
+        dockerfile = (ROOT / "release/Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("git clone --shared --no-checkout /vllm-workspace", dockerfile)
+        self.assertIn("checkout --detach b87339888d29329c42c42573e34cc2beebdcc48b", dockerfile)
+        self.assertNotIn("https://github.com/vllm-project/vllm.git", dockerfile)
+
     def test_missing_asset_refused(self):
         (self.root / "release/assets.json").write_text(json.dumps(["missing.md"]))
         with mock.patch.object(bundle, "ROOT", self.root):

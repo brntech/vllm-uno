@@ -12,9 +12,10 @@ LABEL org.opencontainers.image.title="Uno for vLLM" \
       ai.uno.upstream.commit="b87339888d29329c42c42573e34cc2beebdcc48b"
 # build.sh supplies only files named in release/assets.json.
 COPY . .
-# Preserve the upstream compiled libraries and matching dependencies.
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/* \
+# The CI image embeds the exact source repository at its build commit. Clone
+# locally from it so an image build never contacts GitHub or guesses a source.
+RUN git clone --shared --no-checkout /vllm-workspace /opt/uno-vllm-source \
+    && git -C /opt/uno-vllm-source -c core.autocrlf=false checkout --detach b87339888d29329c42c42573e34cc2beebdcc48b \
     && python3 release/stack.py apply /opt/uno-vllm-source \
     && python3 release/stack.py overlay /opt/uno-vllm-source \
     && rm -rf /opt/uno-vllm-source
