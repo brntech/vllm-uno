@@ -25,12 +25,8 @@ the same finite-B correction as p, not factor*floor. New summaries include it
 even without --floor. --min-count affects only reported merged support size;
 sparse categories remain in the permutation test.
 
-Inputs require equal sampling configs (except mixed_greedy), equal client CHUNK, prefix token IDs,
-and nonempty equal sample counts. The chunk is compared separately from the other config keys and refused
-by name when it differs, because the client's chunking is otherwise invisible and changes the measured
-distribution on its own (plain chunk 1 against plain chunk 32 on one server is red 35 of 36). A floor
-summary that declares its own chunk must match the pair being compared. Records written before the chunk
-field existed declare none and compare only with each other. Candidate subsets of reference prefixes are
+Inputs require equal sampling configs (except mixed_greedy), prefix token IDs,
+and nonempty equal sample counts. Candidate subsets of reference prefixes are
 allowed for legacy --only callers; m uses that subset. No candidate extras.
 CPU only: NumPy multivariate-hypergeometric counts have exactly the same label
 randomization law as shuffling pooled observations, without Python token loops.
@@ -138,12 +134,10 @@ def joint_at(samples, t):
 
 
 def _comparisons(A, B, joint, min_count):
-    cfg_a = {k: v for k, v in A["config"].items() if k not in ("mixed_greedy", "chunk")}
-    cfg_b = {k: v for k, v in B["config"].items() if k not in ("mixed_greedy", "chunk")}
+    cfg_a = {k: v for k, v in A["config"].items() if k != "mixed_greedy"}
+    cfg_b = {k: v for k, v in B["config"].items() if k != "mixed_greedy"}
     if cfg_a != cfg_b:
         raise ValueError(f"sampling configs differ: {cfg_a} vs {cfg_b}")
-    if A["config"].get("chunk") != B["config"].get("chunk"):
-        raise ValueError(f"sampling chunk differs: {A['config'].get('chunk')} vs {B['config'].get('chunk')}")
     T = cfg_a["max_tokens"]
     if not isinstance(T, int) or T < 1:
         raise ValueError("max_tokens must be a positive integer")
@@ -206,8 +200,6 @@ def compare_runs(A, B, *, alpha=0.01, permutations=None, floor=None,
     if floor is not None:
         # Legacy floors have no sample/config metadata. Preserve their per-kind
         # diagnostic threshold without presenting it as a calibrated null.
-        if floor.get("chunk") is not None and floor["chunk"] != A["config"].get("chunk"):
-            raise ValueError(f"floor chunk differs: {floor['chunk']} vs {A['config'].get('chunk')}")
         for r in floor["rows"]:
             if r["smoke"]:
                 continue
@@ -236,7 +228,6 @@ def compare_runs(A, B, *, alpha=0.01, permutations=None, floor=None,
     tv_exceedances = [r for r in rows if r["tol"] is not None and r["tv"] > r["tol"]]
     fails_tv = tv_exceedances if strict_tv else []
     return {"verdict": "FAIL" if fails_p or fails_tv else "PASS", "tests": m,
-            "chunk": A["config"].get("chunk"),
             "alpha": alpha, "alpha_bonferroni": alpha_b, "permutations": budget,
             "min_attainable_p": 1 / (budget + 1),
             "tail_grid_steps": alpha_b * (budget + 1), "seed": seed,

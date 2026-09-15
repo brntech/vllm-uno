@@ -7,6 +7,11 @@ n samples per prefix, T generated tokens each, token ids recorded per sample. Ru
 again for the noise floor, two-pass Uno, Uno with UNO_DEBUG_DRAFT_JUNK, fused ...) and compare with
 lossless_spec_compare.py, which tests every position separately (never pooled).
 
+--chunk is recorded in the run's config beside n and the sampling parameters, and the comparators refuse a
+pair whose declared chunks differ: one arm's chunk change alone moves the measured distribution (plain chunk 1
+against plain chunk 32 on one server is red 35 of 36), so a chunk is part of the comparison convention, not a
+transport detail. Records written before the field existed declare no chunk and compare only with each other.
+
 Prefix set (gates/prefixes_spec.json): a near-deterministic counting prefix (drafts accept almost always),
 a math and a prose chat prefix (mixed), plus the same math prefix under a forced all-reject server
 (UNO_DEBUG_DRAFT_JUNK) — the regime is reported from /metrics acceptance per prefix.
@@ -108,7 +113,7 @@ if a.only:
 if not prefixes:
     raise SystemExit("no prefixes selected")
 out = {"config": {"n": a.n, "max_tokens": a.max_tokens, "temperature": 1.0, "top_p": 0.95, "top_k": 50,
-                  "mixed_greedy": a.mixed_greedy}, "prefixes": {}}
+                  "chunk": a.chunk, "mixed_greedy": a.mixed_greedy}, "prefixes": {}}
 bg = None
 if a.mixed_greedy:
     bg = threading.Thread(target=greedy_stream, args=(tokenize(prefixes[-1]["text"]),), daemon=True)

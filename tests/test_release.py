@@ -198,6 +198,41 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bundle.assets()
 
+    def comparator(self):
+        spec = importlib.util.spec_from_file_location(
+            "lossless_spec_compare", ROOT / "gates" / "lossless_spec_compare.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def sampled_record(self, chunk):
+        return {
+            "config": {"n": 4, "max_tokens": 2, "temperature": 1.0, "top_p": 0.95,
+                       "top_k": 50, "chunk": chunk, "mixed_greedy": False},
+            "prefixes": {"p": {
+                "ids": [1, 2],
+                "samples": [[1, 1], [1, 2], [2, 1], [2, 2]],
+            }},
+        }
+
+    def test_comparator_refuses_a_chunk_mismatch(self):
+        module = self.comparator()
+        with self.assertRaisesRegex(ValueError, "sampling chunk differs: 1 vs 32"):
+            module.compare_runs(self.sampled_record(1), self.sampled_record(32))
+        verdict = module.compare_runs(self.sampled_record(1), self.sampled_record(1))
+        self.assertIn(verdict["verdict"], ("PASS", "FAIL"))
+        self.assertEqual(verdict["chunk"], 1)
+
+    def test_comparator_refuses_a_floor_from_another_chunk(self):
+        module = self.comparator()
+        floor = module.compare_runs(self.sampled_record(32), self.sampled_record(32))
+        floor["chunk"] = 32
+        with self.assertRaisesRegex(ValueError, "floor chunk differs: 32 vs 1"):
+            module.compare_runs(self.sampled_record(1), self.sampled_record(1), floor=floor)
+        floor["chunk"] = 1
+        verdict = module.compare_runs(self.sampled_record(1), self.sampled_record(1), floor=floor)
+        self.assertEqual(verdict["chunk"], 1)
+
     def test_archive_is_deterministic_and_complete(self):
         self.override.stop()
         for name in ("first.tar.gz", "second.tar.gz"):

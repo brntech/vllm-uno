@@ -11,6 +11,7 @@
   "docs/validation.md",
   "gates/compare.py",
   "gates/golden.py",
+  "gates/lossless_floor.py",
   "gates/lossless_spec.py",
   "gates/lossless_spec_compare.py",
   "gates/prefixes_spec.json",
