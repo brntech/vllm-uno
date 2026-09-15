@@ -1,8 +1,10 @@
 # Uno for vLLM
 
-**v0.2.0** is the validated Model Runner V2 release kit for Uno on vLLM
-`b87339888d29329c42c42573e34cc2beebdcc48b`. It is ready for the maintainer's
-tag, registry push, and release publication steps recorded in this repository.
+**v0.3.0** is the validated Model Runner V2 release kit for Uno on vLLM
+`00972dfd72988942138a7a6089eaee08580210b8`. It ships two validated serving
+profiles: Qwen3-8B BF16 at `K=8` and Gemma 4 26B A4B AWQ at `K=4`. It is ready
+for the maintainer's tag, registry push, and release publication steps recorded
+in this repository.
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter
 through vLLM's OpenAI-compatible server. The integration provides a native
@@ -13,13 +15,17 @@ This repository is an independent community implementation by the BroadNet
 Research Team. The Uno method and trained adapters are the work of IFM and the
 [Uno authors](https://arxiv.org/abs/2609.04010).
 
-## Supported profile
+## Supported profiles
 
-The v0.2.0 production shape is the PR's measured nine-cell shape:
+Both profiles run on one NVIDIA GPU under Linux AMD64 and share the same
+digest-pinned base image; this release does not ship ARM64.
 
-- Linux AMD64 on one NVIDIA GPU; this release does not ship ARM64.
-- Model Runner V2 source head `5da193919b44335ddf14eac193dfc9e8d5e59df5`
-  on the pinned vLLM base `b87339888d29329c42c42573e34cc2beebdcc48b`.
+**Qwen3-8B (default, `UNO_PROFILE=qwen3`)** is the PR's measured nine-cell
+shape:
+
+- Model Runner V2 source base `3ad49350281a6b73de58449aadb293a8b398fb5d`
+  (the v0.2.0 release content) with the Gemma 4 layer
+  `cf87916880b051e8782521dfe2afa12e0627e172` on top.
 - `Qwen/Qwen3-8B` in BF16 and the pinned
   [`s-sahoo/uno-qwen3-8B`](https://huggingface.co/s-sahoo/uno-qwen3-8B)
   adapter, with `K=8` speculative tokens.
@@ -30,30 +36,58 @@ The v0.2.0 production shape is the PR's measured nine-cell shape:
   default.
 - CUDA graph capture sizes `[1,2,4,8,16,32,64,128,144]`.
 
+**Gemma 4 26B A4B (`UNO_PROFILE=gemma4`)** serves a language-only,
+sliding-window MoE model with `K=4` speculative tokens:
+
+- `cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit` (AWQ 4-bit) with a trained Uno
+  adapter, `--language-model-only`, `TRITON_ATTN`, and the base image's
+  Marlin MoE kernels.
+- `--max-num-seqs 4`, `--max-num-batched-tokens 2048`,
+  `--max-model-len 8192`, `--gpu-memory-utilization 0.85`, and capture sizes
+  `[1,2,3,4,5,6,7,8,13,14,15,16]` covering the 16-draft-row bound
+  (`4 sequences * K=4`).
+- `UNO_GEMMA_SPLITKV=1` opts into split-KV draft attention;
+  `UNO_DRAFT_MOE_TOPK=4` opts into top-4 draft MoE routing under captured
+  graphs and refuses any serving shape it did not capture.
+
 The digest-pinned per-commit base image is AMD64-only. An ARM64 image follows
-when vLLM publishes a release image containing this base; `v0.29.1rc0` is 53
-commits past it and has no image.
+when vLLM publishes a release image containing this base.
 
 ## Container
 
 After the maintainer publishes the release, pull the AMD64 image:
 
 ```bash
-docker pull ghcr.io/brntech/vllm-uno:0.2.0
+docker pull ghcr.io/brntech/vllm-uno:0.3.0
 ```
 
 Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured
 with the NVIDIA Container Toolkit. The validated Qwen3-8B profile ran on a
-24 GiB RTX 3090. Allow space for the CUDA image and model cache.
+24 GiB RTX 3090, and so did the Gemma 4 26B A4B profile. Allow space for the
+CUDA image and model cache.
 
-Start the server with a named Hugging Face cache and a loopback-only API:
+Start the default Qwen3-8B server with a named Hugging Face cache and a
+loopback-only API:
 
 ```bash
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.2.0 \
+  ghcr.io/brntech/vllm-uno:0.3.0 \
   Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B
+```
+
+For Gemma 4, mount the model cache and the adapter directory and select the
+gemma4 profile:
+
+```bash
+docker run --rm --name vllm-uno-gemma --gpus all --ipc=host \
+  -p 127.0.0.1:8000:8000 \
+  -v /path/to/hf-cache:/root/.cache/huggingface \
+  -v /path/to/export-step1900:/adapter:ro \
+  -e UNO_PROFILE=gemma4 -e UNO_GEMMA_SPLITKV=1 \
+  ghcr.io/brntech/vllm-uno:0.3.0 \
+  cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter
 ```
 
 When `/health` is ready, send an OpenAI-compatible request:
@@ -74,13 +108,14 @@ From the checked-out release tag, audit and build the supported AMD64 image:
 
 ```bash
 python3 release/stack.py audit
-PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.2.0
+PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.3.0
 ```
 
 The build starts from the digest-pinned CI image containing the exact base
-repository, checks out the pinned commit locally inside that image, and overlays
-only the verified Python source. It preserves the base image's compiled CUDA
-libraries and does not clone vLLM from GitHub during the image build.
+repository, checks out the pinned commit locally inside that image, applies the
+ordered two-layer patch series, and overlays only the verified Python source. It
+preserves the base image's compiled CUDA libraries and does not clone vLLM from
+GitHub during the image build.
 
 ## Upstream contribution
 
@@ -105,21 +140,26 @@ H100 and GB10; output is lossless and first-token latency is level with plain.
 The tables and receipts are in the PR description. The PR is open and not yet
 merged.
 
+The Gemma 4 26B A4B port carried by this release is developed in a fork of that
+work and is published here; proposing it upstream is a separate step and is not
+claimed by this release. Its draft-scope limits are stated in the release notes
+and in [docs/validation.md](docs/validation.md).
+
 ## Validation
 
-The release record identifies the exact image, source patch, RTX 3090 checks,
-and test receipts. See [docs/validation.md](docs/validation.md) and the concise
-[v0.2.0 lane record](docs/lanes/release-0.2.0.md). The default verifier uses
-sampled-distribution and mixed-chunk gates.
+The release record identifies the exact image, source patch series, and the
+RTX 3090 checks for both profiles. See [docs/validation.md](docs/validation.md)
+and the concise [v0.3.0 lane record](docs/lanes/release-0.3.0.md). The default
+verifier uses sampled-distribution and mixed-chunk gates.
 
 ## Repository map
 
-- [`patch/`](patch/) - consolidated patch against the pinned vLLM commit
+- [`patch/`](patch/) - ordered patch series against the pinned vLLM commit
 - [`release/stack.py`](release/stack.py) - audit and source assembly
 - [`release/apply.sh`](release/apply.sh) - apply or verify the patch in an
   exact-base checkout
 - [`release/build.sh`](release/build.sh) - build the supported AMD64 image
-- [`release/serve.sh`](release/serve.sh) - launch the supported profile
+- [`release/serve.sh`](release/serve.sh) - launch a validated serving profile
 - [`release/verify.sh`](release/verify.sh) - capture plain-reference and Uno
   candidate evidence
 - [`release/check.py`](release/check.py) - standard-library package checks

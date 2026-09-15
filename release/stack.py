@@ -15,7 +15,7 @@ import sys
 import uuid
 
 HERE = Path(__file__).resolve().parent
-BASE = "b87339888d29329c42c42573e34cc2beebdcc48b"
+BASE = "00972dfd72988942138a7a6089eaee08580210b8"
 
 
 @contextmanager
@@ -136,7 +136,7 @@ def overlay(source):
     dist = importlib.metadata.distribution("vllm")
     version = dist.version
     package = Path(dist.locate_file("vllm")).resolve()
-    # b87339888 is the build's SCM version, not a tag guessed from its date.
+    # 00972dfd7 is the build's SCM version, not a tag guessed from its date.
     import vllm
     commit = getattr(vllm, "__commit__", None)
     if not (re.search(r"(?:\+|\.)g" + BASE[:8] + r"[0-9a-f]*(?:\.|$)", version)

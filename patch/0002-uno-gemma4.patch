@@ -1,0 +1,4052 @@
+diff --git a/tests/v1/spec_decode/UNO_DRAFT_GUARD_CALL_SITES.md b/tests/v1/spec_decode/UNO_DRAFT_GUARD_CALL_SITES.md
+new file mode 100644
+index 0000000000..b2b098c80a
+--- /dev/null
++++ b/tests/v1/spec_decode/UNO_DRAFT_GUARD_CALL_SITES.md
+@@ -0,0 +1,125 @@
++# Uno draft-guard call sites
++
++Every call of `execute_model`, `sample_tokens`, `_run_speculator_proposal` and
++`propose(`, and every reader of `dummy_run` / `is_profile`, under
++`vllm/v1/worker/` (both runner versions). Derived from a sweep of the tree at
++revision `e37f4cff33`, the parent of the commit that carries it: the commit
++whose subject is `docs(uno): inventory the draft-guard call sites and correct
++two test comments`, which adds this file. An earlier copy of this inventory was
++untracked, so this is the first committed copy; it is not evidence that
++predates the changes it accompanies.
++
++The sweep was re-run at revision `debaebb531` to add the reader sites an
++earlier copy had omitted, so the selectors below span every hit of the sweep
++except the occurrences named here as non-readers. The sweep matches the
++identifiers rather than only their reads, so it also returns the
++`maybe_dummy_run_with_lora` helper and the V1 call of it
++(`lora_model_runner_mixin.py:253`, `gpu_model_runner.py:6105`), the V1
++drafter's own `dummy_run` calls (`gpu_model_runner.py:4688,4765,6225`) and
++prose in docstrings, comments and error text; none of them reads either flag,
++so none carries a row.
++
++Legend for the last column: can `UnoSpeculator.propose` reach
++`refuse_uncaptured_eager_draft`
++(`vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py:638`) with **both** flags
++false?
++
++The refusal is reachable only from the eager branch of `UnoSpeculator.propose`
++(`vllm/v1/worker/gpu/spec_decode/uno.py:1007`). `propose` has exactly two
++callers, both in the V2 runner (`vllm/v1/worker/gpu/model_runner.py:944` and
++`:1274`). `:944` hard-codes `dummy_run=True`. So the only path that can carry
++both flags false is `:1274` (`_run_speculator_proposal`), and it carries
++whatever the executing pass wrote into `ExecuteModelState` at
++`gpu/model_runner.py:2332-2333`. Those values come from `execute_model`'s own
++kwargs, which the worker supplies.
++
++Row count: **A: 9 + B: 8 + C: 2 + D: 4 + E: 19 = 42 rows**, unchanged by the
++re-sweep: the readers it added extend existing rows rather than adding rows.
++
++## A. `execute_model` call sites
++
++| # | site (file:line) | call | runner | flags passed | Uno refusal reachable with both false? |
++| --- | --- | --- | --- | --- | --- |
++| A1 | `vllm/v1/worker/worker_base.py:375` | `self.worker.execute_model(scheduler_output)` | both | none (`is_profile=False`, `dummy_run=False`) | yes, intended SERVING path (an uncaptured shape under the top-k variant is refused by design) |
++| A2 | `vllm/v1/worker/gpu_worker.py:817-821` | `warmup_kernels(self.model_runner, self._discarded_startup_forward(), self.sample_tokens)` | V2 only (`gpu_worker.py:811`) | `is_profile=True` via the helper | no — exempt by `is_profile` |
++| A3 | `vllm/v1/worker/gpu_worker.py:948-952` | `run_uno_served_jit_self_check(self.model_runner, self._discarded_startup_forward(), self.sample_tokens)` | both (V1 returns early: not a `UnoSpeculator`) | `is_profile=True` via the helper | no — exempt by `is_profile` |
++| A4 | `vllm/v1/worker/gpu_worker.py:1246-1250` | `pass_state = {"is_profile": is_profile} if self.use_v2_model_runner else {}`, then `self.model_runner.execute_model(scheduler_output, intermediate_tensors, **pass_state)` | V1 + V2 shared | V2: the worker's `is_profile` (default `False`); V1: none | V2: yes, the serving transport; V1: no Uno speculator exists |
++| A5 | `vllm/v1/worker/gpu/model_runner.py:889-897` | V2 `_dummy_run` calls `self.execute_model(..., dummy_run=True, skip_attn_for_dummy_run=skip_attn, is_profile=is_profile, ...)` | V2 | `dummy_run=True` | no — exempt by `dummy_run` |
++| A6 | `vllm/v1/worker/gpu/warmup.py:458,461,463` (mixed prefill+decode) and `:811,871,909` (kernel warmup) | invokes the injected `worker_execute_model` | both | inherited from the callable handed in | no for the A2/A3 handlers (both are the marked helper); the other caller is A9 |
++| A7 | `vllm/v1/worker/gpu_model_runner.py:4187` | V1 `def execute_model(self, scheduler_output, intermediate_tensors=None)` — no `is_profile`/`dummy_run` parameters | V1 | n/a | n/a — V1 has no Uno speculator |
++| A8 | `vllm/v1/worker/mm_encoder_model_runner.py:94-102` | encoder-only `def execute_model(..., dummy_run=False, skip_attn_for_dummy_run=False, is_profile=False)`, asserts `not dummy_run` | encoder-only | n/a | no — encoder-only, no speculator |
++| A9 | `vllm/model_executor/warmup/flashinfer_sparse_mla_warmup.py:169-172,183-186,275-278` | `run_mixed_prefill_decode_warmup(..., worker.execute_model, worker.sample_tokens, ...)` (outside `vllm/v1/worker/`) | V2, backend-gated | none | no — DeepSeek sparse-MLA / SM120 models only, never the Uno Gemma path |
++
++## B. `sample_tokens` call sites
++
++| # | site (file:line) | call | flags passed | note |
++| --- | --- | --- | --- | --- |
++| B1 | `vllm/v1/worker/worker_base.py:177-180` | abstract protocol | none | `sample_tokens` carries no flags; the pass classification lives in `execute_model`/`ExecuteModelState` |
++| B2 | `vllm/v1/worker/gpu_worker.py:1176-1179` | `self.model_runner.sample_tokens(grammar_output)` | none | forwarding; V2 reads the classification from state (B8) |
++| B3 | `vllm/v1/worker/gpu_worker.py:820` | `self.sample_tokens` handed to `warmup_kernels` (A2) | none | flags already on the execute side |
++| B4 | `vllm/v1/worker/gpu_worker.py:951` | `self.sample_tokens` handed to the startup JIT self-check (A3) | none | flags already on the execute side |
++| B5 | `vllm/v1/worker/gpu/warmup.py:459,462,829,872` | invokes the provided sample callable | none | mixed warmup + kernel warmup |
++| B6 | `vllm/v1/worker/gpu/warmup.py:591-596` | `counted_sample_tokens` counts the call, then `return worker_sample_tokens(grammar_output)` | none | the counted forwarding the startup JIT self-check runs |
++| B7 | `vllm/v1/worker/gpu_model_runner.py:4566` (V1) | `def sample_tokens`; reads the V1 `ExecuteModelState` at `:4591` | none | V1 state has no `dummy_run`/`is_profile` fields |
++| B8 | `vllm/v1/worker/gpu/model_runner.py:2351-2372` (V2) | `def sample_tokens`; reads `dummy_run`/`is_profile` at `:2371-2372`; forwards at `:2536-2537` | from `ExecuteModelState` | the V2 transport a startup proposal depends on |
++
++## C. `_run_speculator_proposal`
++
++| # | site (file:line) | flags passed | note |
++| --- | --- | --- | --- |
++| C1 | `vllm/v1/worker/gpu/model_runner.py:1245-1258` | definition: `dummy_run=False, is_profile=False` parameters | |
++| C2 | `vllm/v1/worker/gpu/model_runner.py:2526-2538` | `dummy_run=dummy_run, is_profile=is_profile` read from `ExecuteModelState` at `:2371-2372`, written by `execute_model` at `:2332-2333` | the ONLY call; the sole carrier of both-flags-false into `propose` |
++
++## D. `propose(` call sites
++
++| # | site (file:line) | flags passed | Uno refusal reachable? |
++| --- | --- | --- | --- |
++| D1 | `vllm/v1/worker/gpu/model_runner.py:944-965` (V2 `_dummy_run`) | `dummy_run=True, skip_attn_for_dummy_run=skip_attn, is_profile=is_profile` | no — exempt by `dummy_run` |
++| D2 | `vllm/v1/worker/gpu/model_runner.py:1274-1290` (via C2) | `dummy_run=dummy_run, is_profile=is_profile` from the executing pass | yes iff that pass was serving (both false) and its shape is uncaptured |
++| D3 | `vllm/v1/worker/gpu_model_runner.py:5042,5051,5076,5098,5125,5143,5277` (V1 `self.drafter.propose`) | no `dummy_run`/`is_profile` kwargs | no — V1 drafter, Uno V2 speculator absent |
++| D4 | definitions: `gpu/spec_decode/speculator.py:67`, `autoregressive/speculator.py:204`, `dflash/speculator.py:301`, `extract_hidden_states.py:88`, `multi_module_mtp/speculator.py:132`, `uno.py:928` | signatures vary | only `uno.py:928` contains the guard |
++
++## E. Readers of `dummy_run` / `is_profile` in `vllm/v1/worker/`
++
++| # | site (file:line) | consumption | both-false consequence |
++| --- | --- | --- | --- |
++| E1 | `gpu_worker.py:973-987` (`_discarded_startup_forward`) | returns `partial(self.execute_model, is_profile=True)` | the mark that keeps A2/A3 out of the refusal, for both runner versions |
++| E2 | `gpu_worker.py:1184` (parameter), `:1246` (keyword built), `:1248-1250` (forward) | worker→runner transport | the transport every pass shares |
++| E3 | `gpu/model_runner.py:1961-1965` (V2 `execute_model` parameters), used at `:1995-1997,2010,2028,2032,2047,2081-2089,2090,2112,2135,2137,2144,2161,2170,2215,2313,2332-2333` | `dummy_run` gating of request state / inputs / attention; `is_profile` forces eager dispatch (`:2028`) and drops Mamba groups from profile attention (`:2144`); a non-first PP rank slices its persistent intermediate tensors on a dummy pass, where the serving pass copies the executing pass's own in (`:2215`) | a serving pass is (correctly) both false |
++| E4 | `gpu/model_runner.py:1968-1981` | `if not dummy_run:` updates, adds, frees and applies request-state writes, then returns an empty output early when no token is scheduled (`:1976-1981`) | a dummy pass mutates no request state, and the early return precedes any proposal |
++| E5 | `gpu/model_runner.py:1544-1559` (`gather_batch_req_state(..., dummy_run)`) | the `dummy_run` branch at `:1555-1559` returns uniform CPU state immediately | dummy passes never gather real per-request state |
++| E6 | `gpu/model_runner.py:2712-2716` (`ExecuteModelState` fields) | state carried `execute_model`→`sample_tokens` | the values B8 and C2 read back |
++| E7 | `gpu/model_runner.py:829-841,881-897,944-965` (V2 `_dummy_run`), callers `:1126-1128` (`profile_run`), `:1207` (draft-kernel warmup), `:1378` (adaptive-verification batches) | classifies its own pass (`dummy_run=True`) and forwards its `is_profile`; the memory profile passes `skip_attn=True, is_profile=True` | never both false |
++| E8 | `gpu_worker.py:804,914-918,1353-1355` | `_dummy_run` callers: weight warmup, V1 sampler warmup, `execute_dummy_batch` | internal `dummy_run` classification; not a V2 proposal path |
++| E9 | `gpu/eplb_utils.py:21-32,115-128` | `is_dummy`/`is_profile` EPLB gating | not a proposal path |
++| E10 | `gpu/lora_utils.py:39-50` | `get_num_active_loras_for_dispatch(..., dummy_run)` | picks the effective-LoRA case dispatch resolves; not a proposal path |
++| E11 | `gpu/spec_decode/autoregressive/speculator.py:226-229,301,336,367,385` | `is_profile`→eager (`:301,367`); `dummy_run`→skip the PCP block-table gather (`:336`) and, with `skip_attn_for_dummy_run`, the multi-step decode's attention (`:385`) | upstream speculator, not Uno |
++| E12 | `gpu/spec_decode/dflash/speculator.py:323-326,348,369,414,442` | same pattern; `dummy_run`→skip the PCP block-table gather (`:369`) and the context-KV store, whose slots stay unset while the block tables are placeholders (`:414`) | upstream speculator, not Uno |
++| E13 | `gpu/spec_decode/extract_hidden_states.py:102-105,114,116,120` | forwards both (`:114,116`); `skip_attn_for_dummy_run` gates the skip (`:120`) | upstream speculator, not Uno |
++| E14 | `gpu/spec_decode/multi_module_mtp/speculator.py:154-157,201,209` | `is_profile`→eager (`:201`), `dummy_run`→skip (`:209`) | upstream speculator, not Uno |
++| E15 | `gpu/spec_decode/speculator.py:89-92` | base signature | framework |
++| E16 | `gpu/spec_decode/uno.py:942-945` (params), `:952,981,988,1001,1008-1009,1027` | `dummy_run and skip_attn_for_dummy_run` early-returns before the guard; `is_profile` forces an eager descriptor; `warmup=dummy_run or is_profile` exempts the guard | the guard under check |
++| E17 | `gpu_model_runner.py:5850,5858,5963,6251,6523-6525,6951,6972` (V1 `_dummy_run` and `_warmup_and_capture`) | V1 dummy/profile classification; no proposal forwarding | V1 has no Uno speculator |
++| E18 | `gpu_model_runner.py:3406-3417` (V1 `eplb_step`), `:4248` (empty DP batch) | `is_profile`; `self._dummy_run(1)` | not a proposal path |
++| E19 | `mm_encoder_model_runner.py:76,98-103` | encoder-only | no Uno |
++
++## What the fixes are checked against
++
++1. **The shared worker forward.** A4/E2 is the only transport into
++   `model_runner.execute_model`, and it is shared by V1 and V2. V1's
++   `execute_model` (A7) has no `is_profile` parameter, so the keyword is sent
++   only on the V2 branch, which leaves the V1 call contract byte-identical.
++2. **The startup mark.** The only `propose` path that can arrive with both
++   flags false from startup is D2 fed by A3/E1. A2/A5/D1 are already marked,
++   and A3 uses the same helper as A2. V1 cannot reach it (Uno is V2-only and
++   the self-check returns early), so the mark is safe for both runners. A
++   serving proposal is still unmarked and still refused by name.
++3. **The receipt and the refusal.** `dispatch`
++   (`vllm/v1/worker/gpu/cudagraph_utils.py:570`) resolves through
++   `resolve_dispatch` (`:512`), which applies padding (via `_candidates`), the
++   effective-LoRA case and the `_graphs_captured` condition.
++   `captured_dispatch_keys` (`:500`) enumerates that same padded key space and
++   is empty before capture, `key_is_covered` (`:545`) calls the same
++   resolution, and the startup receipt
++   (`vllm/v1/worker/gpu/spec_decode/uno.py:840`) reports its keys, so the key a
++   receipt advertises is the key dispatch consults and the key a refusal names.
+diff --git a/tests/v1/spec_decode/test_triton_uno_splitkv.py b/tests/v1/spec_decode/test_triton_uno_splitkv.py
+new file mode 100644
+index 0000000000..0823b4c7f2
+--- /dev/null
++++ b/tests/v1/spec_decode/test_triton_uno_splitkv.py
+@@ -0,0 +1,273 @@
++# SPDX-License-Identifier: Apache-2.0
++# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++"""CPU admission tests for the guarded Gemma Uno splitKV attention path.
++
++The tests extract the two small admission helpers from the source tree.  They
++exercise the real shape, mask, and scratch predicates without importing Triton
++or compiling a CUDA kernel; GPU numerical and graph tests remain in the
++attention probe.
++"""
++
++from __future__ import annotations
++
++import ast
++import os
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++import torch
++
++SOURCE = Path(
++    os.environ.get("VLLM_UNO_SOURCE_ROOT", Path(__file__).resolve().parents[3])
++)
++
++
++def _load_functions(relative_path: str, names: set[str]) -> dict[str, object]:
++    tree = ast.parse((SOURCE / relative_path).read_text(encoding="utf-8"))
++    selected: list[ast.stmt] = [
++        node
++        for node in tree.body
++        if (
++            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
++            and node.name in names
++        )
++        or (
++            isinstance(node, ast.Assign)
++            and any(
++                isinstance(target, ast.Name) and target.id == "NUM_PAR_SOFTMAX_SEGMENTS"
++                for target in node.targets
++            )
++        )
++    ]
++    namespace = {
++        "os": os,
++        "torch": torch,
++        "KVQuantMode": SimpleNamespace(NONE=object()),
++    }
++    exec(
++        compile(ast.Module(body=selected, type_ignores=[]), relative_path, "exec"),
++        namespace,
++    )
++    return {name: namespace[name] for name in names}
++
++
++@pytest.fixture(scope="module")
++def static_width():
++    return _load_functions(
++        "vllm/v1/attention/backends/triton_attn.py",
++        {"_uno_static_query_width"},
++    )["_uno_static_query_width"]
++
++
++@pytest.fixture(scope="module")
++def admission():
++    return _load_functions(
++        "vllm/v1/attention/ops/triton_unified_attention.py",
++        {"_uno_splitkv_env_enabled", "_uno_gemma_splitkv_admissible"},
++    )
++
++
++def _static_kwargs(**overrides):
++    kwargs = dict(
++        use_uno=True,
++        num_reqs=1,
++        num_actual_tokens=4,
++        max_query_len=4,
++        query_start_loc_cpu=torch.tensor([0, 4], dtype=torch.int32),
++        causal=True,
++        uno_custom_mask=None,
++        mm_req_doc_ranges=None,
++        rswa_prefix_lens=None,
++    )
++    kwargs.update(overrides)
++    return kwargs
++
++
++def test_static_width_accepts_only_host_validated_c1_layout(static_width):
++    assert static_width(**_static_kwargs()) == 4
++    assert static_width(**_static_kwargs(use_uno=False)) is None
++    assert static_width(**_static_kwargs(num_reqs=2)) is None
++    one_query = dict(
++        max_query_len=1,
++        num_actual_tokens=1,
++        query_start_loc_cpu=torch.tensor([0, 1]),
++    )
++    assert static_width(**_static_kwargs(**one_query)) is None
++    six_queries = dict(
++        max_query_len=6,
++        num_actual_tokens=6,
++        query_start_loc_cpu=torch.tensor([0, 6]),
++    )
++    assert static_width(**_static_kwargs(**six_queries)) is None
++    assert (
++        static_width(**_static_kwargs(query_start_loc_cpu=torch.tensor([0, 3]))) is None
++    )
++    assert (
++        static_width(**_static_kwargs(query_start_loc_cpu=torch.tensor([0, 4, 4])))
++        is None
++    )
++    assert static_width(**_static_kwargs(causal=torch.tensor([True]))) is None
++    assert static_width(**_static_kwargs(mm_req_doc_ranges={})) is None
++    assert static_width(**_static_kwargs(rswa_prefix_lens=torch.zeros(1))) is None
++
++
++def _attention_case(
++    head_size=512,
++    num_kv_heads=2,
++    width=4,
++    scratch_rows=8,
++    scratch_heads=16,
++    scratch_segments=16,
++    scratch_head_size=None,
++):
++    if scratch_head_size is None:
++        scratch_head_size = head_size
++    tensors = {
++        "q": torch.zeros((width, 16, head_size), dtype=torch.bfloat16),
++        "k": torch.zeros((1, 16, num_kv_heads, head_size), dtype=torch.bfloat16),
++        "v": torch.zeros((1, 16, num_kv_heads, head_size), dtype=torch.bfloat16),
++        "out": torch.zeros((width, 16, head_size), dtype=torch.bfloat16),
++        "max_seqlen_q": width,
++        "num_seqs": 1,
++        "causal": True,
++        "window_size": (-1, -1) if head_size == 512 else (1023, 0),
++        "uno_static_query_width": width,
++        "seq_threshold_3D": scratch_rows,
++        "num_par_softmax_segments": scratch_segments,
++        "softmax_segm_output": torch.empty(
++            (scratch_rows, scratch_heads, scratch_segments, scratch_head_size),
++            dtype=torch.float32,
++        ),
++        "softmax_segm_max": torch.empty(
++            (scratch_rows, scratch_heads, scratch_segments), dtype=torch.float32
++        ),
++        "softmax_segm_expsum": torch.empty(
++            (scratch_rows, scratch_heads, scratch_segments), dtype=torch.float32
++        ),
++        "mm_prefix_range": None,
++        "rswa_prefix_lens": None,
++        "rswa_window": None,
++        "alibi_slopes": None,
++        "qq_bias": None,
++        "sinks": None,
++        "output_scale": None,
++        "q_descale": None,
++        "k_descale": None,
++        "v_descale": None,
++        "kv_quant_mode": SimpleNamespace(NONE=object()).NONE,
++        "chunk_lookback": -1,
++    }
++    return tensors
++
++
++def _none_kv_mode(admission):
++    """The module's own KVQuantMode.NONE, which the helper compares against."""
++    globals_ = admission["_uno_gemma_splitkv_admissible"].__globals__
++    return globals_["KVQuantMode"].NONE
++
++
++def _admitted(admission, **overrides):
++    shape_keys = {
++        "head_size",
++        "num_kv_heads",
++        "width",
++        "scratch_rows",
++        "scratch_heads",
++        "scratch_segments",
++        "scratch_head_size",
++    }
++    args = _attention_case(
++        **{key: value for key, value in overrides.items() if key in shape_keys}
++    )
++    args.update(
++        {key: value for key, value in overrides.items() if key not in shape_keys}
++    )
++    # The source helper compares against its module's enum singleton.  Replace
++    # the fixture value with that exact singleton for the normal case.
++    args["kv_quant_mode"] = _none_kv_mode(admission)
++    return admission["_uno_gemma_splitkv_admissible"](**args)
++
++
++@pytest.mark.parametrize(
++    "head_size,num_kv_heads",
++    [(256, 8), (512, 2)],
++)
++@pytest.mark.parametrize("width", [2, 3, 4, 5])
++def test_admission_accepts_both_gemma_bf16_families(
++    admission, head_size, num_kv_heads, width
++):
++    assert _admitted(
++        admission, head_size=head_size, num_kv_heads=num_kv_heads, width=width
++    )
++
++
++@pytest.mark.parametrize(
++    "overrides",
++    [
++        {"head_size": 128, "num_kv_heads": 8},
++        {"head_size": 256, "num_kv_heads": 2},
++        {"head_size": 512, "num_kv_heads": 8},
++        {"scratch_rows": 3},
++        {"scratch_heads": 8},
++        {"scratch_segments": 8},
++        {"scratch_head_size": 128},
++        {"mm_prefix_range": torch.zeros(1)},
++        {"rswa_prefix_lens": torch.zeros(1)},
++        {"rswa_window": 128},
++        {"causal": torch.tensor([True])},
++        {"chunk_lookback": 1},
++    ],
++)
++def test_admission_fails_closed_for_shape_mask_and_scratch_mismatches(
++    admission, overrides
++):
++    assert not _admitted(admission, **overrides)
++
++
++def test_admission_rejects_noncontiguous_raw_scratch(admission):
++    args = _attention_case(head_size=256, num_kv_heads=8, scratch_head_size=512)
++    base = torch.empty((8, 16, 16, 512), dtype=torch.float32)
++    args["softmax_segm_output"] = base[..., ::2]
++    args["kv_quant_mode"] = _none_kv_mode(admission)
++    assert not admission["_uno_gemma_splitkv_admissible"](**args)
++
++
++def test_none_kv_mode_allows_inert_backend_scales(admission):
++    # TritonAttentionImpl materializes layer K/V scales even for BF16
++    # KVQuantMode.NONE.  They are ignored by the kernel in this mode.
++    assert _admitted(
++        admission,
++        k_descale=torch.ones(1),
++        v_descale=torch.ones(1),
++    )
++
++
++@pytest.mark.parametrize("value", ["1", "true", "YES", "on"])
++def test_environment_is_explicit_opt_in(admission, monkeypatch, value):
++    monkeypatch.setenv("UNO_GEMMA_SPLITKV", value)
++    assert admission["_uno_splitkv_env_enabled"]()
++
++
++@pytest.mark.parametrize("value", [None, "", "0", "false", "off", "random"])
++def test_environment_defaults_off(admission, monkeypatch, value):
++    if value is None:
++        monkeypatch.delenv("UNO_GEMMA_SPLITKV", raising=False)
++    else:
++        monkeypatch.setenv("UNO_GEMMA_SPLITKV", value)
++    assert not admission["_uno_splitkv_env_enabled"]()
++
++
++def test_c1_marker_refuses_multi_request_layout(static_width):
++    # The legacy resolver addresses B=2,width=4,BLOCK_Q=2 as [0,1,3,4]; a
++    # contiguous exact-grid optimization would silently drop block 4.
++    assert (
++        static_width(
++            **_static_kwargs(
++                num_reqs=2,
++                num_actual_tokens=8,
++                query_start_loc_cpu=torch.tensor([0, 4, 8], dtype=torch.int32),
++            )
++        )
++        is None
++    )
+diff --git a/tests/v1/spec_decode/test_uno_config.py b/tests/v1/spec_decode/test_uno_config.py
+index cd67485cc3..75f660ad29 100644
+--- a/tests/v1/spec_decode/test_uno_config.py
++++ b/tests/v1/spec_decode/test_uno_config.py
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ 
++from types import SimpleNamespace
+ from unittest.mock import MagicMock
+ 
+ import pytest
+@@ -9,6 +10,7 @@ import torch
+ from vllm.config import (
+     CacheConfig,
+     DeviceConfig,
++    ECTransferConfig,
+     LoRAConfig,
+     ModelConfig,
+     ParallelConfig,
+@@ -34,6 +36,9 @@ def uno_config_factory():
+     target.is_attention_free = False
+     target.get_sliding_window.return_value = None
+     target.get_vocab_size.return_value = 128
++    target.multimodal_config = None
++    target.hf_config = SimpleNamespace(eagle_aux_hidden_state_layer_ids=None)
++    target.compute_hash = lambda: "mock-target-hash"
+     parallel = ParallelConfig(distributed_executor_backend="uni")
+ 
+     def make(**overrides):
+@@ -77,8 +82,11 @@ def test_uno_forces_probabilistic_draft_sampling(uno_config_factory):
+         ({"uno_lora_path": " "}, "uno_lora_path"),
+         ({"num_speculative_tokens": None}, "num_speculative_tokens"),
+         ({"num_speculative_tokens": 0}, "greater than 0"),
+-        ({"uno_mask_token_id": 1}, "greater than 1"),
++        ({"uno_mask_token_id": 0}, "greater than 0"),
++        ({"uno_mask_token_id": 1}, "noise requires"),
+         ({"uno_mask_token_id": 129}, "target vocabulary size"),
++        ({"uno_noise_low": -1}, "greater than or equal to 0"),
++        ({"uno_noise_low": 8, "uno_mask_token_id": 8}, "noise requires"),
+         ({"model": "other-model"}, "shares the target"),
+         ({"target_model_config": None}, "target model"),
+         ({"draft_tensor_parallel_size": 2}, "target's tensor_parallel_size"),
+@@ -97,12 +105,11 @@ def test_uno_rejects_incompatible_options(uno_config_factory, overrides, message
+ @pytest.mark.parametrize(
+     ("attribute", "value", "message"),
+     [
+-        ("runner_type", "pooling", "text-only"),
+-        ("is_diffusion", True, "text-only"),
+-        ("is_multimodal_model", True, "text-only"),
+-        ("is_encoder_decoder", True, "text-only"),
+-        ("is_hybrid", True, "full attention"),
+-        ("is_attention_free", True, "full attention"),
++        ("runner_type", "pooling", "text decoder"),
++        ("is_diffusion", True, "text decoder"),
++        ("is_encoder_decoder", True, "text decoder"),
++        ("is_hybrid", True, "hybrid"),
++        ("is_attention_free", True, "attention-free"),
+     ],
+ )
+ def test_uno_rejects_unsupported_model_types(
+@@ -114,6 +121,78 @@ def test_uno_rejects_unsupported_model_types(
+         uno_config_factory(target_model_config=target)
+ 
+ 
++def test_uno_refuses_a_multimodal_checkpoint_that_keeps_vision_inputs(
++    uno_config_factory,
++):
++    """An architecture-only relaxation would let images reach the draft rows."""
++    target = uno_config_factory().target_model_config
++    target.is_multimodal_model = True
++    target.multimodal_config = SimpleNamespace(language_model_only=False)
++    with pytest.raises(ValueError, match="language-only"):
++        uno_config_factory(target_model_config=target)
++
++    target.multimodal_config = SimpleNamespace(language_model_only=True)
++    config = uno_config_factory(target_model_config=target)
++    assert config.use_uno()
++
++
++def test_uno_refuses_a_multimodal_configuration_that_is_missing(uno_config_factory):
++    """A multimodal checkpoint without a multimodal config is not text-only."""
++    target = uno_config_factory().target_model_config
++    target.is_multimodal_model = True
++    target.multimodal_config = None
++    with pytest.raises(ValueError, match="language-only"):
++        uno_config_factory(target_model_config=target)
++
++
++def test_uno_refuses_missing_parallel_configuration(uno_config_factory):
++    with pytest.raises(ValueError, match="target model and parallel"):
++        uno_config_factory(target_parallel_config=None)
++
++
++def test_uno_refuses_language_only_with_embedding_inputs(uno_config_factory):
++    """``--enable-mm-embeds`` delivers embeddings that language-only forbids."""
++    target = uno_config_factory().target_model_config
++    target.is_multimodal_model = True
++    target.multimodal_config = SimpleNamespace(
++        language_model_only=True, enable_mm_embeds=True
++    )
++    with pytest.raises(ValueError, match="text-only"):
++        uno_config_factory(target_model_config=target)
++
++
++def test_uno_admits_language_only_without_embedding_inputs(uno_config_factory):
++    target = uno_config_factory().target_model_config
++    target.is_multimodal_model = True
++    target.multimodal_config = SimpleNamespace(
++        language_model_only=True, enable_mm_embeds=False
++    )
++    assert uno_config_factory(target_model_config=target).use_uno()
++
++
++def test_uno_admits_a_sliding_window_at_config_time(uno_config_factory):
++    """The window itself is admissible; the arrangement is checked at setup."""
++    target = uno_config_factory().target_model_config
++    target.get_sliding_window.return_value = 1024
++    config = uno_config_factory(target_model_config=target)
++    assert config.use_uno()
++
++
++def test_uno_noise_low_defaults_to_the_released_range(uno_config_factory):
++    config = uno_config_factory()
++    assert config.uno_noise_low == 1
++    assert config.uno_mask_token_id == 128
++
++    full_vocab = uno_config_factory(uno_noise_low=0, uno_mask_token_id=128)
++    assert full_vocab.uno_noise_low == 0
++
++
++def test_uno_noise_bounds_change_the_compilation_hash(uno_config_factory):
++    default = uno_config_factory()
++    full_vocab = uno_config_factory(uno_noise_low=0)
++    assert default.compute_hash() != full_vocab.compute_hash()
++
++
+ @pytest.mark.parametrize(
+     "parallelism",
+     [
+@@ -158,14 +237,25 @@ def test_uno_accepts_tensor_parallelism(uno_config_factory):
+         )
+ 
+ 
+-def test_uno_rejects_sliding_window_attention(uno_config_factory):
++def test_uno_admits_sliding_window_attention_at_config_time(uno_config_factory):
++    """A window alone is not fatal: the draft-rows KV rule decides at setup.
++
++    The config-level guard cannot see the resolved attention backend or KV
++    cache groups, so it admits the model and the runner refuses a rolling
++    window allocation the draft rows could not own.
++    """
+     target = uno_config_factory().target_model_config
+     target.get_sliding_window.return_value = 64
+-    with pytest.raises(ValueError, match="full attention"):
+-        uno_config_factory(target_model_config=target)
++    config = uno_config_factory(target_model_config=target)
++    assert config.use_uno()
+ 
+ 
+-def _make_vllm_uno_config(uno_config_factory, cache_config=None, **scheduler_overrides):
++def _make_vllm_uno_config(
++    uno_config_factory,
++    cache_config=None,
++    ec_transfer_config=None,
++    **scheduler_overrides,
++):
+     scheduler_kwargs = dict(
+         max_model_len=2048,
+         max_num_seqs=4,
+@@ -182,6 +272,8 @@ def _make_vllm_uno_config(uno_config_factory, cache_config=None, **scheduler_ove
+     )
+     if cache_config is not None:
+         kwargs["cache_config"] = cache_config
++    if ec_transfer_config is not None:
++        kwargs["ec_transfer_config"] = ec_transfer_config
+     return VllmConfig(**kwargs)
+ 
+ 
+@@ -286,6 +378,27 @@ def test_uno_allows_default_kv_sharing_fast_prefill(uno_config_factory, monkeypa
+     assert config.cache_config.kv_sharing_fast_prefill is False
+ 
+ 
++def test_uno_rejects_ec_cache_transfer(uno_config_factory, monkeypatch):
++    """An EC consumer auto-enables embeddings, which Uno cannot serve."""
++    monkeypatch.setattr("vllm.config.vllm.HAS_TRITON", True)
++    monkeypatch.setattr("vllm.config.vllm.envs.VLLM_USE_V2_MODEL_RUNNER", True)
++    from vllm.platforms import current_platform
++
++    monkeypatch.setattr(
++        current_platform, "apply_config_platform_defaults", lambda _config: None
++    )
++    monkeypatch.setattr(
++        current_platform, "check_and_update_config", lambda _config: None
++    )
++    with pytest.raises(ValueError, match="EC cache transfer"):
++        _make_vllm_uno_config(
++            uno_config_factory,
++            ec_transfer_config=ECTransferConfig(
++                ec_connector="ECExampleConnector", ec_role="ec_consumer"
++            ),
++        )
++
++
+ def test_uno_rejects_forced_v1_runner(uno_config_factory, monkeypatch):
+     monkeypatch.setattr("vllm.config.vllm.envs.VLLM_USE_V2_MODEL_RUNNER", False)
+     with pytest.raises(ValueError, match="Model Runner V2"):
+diff --git a/tests/v1/spec_decode/test_uno_draft_moe.py b/tests/v1/spec_decode/test_uno_draft_moe.py
+new file mode 100644
+index 0000000000..44f023ff95
+--- /dev/null
++++ b/tests/v1/spec_decode/test_uno_draft_moe.py
+@@ -0,0 +1,603 @@
++# SPDX-License-Identifier: Apache-2.0
++# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++"""CPU-only contract tests for the opt-in draft MoE top-k candidate."""
++
++import ast
++import importlib.util
++import os
++import sys
++from pathlib import Path
++from types import SimpleNamespace as NS
++
++import pytest
++import torch
++
++SOURCE = Path(
++    os.environ.get("VLLM_UNO_SOURCE_ROOT", Path(__file__).resolve().parents[3])
++)
++MODULE_PATH = SOURCE / "vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py"
++_spec = importlib.util.spec_from_file_location("uno_draft_moe_under_test", MODULE_PATH)
++assert _spec is not None and _spec.loader is not None
++moe = importlib.util.module_from_spec(_spec)
++sys.modules[_spec.name] = moe
++_spec.loader.exec_module(moe)
++
++from vllm.model_executor.layers.fused_moe.experts.marlin_moe import (  # noqa: E402
++    MarlinExperts as _MarlinExperts,
++)
++from vllm.model_executor.layers.fused_moe.prepare_finalize.no_dp_ep import (  # noqa: E402
++    MoEPrepareAndFinalizeNoDPEPModular as _NoDPEPModular,
++)
++from vllm.model_executor.layers.fused_moe.router.custom_routing_router import (  # noqa: E402
++    CustomRoutingRouter as _CustomRoutingRouter,
++)
++
++
++class CustomRoutingRouter(_CustomRoutingRouter):
++    """The real router family; a same-named unrelated class must not pass."""
++
++    def __init__(self):
++        super().__init__(
++            top_k=8,
++            global_num_experts=128,
++            custom_routing_function=lambda **kwargs: None,
++        )
++        self._routing_replay_out = None
++
++
++class MarlinExperts(_MarlinExperts):
++    routing_replay_capture_fn = None
++    _routing_replay_buffer = None
++
++    def __init__(self):
++        pass
++
++    def workspace_shapes(self, *args):
++        return args
++
++
++class MoEPrepareAndFinalizeNoDPEPModular(_NoDPEPModular):
++    def max_num_tokens_per_rank(self):
++        return None
++
++
++class FusedKernel:
++    def __init__(self):
++        self.fused_experts = MarlinExperts()
++        self.prepare_finalize = MoEPrepareAndFinalizeNoDPEPModular()
++
++
++class QuantMethod:
++    is_monolithic = False
++
++    def __init__(self):
++        self.moe_kernel = FusedKernel()
++
++
++class MoEConfig:
++    experts_per_token = 8
++    num_experts = 128
++
++    def __init__(self):
++        self.moe_parallel_config = NS(
++            tp_size=1,
++            pcp_size=1,
++            ep_size=1,
++            dp_size=1,
++            sp_size=1,
++            use_ep=False,
++            use_all2all_kernels=False,
++            enable_eplb=False,
++        )
++
++
++class RoutedExperts:
++    top_k = 8
++
++    def __init__(self, config):
++        self.moe_config = config
++        self.quant_method = QuantMethod()
++
++
++class MoERunner:
++    def __init__(self):
++        self.router = CustomRoutingRouter()
++        self.moe_config = MoEConfig()
++        self.routed_experts = RoutedExperts(self.moe_config)
++
++
++class RegisteredGemma4Model:
++    """The class the model registry resolves the loaded architecture to."""
++
++    config = NS(model_type="gemma4_text", architectures=["Gemma4ForCausalLM"])
++
++    def __init__(self):
++        self.moe = MoERunner()
++
++    def named_modules(self):
++        yield "", self
++        yield "model.layers.0.mlp.experts", self.moe
++
++
++class Gemma4ForCausalLM:
++    """An unrelated class named identically to the Gemma 4 implementation.
++
++    It carries the exact configuration markers and the routing attributes the
++    candidate expects, but the registry does not resolve the architecture to
++    it, so identity must refuse it.
++    """
++
++    config = NS(model_type="gemma4_text", architectures=["Gemma4ForCausalLM"])
++
++    def __init__(self):
++        self.moe = MoERunner()
++
++    def named_modules(self):
++        yield "", self
++        yield "model.layers.0.mlp.experts", self.moe
++
++
++class LlamaForCausalLM:
++    """A non-Gemma implementation whose configuration text mentions gemma4."""
++
++    def __init__(self):
++        self.config = NS(model_type="llama", architectures=["LlamaForCausalLM"])
++        self.model_config = NS(
++            hf_config=NS(
++                model_type="llama",
++                architectures=["LlamaForCausalLM"],
++                unrelated_note="converted beside a gemma4 checkpoint",
++            )
++        )
++        self.moe = MoERunner()
++
++    def named_modules(self):
++        yield "", self
++        yield "model.layers.0.mlp.experts", self.moe
++
++
++@pytest.fixture(autouse=True)
++def reset_process_variant():
++    moe._reset_process_variant_for_tests()
++    yield
++    moe._reset_process_variant_for_tests()
++
++
++@pytest.fixture
++def runtime_moe():
++    """The module the proposer imports, with its process state reset."""
++    from vllm.v1.worker.gpu.spec_decode import uno_draft_moe as module
++
++    module._reset_process_variant_for_tests()
++    yield module
++    module._reset_process_variant_for_tests()
++
++
++@pytest.fixture
++def registered_cls():
++    """The resolution the loader's model registry would return."""
++    return RegisteredGemma4Model
++
++
++@pytest.fixture
++def proposer(monkeypatch, registered_cls):
++    monkeypatch.setattr(moe.torch.cuda, "is_available", lambda: True)
++    monkeypatch.setattr(moe.torch.cuda, "get_device_capability", lambda device: (8, 6))
++    monkeypatch.setattr(
++        "vllm.model_executor.model_loader.utils.get_model_architecture",
++        lambda model_config: (registered_cls, "Gemma4ForCausalLM"),
++    )
++    from vllm.config.compilation import CUDAGraphMode
++
++    model = registered_cls()
++    vllm_config = NS(
++        parallel_config=NS(
++            tensor_parallel_size=1,
++            pipeline_parallel_size=1,
++            data_parallel_size=1,
++            decode_context_parallel_size=1,
++            prefill_context_parallel_size=1,
++        ),
++        model_config=NS(hf_config=NS(architectures=["Gemma4ForCausalLM"])),
++    )
++    return NS(
++        model=model,
++        device=torch.device("cuda"),
++        vllm_config=vllm_config,
++        speculative_config=NS(use_uno=lambda: True),
++        cudagraph_manager=NS(cudagraph_mode=CUDAGraphMode.FULL),
++        lora_request=NS(lora_int_id=1),
++    )
++
++
++def test_disabled_scope_does_not_import_or_mutate(proposer, monkeypatch):
++    monkeypatch.delenv(moe.ENV_NAME, raising=False)
++    router = proposer.model.moe.router
++    with moe.draft_moe_capture_scope(proposer) as state:
++        assert state is None
++        assert router.top_k == 8
++    assert router.top_k == 8
++
++
++def test_active_scope_validates_sm86_marlin_and_restores(proposer, monkeypatch):
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    router = proposer.model.moe.router
++    routed = proposer.model.moe.routed_experts
++    with moe.draft_moe_capture_scope(proposer) as state:
++        assert state is not None
++        assert state.variant == "gemma4-sm86-marlin-topk4"
++        assert router.top_k == 4
++        assert routed.top_k == 8
++        assert state.receipt()[0]["top_k"] == 4
++        assert state.receipt()[0]["backend"] == "MarlinExperts"
++    assert router.top_k == 8
++
++
++def test_active_scope_restores_after_capture_error(proposer, monkeypatch):
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    router = proposer.model.moe.router
++    with (
++        pytest.raises(RuntimeError, match="capture failure"),
++        moe.draft_moe_capture_scope(proposer),
++    ):
++        assert router.top_k == 4
++        raise RuntimeError("capture failure")
++    assert router.top_k == 8
++
++
++@pytest.mark.parametrize(
++    "change,reason",
++    [
++        (
++            lambda p: setattr(p, "cudagraph_manager", NS(cudagraph_mode=None)),
++            "captured Uno draft graphs",
++        ),
++        (lambda p: setattr(p, "lora_request", None), "adapter routing"),
++        (
++            lambda p: setattr(
++                p.model.moe.routed_experts.quant_method.moe_kernel,
++                "fused_experts",
++                NS(),
++            ),
++            "backend",
++        ),
++        (
++            lambda p: setattr(
++                p.model.moe,
++                "moe_config",
++                NS(experts_per_token=4, num_experts=128),
++            ),
++            "configured at 8",
++        ),
++    ],
++)
++def test_contract_failures_are_fail_closed(proposer, monkeypatch, change, reason):
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    change(proposer)
++    with pytest.raises(moe.DraftMoEConfigurationError, match=reason):
++        moe.validate_draft_moe(proposer)
++    assert proposer.model.moe.router.top_k == 8
++
++
++def test_variant_cannot_be_removed_after_opt_in(proposer, monkeypatch):
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    with moe.draft_moe_capture_scope(proposer):
++        pass
++    monkeypatch.delenv(moe.ENV_NAME)
++    with pytest.raises(moe.DraftMoEConfigurationError, match="enabled|process-fixed"):
++        moe.uno_draft_moe_enabled()
++
++
++def test_unknown_moe_parallelism_fails_closed(proposer, monkeypatch):
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    del proposer.model.moe.moe_config.moe_parallel_config.pcp_size
++    with pytest.raises(
++        moe.DraftMoEConfigurationError, match="cannot identify pcp_size"
++    ):
++        moe.validate_draft_moe(proposer)
++
++
++def test_capture_enters_the_scope_only_around_the_draft_graphs():
++    """The variant must be confined to the draft capture, never serving."""
++    source = (SOURCE / "vllm/v1/worker/gpu/spec_decode/uno.py").read_text(
++        encoding="utf-8"
++    )
++    tree = ast.parse(source)
++    owner = next(
++        node
++        for node in tree.body
++        if isinstance(node, ast.ClassDef) and node.name == "UnoSpeculator"
++    )
++    capture = next(
++        node
++        for node in owner.body
++        if isinstance(node, ast.FunctionDef) and node.name == "capture"
++    )
++    called = {
++        node.func.id
++        for node in ast.walk(capture)
++        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
++    }
++    assert "draft_moe_capture_scope" in called
++    assert "log_capture_receipt" in source
++
++
++def test_identity_accepts_the_registered_implementation(proposer, monkeypatch):
++    """The class the registry resolves the architecture to passes."""
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    moe.validate_draft_moe(proposer)
++
++
++def test_identity_rejects_an_unrelated_same_named_gemma4_class(proposer, monkeypatch):
++    """A same-named class with the exact markers must not pass by name."""
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    proposer.model = Gemma4ForCausalLM()
++    with pytest.raises(
++        moe.DraftMoEConfigurationError, match="registered Gemma 4 implementation"
++    ):
++        moe.validate_draft_moe(proposer)
++
++
++def test_identity_requires_the_loaded_gemma4_implementation(proposer, monkeypatch):
++    """A non-Gemma implementation must not be admitted by configuration text."""
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    proposer.model = LlamaForCausalLM()
++    with pytest.raises(
++        moe.DraftMoEConfigurationError, match="registered Gemma 4 implementation"
++    ):
++        moe.validate_draft_moe(proposer)
++
++
++def test_identity_rejects_non_gemma4_markers_on_a_gemma_implementation(
++    proposer, monkeypatch
++):
++    """Only exact Gemma 4 identifiers qualify; unrelated fields never do."""
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    proposer.model.config = NS(
++        model_type="llama",
++        architectures=["LlamaForCausalLM"],
++        unrelated_note="converted beside a gemma4 checkpoint",
++    )
++    proposer.vllm_config.model_config = NS(
++        hf_config=NS(architectures=["LlamaForCausalLM"])
++    )
++    with pytest.raises(moe.DraftMoEConfigurationError, match="exact Gemma 4"):
++        moe.validate_draft_moe(proposer)
++
++
++def test_identity_refuses_when_the_registry_cannot_resolve_the_architecture(
++    proposer, monkeypatch
++):
++    """An unresolvable architecture must never fall through to a name."""
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++
++    def unresolvable(model_config):
++        raise ValueError("no registered implementation")
++
++    monkeypatch.setattr(
++        "vllm.model_executor.model_loader.utils.get_model_architecture",
++        unresolvable,
++    )
++    with pytest.raises(moe.DraftMoEConfigurationError, match="cannot resolve"):
++        moe.validate_draft_moe(proposer)
++
++
++def test_identity_rejects_a_same_named_unrelated_router(proposer, monkeypatch):
++    """The router contract binds to the class, not its name."""
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++
++    class CustomRoutingRouter:
++        def __init__(self):
++            self.top_k = 8
++            self.custom_routing_function = lambda **kwargs: None
++            self._routing_replay_out = None
++
++    proposer.model.moe.router = CustomRoutingRouter()
++    with pytest.raises(
++        moe.DraftMoEConfigurationError,
++        match="expected vllm.model_executor.layers.fused_moe.router",
++    ):
++        moe.validate_draft_moe(proposer)
++
++
++def test_identity_accepts_the_multimodal_text_config_identifiers(proposer, monkeypatch):
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    proposer.model.config = NS(
++        model_type="gemma4",
++        architectures=["Gemma4ForConditionalGeneration"],
++        text_config=NS(model_type="gemma4_text"),
++    )
++    moe.validate_draft_moe(proposer)
++
++
++def test_identity_rejects_a_gemma4_config_without_the_routing_contract(
++    proposer, monkeypatch
++):
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    del proposer.model.moe.router
++    with pytest.raises(moe.DraftMoEConfigurationError, match="routing contract"):
++        moe.validate_draft_moe(proposer)
++
++
++def _topk4_proposer(proposer, monkeypatch, *, captured):
++    """Build the production proposer and optionally run the real capture."""
++    from unittest.mock import Mock
++
++    from vllm.config.compilation import CUDAGraphMode
++    from vllm.v1.worker.gpu.input_batch import InputBuffers
++    from vllm.v1.worker.gpu.spec_decode.uno import UnoSpeculator
++
++    monkeypatch.setenv(moe.ENV_NAME, "4")
++    spec = object.__new__(UnoSpeculator)
++    spec.k = 4
++    spec.max_num_reqs = 2
++    spec._step = 0
++    spec.num_graph_replays = 0
++    spec.num_eager_proposals = 0
++    spec.num_warmup_proposals = 0
++    spec.max_model_len = 64
++    spec.model = proposer.model
++    spec.device = torch.device("cuda")
++    spec.vllm_config = proposer.vllm_config
++    spec.speculative_config = NS(
++        use_uno=lambda: True,
++        uno_mask_token_id=1000,
++        uno_noise_low=1,
++        uno_noise_seed=42,
++    )
++    spec.lora_request = proposer.lora_request
++    spec.input_buffers = InputBuffers(2, 8, torch.device("cpu"))
++    spec.sample_idx_mapping = torch.empty(8, dtype=torch.int32)
++    spec.draft_tokens = torch.empty((2, 4), dtype=torch.int64)
++    spec.block_tables = NS(
++        slot_mappings=torch.empty((1, 8), dtype=torch.int64),
++        input_block_tables=[torch.ones((2, 8), dtype=torch.int32)],
++        kernel_block_sizes=[4],
++    )
++    spec.kv_cache_config = Mock()
++    spec.cudagraph_manager = Mock()
++    spec.cudagraph_manager.cudagraph_mode = CUDAGraphMode.FULL
++    spec.cudagraph_manager.graphs = []
++    # A double must expose the manager surface the production coverage receipt
++    # reads; a bare Mock hides that call instead of exercising it.
++    spec.cudagraph_manager.captured_dispatch_keys.return_value = []
++    spec.cudagraph_manager.key_is_covered.return_value = False
++    spec.cudagraph_manager.dispatch_key.side_effect = (
++        lambda num_tokens, num_active_loras: (num_tokens, num_active_loras)
++    )
++    spec._graph_attn_metadata = {}
++    spec.set_lora_hook(lambda mapping: None)
++    if captured:
++        spec.capture()
++    return spec
++
++
++def _uncaptured_propose(spec, monkeypatch):
++    """Arrange propose() to dispatch a descriptor with no captured graph."""
++    from unittest.mock import Mock
++
++    from vllm.config.compilation import CUDAGraphMode
++    from vllm.v1.worker.gpu.cudagraph_utils import BatchExecutionDescriptor
++    from vllm.v1.worker.gpu.spec_decode import uno as uno_module
++
++    spec.cudagraph_manager.dispatch.return_value = BatchExecutionDescriptor(
++        CUDAGraphMode.NONE, 8, 2
++    )
++    spec._copy_request_inputs = Mock()
++    spec._build_uniform_attn_metadata = Mock(return_value={"eager": object()})
++    spec._generate_draft = Mock()
++    monkeypatch.setattr(uno_module, "prepare_uno_inputs_fused", Mock())
++    monkeypatch.setattr(
++        uno_module, "build_slot_mappings_by_layer", Mock(return_value={})
++    )
++    return NS(
++        num_reqs=2,
++        idx_mapping=torch.tensor([0, 1]),
++        seq_lens_cpu_upper_bound=torch.tensor([10, 20]),
++    )
++
++
++def _propose(spec, batch, **kwargs):
++    tensor = torch.empty(4)
++    return spec.propose(
++        batch,
++        {},
++        {},
++        tensor,
++        None,
++        tensor,
++        tensor,
++        tensor,
++        tensor,
++        tensor,
++        tensor,
++        **kwargs,
++    )
++
++
++def test_uncaptured_serving_shape_is_refused_after_topk4_capture(
++    proposer, monkeypatch, runtime_moe
++):
++    spec = _topk4_proposer(proposer, monkeypatch, captured=True)
++    assert spec.draft_moe_state is not None
++    assert spec.draft_moe_state.variant == "gemma4-sm86-marlin-topk4"
++    assert proposer.model.moe.router.top_k == 8
++
++    batch = _uncaptured_propose(spec, monkeypatch)
++    with pytest.raises(runtime_moe.DraftMoEConfigurationError) as excinfo:
++        _propose(spec, batch)
++    message = str(excinfo.value)
++    assert "gemma4-sm86-marlin-topk4" in message
++    assert "num_reqs=2" in message
++    assert "num_tokens=8" in message
++    spec._generate_draft.assert_not_called()
++
++
++def test_uncaptured_warmup_shape_stays_exempt(proposer, monkeypatch, runtime_moe):
++    spec = _topk4_proposer(proposer, monkeypatch, captured=True)
++    batch = _uncaptured_propose(spec, monkeypatch)
++    _propose(spec, batch, dummy_run=True)
++    spec._generate_draft.assert_called_once()
++
++
++def test_uncaptured_profiling_shape_stays_exempt(proposer, monkeypatch, runtime_moe):
++    """Both exemption arms must reach the guard, not just the dummy one."""
++    spec = _topk4_proposer(proposer, monkeypatch, captured=True)
++    batch = _uncaptured_propose(spec, monkeypatch)
++    _propose(spec, batch, is_profile=True)
++    spec._generate_draft.assert_called_once()
++
++
++def test_uncaptured_refusal_names_the_same_key_as_the_coverage_receipt(
++    proposer, monkeypatch, runtime_moe
++):
++    """The refusal must name the (num_tokens, effective_loras) key it lacked.
++
++    The startup receipt states dispatch keys; a refusal that names only
++    ``num_tokens`` leaves the reader unable to line the two up.
++    """
++    from vllm.config.compilation import CUDAGraphMode
++    from vllm.v1.worker.gpu.cudagraph_utils import BatchExecutionDescriptor
++
++    spec = _topk4_proposer(proposer, monkeypatch, captured=True)
++    desc = BatchExecutionDescriptor(CUDAGraphMode.NONE, 16, 4, num_active_loras=2)
++    with pytest.raises(runtime_moe.DraftMoEConfigurationError) as excinfo:
++        runtime_moe.refuse_uncaptured_eager_draft(spec, desc, warmup=False)
++    message = str(excinfo.value)
++    assert "num_tokens=16" in message
++    assert "effective_loras=2" in message
++
++
++def test_eager_serving_shape_is_refused_when_topk4_never_captured(
++    proposer, monkeypatch, runtime_moe
++):
++    spec = _topk4_proposer(proposer, monkeypatch, captured=False)
++    batch = _uncaptured_propose(spec, monkeypatch)
++    with pytest.raises(
++        runtime_moe.DraftMoEConfigurationError, match="requires captured"
++    ):
++        _propose(spec, batch)
++
++
++def test_never_captured_refusal_names_key_environment_and_variant(
++    proposer, monkeypatch, runtime_moe
++):
++    """The never-captured path must name all three identifiers.
++
++    With no capture state there is no ``variant`` attribute to read, so this is
++    the path that can drop the variant name while the captured-state path keeps
++    it; the captured-state message is not a proxy for this one.
++    """
++    from vllm.config.compilation import CUDAGraphMode
++    from vllm.v1.worker.gpu.cudagraph_utils import BatchExecutionDescriptor
++
++    spec = _topk4_proposer(proposer, monkeypatch, captured=False)
++    assert getattr(spec, "draft_moe_state", None) is None
++    desc = BatchExecutionDescriptor(CUDAGraphMode.NONE, 16, 4, num_active_loras=2)
++    with pytest.raises(runtime_moe.DraftMoEConfigurationError) as excinfo:
++        runtime_moe.refuse_uncaptured_eager_draft(spec, desc, warmup=False)
++    message = str(excinfo.value)
++    assert f"{runtime_moe.ENV_NAME}={runtime_moe.DRAFT_TOP_K}" in message
++    assert "num_tokens=16" in message
++    assert "effective_loras=2" in message
++    assert "gemma4-sm86-marlin-topk4" in message
+diff --git a/tests/v1/spec_decode/test_uno_draft_rows_kv.py b/tests/v1/spec_decode/test_uno_draft_rows_kv.py
+new file mode 100644
+index 0000000000..ced0bb3dd4
+--- /dev/null
++++ b/tests/v1/spec_decode/test_uno_draft_rows_kv.py
+@@ -0,0 +1,150 @@
++# SPDX-License-Identifier: Apache-2.0
++# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++"""CPU tests for the Uno draft-rows contract on the shared attention layers.
++
++The draft rows reuse the target's attention layers and KV cache, so the
++arrangement must be a causal full KV allocation and every draft layer must run
++on a backend the draft can drive. Sliding-window checkpoints (e.g. Gemma with
++mixed local/global layers) are admitted only under that full allocation, where
++each layer's own kernel bounds its window and no window-owned row can be
++recycled under a draft write.
++"""
++
++from types import SimpleNamespace
++from unittest.mock import patch
++
++import pytest
++import torch
++
++from vllm.v1.kv_cache_interface import (
++    FullAttentionSpec,
++    SlidingWindowSpec,
++    UniformTypeKVCacheSpecs,
++)
++from vllm.v1.worker.gpu.spec_decode.uno import UnoSpeculator
++
++KB = 1024
++
++
++def _full_attention(window: int | None = None, **overrides) -> FullAttentionSpec:
++    kwargs = dict(
++        block_size=16,
++        num_kv_heads=8,
++        head_size=256,
++        head_size_v=256,
++        dtype=torch.bfloat16,
++        sliding_window=window,
++    )
++    kwargs.update(overrides)
++    return FullAttentionSpec(**kwargs)
++
++
++def _uniform(specs: dict[str, FullAttentionSpec]) -> UniformTypeKVCacheSpecs:
++    return UniformTypeKVCacheSpecs(block_size=16, kv_cache_specs=specs)
++
++
++@pytest.fixture
++def proposer():
++    instance = object.__new__(UnoSpeculator)
++    instance.draft_attn_layer_names = {"layer.0.self_attn.attn"}
++    return instance
++
++
++def _set_attn(proposer, groups):
++    kv_cache_config = SimpleNamespace(kv_cache_groups=groups)
++
++    def base_set_attn(self, *_args, **_kwargs):
++        self.attn_groups = [
++            [SimpleNamespace(supports_draft_decode_metadata_update=True)]
++        ]
++
++    with patch(
++        "vllm.v1.worker.gpu.spec_decode.speculator.DraftModelSpeculator.set_attn",
++        base_set_attn,
++    ):
++        UnoSpeculator.set_attn(
++            proposer,
++            SimpleNamespace(),
++            kv_cache_config,
++            SimpleNamespace(),
++            SimpleNamespace(),
++            [[SimpleNamespace()]],
++        )
++
++
++def _group(spec):
++    return SimpleNamespace(layer_names=["layer.0.self_attn.attn"], kv_cache_spec=spec)
++
++
++def test_full_attention_group_is_admitted(proposer):
++    _set_attn(proposer, [_group(_full_attention())])
++
++
++def test_promoted_sliding_window_group_is_admitted(proposer):
++    """Full allocation promotes local layers to full-attention KV specs."""
++    spec = _uniform(
++        {
++            "layer.0.self_attn.attn": _full_attention(),
++            "layer.1.self_attn.attn": _full_attention(),
++        }
++    )
++    _set_attn(proposer, [_group(spec)])
++
++
++@pytest.mark.parametrize(
++    "spec",
++    [
++        _full_attention(non_causal=True),
++        _full_attention(attention_chunk_size=KB),
++        SlidingWindowSpec(
++            block_size=16,
++            num_kv_heads=8,
++            head_size=256,
++            head_size_v=256,
++            dtype=torch.bfloat16,
++            sliding_window=KB,
++        ),
++        _uniform({"layer.0.self_attn.attn": _full_attention(non_causal=True)}),
++    ],
++)
++def test_rolling_or_non_causal_allocation_is_refused(proposer, spec):
++    with pytest.raises(ValueError, match="causal full KV allocation"):
++        _set_attn(proposer, [_group(spec)])
++
++
++def test_multiple_kv_groups_are_refused(proposer):
++    with pytest.raises(ValueError, match="one KV cache group"):
++        _set_attn(
++            proposer,
++            [_group(_full_attention()), _group(_full_attention())],
++        )
++
++
++def _layer(backend: str):
++    layer = SimpleNamespace(
++        get_kv_cache_spec=lambda _config: object(),
++        get_attn_backend=lambda: SimpleNamespace(get_name=lambda: backend),
++    )
++    return layer
++
++
++def _load_model(proposer, backend: str):
++    layers = {"layer.0.self_attn.attn": _layer(backend)}
++    proposer.vllm_config = SimpleNamespace(speculative_config=SimpleNamespace())
++    proposer.use_local_argmax_reduction = False
++    with patch(
++        "vllm.v1.worker.gpu.spec_decode.uno.get_layers_from_vllm_config",
++        return_value=layers,
++    ):
++        UnoSpeculator.load_model(proposer, SimpleNamespace())
++
++
++@pytest.mark.parametrize("backend", ["FLASH_ATTN", "TRITON_ATTN"])
++def test_admitted_draft_backends(proposer, backend):
++    _load_model(proposer, backend)
++    assert proposer.draft_attn_layer_names == {"layer.0.self_attn.attn"}
++
++
++def test_unknown_draft_backend_is_refused(proposer):
++    with pytest.raises(ValueError, match="FLASH_ATTN or TRITON_ATTN"):
++        _load_model(proposer, "FLEX_ATTENTION")
+diff --git a/tests/v1/spec_decode/test_uno_mrv2.py b/tests/v1/spec_decode/test_uno_mrv2.py
+index 7e115d0225..f82fbb73d4 100644
+--- a/tests/v1/spec_decode/test_uno_mrv2.py
++++ b/tests/v1/spec_decode/test_uno_mrv2.py
+@@ -72,6 +72,7 @@ def test_rejection_and_prefill_use_correct_seed_and_persistent_slot():
+         4,
+         16,
+         42,
++        1,
+         1000,
+         1,
+     )
+@@ -122,6 +123,7 @@ def test_draft_does_not_write_null_or_unallocated_or_out_of_context_slots(
+         4,
+         max_len,
+         42,
++        1,
+         1000,
+         1,
+     )
+@@ -195,7 +197,7 @@ def test_graph_replay_refreshes_native_backend_without_rebuilding_metadata(
+     proposer.num_eager_proposals = 0
+     proposer.max_model_len = 32
+     proposer.speculative_config = SimpleNamespace(
+-        uno_mask_token_id=1000, uno_noise_seed=42
++        uno_mask_token_id=1000, uno_noise_low=1, uno_noise_seed=42
+     )
+     proposer.input_buffers = InputBuffers(4, 8, torch.device("cpu"))
+     proposer.sample_idx_mapping = torch.empty(8, dtype=torch.int32)
+@@ -223,7 +225,7 @@ def test_graph_replay_refreshes_native_backend_without_rebuilding_metadata(
+         ("replay", None)
+     )
+     proposer._copy_request_inputs = Mock()
+-    proposer._build_draft_attn_metadata = Mock(return_value={"eager": object()})
++    proposer._build_uniform_attn_metadata = Mock(return_value={"eager": object()})
+     proposer._generate_draft = Mock()
+     proposer.set_lora_hook(lambda mapping: events.append(("lora", mapping)))
+     fused_prepare = Mock()
+@@ -243,14 +245,14 @@ def test_graph_replay_refreshes_native_backend_without_rebuilding_metadata(
+     assert events[-1] == ("lora", None)
+     if full_graph:
+         assert events[1:3] == [("refresh", captured_attn), ("replay", None)]
+-        proposer._build_draft_attn_metadata.assert_not_called()
++        proposer._build_uniform_attn_metadata.assert_not_called()
+         slot_builder.assert_not_called()
+         proposer._generate_draft.assert_not_called()
+         assert proposer.num_graph_replays == 1
+     else:
+         group.update_draft_decode_metadata.assert_not_called()
+         proposer.cudagraph_manager.run_fullgraph.assert_not_called()
+-        proposer._build_draft_attn_metadata.assert_called_once()
++        proposer._build_uniform_attn_metadata.assert_called_once()
+         slot_builder.assert_called_once()
+         proposer._generate_draft.assert_called_once()
+         assert proposer.draft_max_seq_len == 32
+@@ -279,7 +281,7 @@ def test_eager_draft_attn_metadata_keeps_k_row_physical_capacity(monkeypatch):
+     proposer.num_eager_proposals = 0
+     proposer.max_model_len = 64
+     proposer.speculative_config = SimpleNamespace(
+-        uno_mask_token_id=1000, uno_noise_seed=42
++        uno_mask_token_id=1000, uno_noise_low=1, uno_noise_seed=42
+     )
+     proposer.input_buffers = InputBuffers(4, 32, torch.device("cpu"))
+     proposer.sample_idx_mapping = torch.empty(32, dtype=torch.int32)
+@@ -298,23 +300,23 @@ def test_eager_draft_attn_metadata_keeps_k_row_physical_capacity(monkeypatch):
+     captured: dict = {}
+ 
+     def fake_build(
++        batch_desc,
+         num_reqs,
+-        num_reqs_padded,
+-        num_tokens_padded,
++        num_query_per_req,
+         seq_lens_cpu_upper_bound,
+         step,
+         **kwargs,
+     ):
+         captured.update(
++            batch_desc=batch_desc,
+             num_reqs=num_reqs,
+-            num_reqs_padded=num_reqs_padded,
+-            num_tokens_padded=num_tokens_padded,
++            num_query_per_req=num_query_per_req,
+             step=step,
+             **kwargs,
+         )
+         return {"eager": object()}
+ 
+-    proposer._build_draft_attn_metadata = fake_build
++    proposer._build_uniform_attn_metadata = fake_build
+     proposer.set_lora_hook(lambda mapping: None)
+     monkeypatch.setattr(f"{module}.prepare_uno_inputs_fused", Mock())
+     monkeypatch.setattr(f"{module}.build_slot_mappings_by_layer", Mock(return_value={}))
+@@ -327,12 +329,40 @@ def test_eager_draft_attn_metadata_keeps_k_row_physical_capacity(monkeypatch):
+     proposer.propose(
+         batch, {}, {}, tensor, None, tensor, tensor, tensor, tensor, tensor, tensor
+     )
+-    assert captured["num_tokens_padded"] == count
+-    assert captured["num_reqs_padded"] == n
++    assert captured["batch_desc"] is desc
++    assert captured["num_reqs"] == n
+     assert captured["step"] == k
+     assert captured["num_query_per_req"] == k
+ 
+ 
++def test_every_uno_metadata_helper_call_resolves_on_the_proposer():
++    """Eager drafting must resolve every metadata builder it calls.
++
++    The eager branch once called a helper that the shared speculator base class
++    no longer defined, so a batch without a captured draft graph failed on its
++    first proposal instead of drafting eagerly. A rename in the base class must
++    not silently break the call site again.
++    """
++    import ast
++    import inspect
++    from pathlib import Path
++
++    from vllm.v1.worker.gpu.spec_decode import uno as uno_module
++
++    source = Path(inspect.getfile(uno_module)).read_text(encoding="utf-8")
++    referenced = {
++        node.attr
++        for node in ast.walk(ast.parse(source))
++        if isinstance(node, ast.Attribute)
++        and isinstance(node.value, ast.Name)
++        and node.value.id == "self"
++        and node.attr.startswith("_build_")
++    }
++    assert referenced
++    missing = sorted(name for name in referenced if not hasattr(UnoSpeculator, name))
++    assert missing == []
++
++
+ def _cpu_uno_proposer(
+     k: int,
+     max_num_seqs: int = 4,
+@@ -385,7 +415,7 @@ def _cpu_uno_proposer(
+     proposer.max_num_reqs = max_num_seqs
+     proposer.max_model_len = 64
+     proposer.speculative_config = SimpleNamespace(
+-        uno_mask_token_id=1000, uno_noise_seed=42
++        uno_mask_token_id=1000, uno_noise_low=1, uno_noise_seed=42
+     )
+     rows = max(32, max_num_seqs * k)
+     proposer.input_buffers = InputBuffers(max_num_seqs, rows, torch.device("cpu"))
+@@ -398,7 +428,7 @@ def _cpu_uno_proposer(
+     )
+     proposer.kv_cache_config = Mock()
+     proposer._copy_request_inputs = Mock()
+-    proposer._build_draft_attn_metadata = Mock(return_value={"eager": object()})
++    proposer._build_uniform_attn_metadata = Mock(return_value={"eager": object()})
+     proposer._generate_draft = Mock()
+     proposer.set_lora_hook(lambda mapping: None)
+     proposer.attn_groups = [[Mock()]]
+@@ -553,6 +583,72 @@ def test_draft_dispatch_falls_back_above_the_largest_captured_size(monkeypatch):
+     assert manager.dispatch(12, 12 * k, k, 2).cg_mode == CUDAGraphMode.NONE
+ 
+ 
++def test_draft_dispatch_receipt_covers_a_padded_serving_key(monkeypatch, caplog):
++    """A padded serving key must appear in the receipt, not only the row counts.
++
++    Captured graphs at 4, 8 and 16 draft rows serve a three-request batch at
++    K=4 (12 rows) by padding into the 16-row graph. The receipt used to list
++    only descriptor row counts, so it omitted the (12, 2) key that dispatch
++    already resolved by padding. The receipt and the dispatch both call the
++    same resolution now, so the key (12, 2) is advertised and covered.
++    """
++    import logging
++
++    from vllm.config.compilation import CUDAGraphMode
++
++    _cpu_graph_manager_patches(monkeypatch)
++    proposer = _cpu_uno_proposer(
++        4,
++        max_num_seqs=4,
++        capture_sizes=[1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16],
++    )
++    proposer.init_cudagraph_manager(CUDAGraphMode.FULL_DECODE_ONLY)
++    manager = proposer.cudagraph_manager
++    assert manager is not None
++    manager._graphs_captured = True
++
++    assert (12, 2) in manager.captured_dispatch_keys()
++    assert (16, 2) in manager.captured_dispatch_keys()
++    assert manager.key_is_covered(3, 12, 4, 2)
++    assert manager.dispatch(3, 12, 4, 2).num_tokens == 16
++
++    with caplog.at_level(logging.INFO, logger="vllm.v1.worker.gpu.spec_decode.uno"):
++        proposer._log_draft_graph_coverage()
++    assert "cover every request count" in caplog.text
++    assert "num_tokens=12 effective_loras=2" in caplog.text
++
++
++def test_draft_graph_receipt_before_capture_names_nothing_captured(monkeypatch, caplog):
++    """Before capture the receipt must not advertise a key it cannot serve.
++
++    ``captured_dispatch_keys`` is populated from the configured capture sizes at
++    construction, so a receipt rendered before ``capture()`` completed could
++    advertise keys while dispatch (which also requires ``_graphs_captured``)
++    refuses them. The pre-capture state is an empty advertised list and a named
++    set of uncovered keys, not a silent return.
++    """
++    import logging
++
++    from vllm.config.compilation import CUDAGraphMode
++
++    _cpu_graph_manager_patches(monkeypatch)
++    proposer = _cpu_uno_proposer(4, max_num_seqs=2, capture_sizes=[16])
++    proposer.init_cudagraph_manager(CUDAGraphMode.FULL_DECODE_ONLY)
++    manager = proposer.cudagraph_manager
++    assert manager is not None
++    assert not manager._graphs_captured
++
++    assert manager.captured_dispatch_keys() == []
++    assert not manager.key_is_covered(1, 4, 4, 2)
++    assert manager.dispatch(1, 4, 4, 2).cg_mode == CUDAGraphMode.NONE
++
++    with caplog.at_level(logging.INFO, logger="vllm.v1.worker.gpu.spec_decode.uno"):
++        proposer._log_draft_graph_coverage()
++    assert "nothing captured" in caplog.text
++    assert "num_tokens=4 effective_loras=2" in caplog.text
++    assert "num_tokens=8 effective_loras=2" in caplog.text
++
++
+ def test_uncovered_request_counts_are_the_top_of_the_range():
+     """Padding means the gap can only be at the top, never a hole inside."""
+     from vllm.v1.worker.gpu.spec_decode.uno import uncovered_draft_request_counts
+@@ -590,6 +686,7 @@ def test_startup_coverage_is_logged_for_both_outcomes(monkeypatch, caplog):
+     assert manager is not None
+     for desc in manager._capture_descs[CUDAGraphMode.FULL]:
+         manager.graphs[desc] = Mock()
++    manager._graphs_captured = True
+     with caplog.at_level(logging.INFO, logger="vllm.v1.worker.gpu.spec_decode.uno"):
+         covered._log_draft_graph_coverage()
+     assert "cover every request count" in caplog.text
+@@ -602,6 +699,7 @@ def test_startup_coverage_is_logged_for_both_outcomes(monkeypatch, caplog):
+     assert manager is not None
+     for desc in manager._capture_descs[CUDAGraphMode.FULL]:
+         manager.graphs[desc] = Mock()
++    manager._graphs_captured = True
+     with caplog.at_level(logging.INFO, logger="vllm.v1.worker.gpu.spec_decode.uno"):
+         gapped._log_draft_graph_coverage()
+     warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+@@ -856,7 +954,7 @@ def test_uno_warmup_shares_filter_keys_without_prefill_verification(
+         num_sm=82,
+         use_flashinfer=use_flashinfer,
+     )
+-    covered = set()
++    covered: set[str] = set()
+     observed_modes = set()
+     for call in plan.sampler_warmups:
+         if call.sampler_branch == "native_verification":
+@@ -915,7 +1013,7 @@ def test_uno_warmup_filter_calls_add_uncovered_keys_across_sampler_branches(
+         num_sm=82,
+         use_flashinfer=False,
+     )
+-    covered = set()
++    covered: set[str] = set()
+     observed_modes = set()
+     for call in plan.sampler_warmups:
+         if not call.kernel_keys:
+@@ -1268,6 +1366,7 @@ def test_uno_warmup_executes_native_verification_s4(
+     class LaunchRecorder:
+         def __init__(self, name):
+             self.name = name
++            self.arg_names: tuple[str, ...] = ()
+ 
+         def __getitem__(self, grid):
+             def launch(*args, **kwargs):
+@@ -1778,27 +1877,22 @@ def test_uno_mode_branch_matches_production_sampler(
+     )
+     subject.apply_sampling_params = lambda logits, *_args, **_kwargs: logits
+     calls: list[str] = []
+-    monkeypatch.setattr(
+-        sampler_module,
+-        "flashinfer_sample",
+-        lambda logits, _top_k, _top_p: (
+-            calls.append("flashinfer")
+-            or torch.zeros(logits.shape[0], dtype=torch.int64)
+-        ),
+-    )
+-    monkeypatch.setattr(
+-        sampler_module,
+-        "apply_top_k_top_p",
+-        lambda logits, _top_k, _top_p: calls.append("triton_filter") or logits,
+-    )
+-    monkeypatch.setattr(
+-        sampler_module,
+-        "gumbel_sample",
+-        lambda logits, *_args, **_kwargs: (
+-            calls.append("triton_sample")
+-            or torch.zeros(logits.shape[0], dtype=torch.int64)
+-        ),
+-    )
++
++    def record_flashinfer(logits, _top_k, _top_p):
++        calls.append("flashinfer")
++        return torch.zeros(logits.shape[0], dtype=torch.int64)
++
++    def record_filter(logits, _top_k, _top_p):
++        calls.append("triton_filter")
++        return logits
++
++    def record_gumbel(logits, *_args, **_kwargs):
++        calls.append("triton_sample")
++        return torch.zeros(logits.shape[0], dtype=torch.int64)
++
++    monkeypatch.setattr(sampler_module, "flashinfer_sample", record_flashinfer)
++    monkeypatch.setattr(sampler_module, "apply_top_k_top_p", record_filter)
++    monkeypatch.setattr(sampler_module, "gumbel_sample", record_gumbel)
+ 
+     subject.sample(
+         torch.ones((len(params), 4)),
+@@ -1862,6 +1956,7 @@ def test_uno_warmup_key_set_covers_served_prepare_and_sampler_shapes():
+             block_size=16,
+             max_model_len=4096,
+             noise_seed=0,
++            noise_low=1,
+             noise_high=vocab - 267,
+             has_rejected=True,
+             block=256,
+@@ -2292,7 +2387,7 @@ def test_uno_startup_jit_self_check_proves_flashinfer_branches(monkeypatch):
+     )
+     monkeypatch.setattr(jit_monitor, "_active", True)
+     monkeypatch.setattr(warmup.torch.accelerator, "synchronize", lambda: None)
+-    observed_launches = {}
++    observed_launches: dict[str, int] = {}
+ 
+     @contextmanager
+     def recorded_sampler_launches():
+@@ -2543,7 +2638,12 @@ def _uno_sample_tokens_runner(monkeypatch, num_reqs=1):
+ 
+     def propose(*args, **kwargs):
+         assert args[3] is target_hidden
+-        assert kwargs == {"dp_sync": None, "mm_inputs": None}
++        assert kwargs == {
++            "dp_sync": None,
++            "mm_inputs": None,
++            "dummy_run": False,
++            "is_profile": False,
++        }
+         events.append(f"propose-step-{proposer._step}")
+         proposer._step += 1
+         return torch.tensor([[8, 9]], dtype=torch.int64).repeat(num_reqs, 1)
+@@ -3630,3 +3730,352 @@ def test_survivor_usage_percentages_are_read_against_the_pinned_pool():
+         1 - 1 / 68, 5
+     )
+     assert round(budget.usage_with_free_blocks(81, 1), 5) == round(1 - 1 / 80, 5)
++
++
++def test_draft_graph_coverage_names_the_dispatch_key_it_lacks(monkeypatch, caplog):
++    """The startup receipt must state the key dispatch looks up.
++
++    Capturing draft row counts [4, 8, 16] is not the same as covering the
++    (num_tokens, effective_loras) key a four-request batch dispatches with:
++    the receipt listed the counts and so omitted the padded key dispatch
++    resolves, while the refusal names that key. The receipt and the refusal
++    must name the same key.
++    """
++    import logging
++
++    from vllm.config.compilation import CUDAGraphMode
++    from vllm.v1.worker.gpu.cudagraph_utils import BatchExecutionDescriptor
++    from vllm.v1.worker.gpu.spec_decode.uno_draft_moe import (
++        refuse_uncaptured_eager_draft,
++    )
++
++    _cpu_graph_manager_patches(monkeypatch)
++    proposer = _cpu_uno_proposer(
++        4, max_num_seqs=4, capture_sizes=[1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16]
++    )
++    proposer.init_cudagraph_manager(CUDAGraphMode.FULL_DECODE_ONLY)
++    manager = proposer.cudagraph_manager
++    assert manager is not None
++    manager._graphs_captured = True
++    assert (16, 2) in manager.captured_dispatch_keys()
++    # The capture at 16 rows pads down to serve the dispatch keys 9..16. Drop
++    # that whole family of keys: a bundle of captured row counts is not the
++    # same receipt as the keys dispatch is asked for.
++    for padded in range(9, 17):
++        manager._candidates.pop((padded, 2), None)
++
++    with caplog.at_level(logging.WARNING, logger="vllm.v1.worker.gpu.spec_decode.uno"):
++        proposer._log_draft_graph_coverage()
++    warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
++    assert warnings, caplog.text
++    message = warnings[0].getMessage()
++    _, _, keys = message.partition("captured draft dispatch keys ")
++    covered_text, _, uncovered_text = keys.partition("; ")
++    assert uncovered_text, message
++    assert "num_tokens=16" not in covered_text
++    assert "num_tokens=16 effective_loras=2" in uncovered_text
++
++    proposer.draft_moe_state = SimpleNamespace(
++        top_k=4, variant="gemma4-sm86-marlin-topk4"
++    )
++    desc = BatchExecutionDescriptor(CUDAGraphMode.NONE, 16, 4, num_active_loras=2)
++    with pytest.raises(Exception) as excinfo:
++        refuse_uncaptured_eager_draft(proposer, desc, warmup=False)
++    assert "num_tokens=16 effective_loras=2" in str(excinfo.value)
++
++
++def test_proposal_call_site_forwards_the_runners_pass_state():
++    """The production proposal call site must pass the runner's own flags.
++
++    ``_dummy_run`` classified its proposals, but the only other proposal call
++    site passed neither flag, so a speculator could not tell a discarded
++    startup proposal from a serving one. A test double that supplies the flag
++    itself would hide that, so this drives the real GPUModelRunner method.
++    """
++    from vllm.v1.worker.gpu.model_runner import GPUModelRunner
++
++    recorded: dict = {}
++
++    class RecordingSpeculator:
++        def prepare_watermarking(self, *args, **kwargs):
++            raise AssertionError("a non-watermark sampler must not be prepared")
++
++        def propose(self, *args, **kwargs):
++            recorded.update(kwargs)
++            return torch.zeros((2, 4), dtype=torch.int64)
++
++    runner = object.__new__(GPUModelRunner)
++    runner._draft_workspace_lane = 0
++    runner.speculator = RecordingSpeculator()
++    runner.sampler = SimpleNamespace(
++        sampling_states=SimpleNamespace(
++            temperature=SimpleNamespace(gpu=torch.zeros(2)),
++            seeds=SimpleNamespace(gpu=torch.zeros(2)),
++        )
++    )
++    runner.adaptive_verification = None
++    runner.req_states = SimpleNamespace(
++        last_sampled_tokens=torch.zeros(2, dtype=torch.int64),
++        next_prefill_tokens=torch.zeros(2, dtype=torch.int64),
++        draft_tokens=torch.zeros((2, 4), dtype=torch.int64),
++    )
++    tensor = torch.zeros(2)
++
++    runner._run_speculator_proposal(
++        SimpleNamespace(idx_mapping=torch.tensor([0, 1])),
++        None,
++        None,
++        tensor,
++        None,
++        tensor,
++        tensor,
++        None,
++        None,
++        dummy_run=True,
++        is_profile=False,
++    )
++    assert recorded["dummy_run"] is True
++    assert recorded["is_profile"] is False
++
++
++def _startup_forward_markers() -> dict[str, str]:
++    """Which callable each startup phase hands the worker's forward, unparsed."""
++    import ast
++    import textwrap
++
++    from vllm.v1.worker import gpu_worker
++
++    source = textwrap.dedent(
++        inspect.getsource(gpu_worker.Worker.compile_or_warm_up_model)
++    )
++    markers: dict[str, str] = {}
++    for node in ast.walk(ast.parse(source)):
++        if not isinstance(node, ast.Call) or len(node.args) < 2:
++            continue
++        func = node.func
++        name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
++        if name in ("warmup_kernels", "run_uno_served_jit_self_check"):
++            markers[name] = ast.unparse(node.args[1])
++    return markers
++
++
++def _cpu_worker_forward(runner, *, use_v2: bool):
++    """A real Worker whose forward reaches `runner` without a device."""
++    from vllm.v1.worker import gpu_worker
++
++    worker = object.__new__(gpu_worker.Worker)
++    worker.model_runner = runner
++    worker.use_v2_model_runner = use_v2
++    worker._pp_send_work = []
++    worker.vllm_config = SimpleNamespace(
++        compilation_config=SimpleNamespace(
++            pass_config=SimpleNamespace(enable_sp=False)
++        ),
++        parallel_config=SimpleNamespace(pipeline_parallel_size=1),
++    )
++    worker.annotate_profile = lambda scheduler_output: nullcontext()
++    return worker
++
++
++def _mixed_warmup_model_runner(proposer, recorded: list[bool]):
++    """A runner double that runs the real proposal with the flags it is sent."""
++    runner = SimpleNamespace(
++        is_pooling_model=False,
++        max_num_reqs=2,
++        vllm_config=SimpleNamespace(num_lookahead_tokens=0),
++        max_model_len=64,
++        model_state=SimpleNamespace(max_encoder_len=0),
++        kv_connector=SimpleNamespace(set_disabled=lambda disabled: None),
++        kv_cache_config=SimpleNamespace(
++            num_blocks=1000,
++            kv_cache_groups=[
++                SimpleNamespace(kv_cache_spec=SimpleNamespace(block_size=16))
++            ],
++        ),
++    )
++
++    def execute_model(scheduler_output, intermediate_tensors=None, *, is_profile=False):
++        recorded.append(is_profile)
++        n = len(scheduler_output.num_scheduled_tokens)
++        if n == 0:
++            return None
++        proposer.propose(
++            SimpleNamespace(
++                num_reqs=n,
++                idx_mapping=torch.arange(n),
++                seq_lens_cpu_upper_bound=torch.full((max(4, n),), 8, dtype=torch.int32),
++            ),
++            attn_metadata={},
++            slot_mappings={},
++            last_hidden_states=torch.zeros(1),
++            aux_hidden_states=None,
++            num_sampled=torch.zeros(n, dtype=torch.int32),
++            num_rejected=torch.zeros(n, dtype=torch.int32),
++            last_sampled=torch.zeros(n, dtype=torch.int64),
++            next_prefill_tokens=torch.zeros(n, dtype=torch.int64),
++            temperature=torch.zeros(n),
++            seeds=torch.zeros(n, dtype=torch.int64),
++            dummy_run=False,
++            is_profile=is_profile,
++        )
++        return None
++
++    runner.execute_model = execute_model
++    return runner
++
++
++def test_startup_forwards_are_marked_as_discarded():
++    """Every startup phase handing batches to the worker marks them discarded.
++
++    ``warmup_kernels`` runs before capture and the JIT self-check runs after
++    it; both feed scheduler-realistic batches through the worker, so their
++    proposal call sites see ``dummy_run=False``. Without the profiling mark a
++    speculator that refuses uncaptured serving shapes kills the engine at boot.
++    The mark, not a shape guess, is what keeps that exemption honest.
++    """
++    from vllm.v1.worker.gpu.model_runner import ExecuteModelState
++
++    assert "dummy_run" in ExecuteModelState._fields
++    assert "is_profile" in ExecuteModelState._fields
++
++    markers = _startup_forward_markers()
++    assert set(markers) == {"warmup_kernels", "run_uno_served_jit_self_check"}
++    assert markers["warmup_kernels"] == "self._discarded_startup_forward()"
++    assert (
++        markers["run_uno_served_jit_self_check"] == "self._discarded_startup_forward()"
++    )
++
++
++def test_discarded_startup_forward_marks_the_pass_for_the_runner():
++    """The marker callable carries ``is_profile`` to the runner it wraps."""
++    from vllm.v1.worker import gpu_worker
++
++    seen: dict = {}
++
++    def fake_execute_model(scheduler_output, *, is_profile=False):
++        seen["is_profile"] = is_profile
++        return None
++
++    worker = object.__new__(gpu_worker.Worker)
++    worker.execute_model = fake_execute_model
++    worker._discarded_startup_forward()(SimpleNamespace())
++    assert seen == {"is_profile": True}
++
++
++def test_worker_forward_keeps_the_v2_profile_flag_off_the_v1_runner(monkeypatch):
++    """The shared forward must not send ``is_profile`` to the V1 runner.
++
++    ``gpu_worker.execute_model`` forwards to both runner versions, but the V1
++    runner's ``execute_model`` has no ``is_profile`` parameter, so an ordinary
++    V1 request would raise ``TypeError`` before executing. The double below has
++    the V1 signature exactly, which is what a permissive Mock cannot catch.
++    """
++    from vllm.v1.worker import gpu_worker
++
++    monkeypatch.setattr(
++        gpu_worker,
++        "get_pp_group",
++        lambda: SimpleNamespace(is_first_rank=True, is_last_rank=True),
++    )
++
++    v1_calls: list[dict] = []
++
++    class V1Runner:
++        is_pooling_model = False
++
++        def execute_model(self, scheduler_output, intermediate_tensors=None):
++            v1_calls.append({"intermediate_tensors": intermediate_tensors})
++            return None
++
++    worker = _cpu_worker_forward(V1Runner(), use_v2=False)
++    assert worker.execute_model(SimpleNamespace(total_num_scheduled_tokens=0)) is None
++    assert v1_calls == [{"intermediate_tensors": None}]
++
++    v2_calls: list[bool] = []
++
++    class V2Runner:
++        is_pooling_model = False
++
++        def execute_model(
++            self, scheduler_output, intermediate_tensors=None, *, is_profile=False
++        ):
++            v2_calls.append(is_profile)
++            return None
++
++    worker = _cpu_worker_forward(V2Runner(), use_v2=True)
++    worker._discarded_startup_forward()(SimpleNamespace(total_num_scheduled_tokens=0))
++    worker.execute_model(SimpleNamespace(total_num_scheduled_tokens=0))
++    assert v2_calls == [True, False]
++
++
++def test_mixed_warmup_through_the_worker_never_reaches_the_serving_refusal(
++    monkeypatch,
++):
++    """Startup batches must not be refused as uncaptured serving shapes.
++
++    With the draft top-k variant enabled and no captured graph, the mixed
++    warmup the startup JIT self-check runs reaches the eager branch of
++    ``propose`` with both flags false unless the worker marks the forward as a
++    discarded pass. The marked forward must complete, and the same uncaptured
++    shape on an unmarked serving forward must still refuse by name.
++    """
++    from vllm.config.compilation import CUDAGraphMode
++    from vllm.v1.worker import gpu_worker
++    from vllm.v1.worker.gpu import warmup
++    from vllm.v1.worker.gpu.spec_decode import uno_draft_moe
++    from vllm.v1.worker.gpu.spec_decode.uno_draft_moe import (
++        DraftMoEConfigurationError,
++    )
++
++    _cpu_graph_manager_patches(monkeypatch)
++    monkeypatch.setattr(
++        gpu_worker,
++        "get_pp_group",
++        lambda: SimpleNamespace(is_first_rank=True, is_last_rank=True),
++    )
++    monkeypatch.setattr(
++        "vllm.v1.worker.gpu.spec_decode.uno.prepare_uno_inputs_fused",
++        lambda *args, **kwargs: None,
++    )
++    monkeypatch.setattr(
++        "vllm.v1.worker.gpu.spec_decode.uno.build_slot_mappings_by_layer",
++        lambda *args, **kwargs: {},
++    )
++    # The variant is requested but capture produced no graph: the boot shape
++    # the JIT self-check must survive.
++    monkeypatch.setattr(uno_draft_moe, "uno_draft_moe_enabled", lambda: True)
++
++    proposer = _cpu_uno_proposer(4, max_num_seqs=2, capture_sizes=[8, 16])
++    proposer.init_cudagraph_manager(CUDAGraphMode.FULL_DECODE_ONLY)
++    manager = proposer.cudagraph_manager
++    assert manager is not None
++    assert not manager._graphs_captured
++
++    marked: list[bool] = []
++    marked_runner = _mixed_warmup_model_runner(proposer, marked)
++    worker = _cpu_worker_forward(marked_runner, use_v2=True)
++    ran = warmup.run_mixed_prefill_decode_warmup(
++        marked_runner,
++        worker._discarded_startup_forward(),
++        lambda grammar_output=None: None,
++        5,
++    )
++    assert ran
++    # The two executed batches are marked. The trailing empty cleanup is sent
++    # is_profile=True by the same callable too; it schedules no tokens, so it
++    # reaches no proposal.
++    assert marked == [True, True, True]
++
++    serving: list[bool] = []
++    serving_runner = _mixed_warmup_model_runner(proposer, serving)
++    serving_worker = _cpu_worker_forward(serving_runner, use_v2=True)
++    with pytest.raises(DraftMoEConfigurationError) as excinfo:
++        warmup.run_mixed_prefill_decode_warmup(
++            serving_runner,
++            serving_worker.execute_model,
++            lambda grammar_output=None: None,
++            5,
++        )
++    assert "num_tokens=4" in str(excinfo.value)
++    assert "effective_loras=2" in str(excinfo.value)
++    assert serving[:1] == [False]
+diff --git a/tests/v1/spec_decode/test_uno_prepare_mrv2.py b/tests/v1/spec_decode/test_uno_prepare_mrv2.py
+index 653efb8859..5b3e39ca6b 100644
+--- a/tests/v1/spec_decode/test_uno_prepare_mrv2.py
++++ b/tests/v1/spec_decode/test_uno_prepare_mrv2.py
+@@ -168,6 +168,7 @@ def _run_reference(case, k: int, step: int):
+         k,
+         case.max_model_len,
+         29,
++        1,
+         100_003,
+         step,
+     )
+@@ -199,6 +200,7 @@ def test_fused_uno_inputs_match_eager_reference(k, scenario):
+         k,
+         gpu.max_model_len,
+         29,
++        1,
+         100_003,
+         step,
+     )
+@@ -229,6 +231,7 @@ def test_fused_uno_boundaries_write_padding_slots(k):
+         k,
+         case.max_model_len,
+         29,
++        1,
+         100_003,
+         37,
+     )
+@@ -271,6 +274,7 @@ def test_fused_uno_covers_large_graph_padding_capacity():
+         4,
+         case.max_model_len,
+         29,
++        1,
+         100_003,
+         37,
+     )
+@@ -301,6 +305,7 @@ def test_fused_uno_preserves_large_runtime_step_arithmetic():
+         4,
+         case.max_model_len,
+         29,
++        1,
+         100_003,
+         step,
+     )
+@@ -327,6 +332,7 @@ def test_fused_uno_rejects_cpu_buffers_before_launch():
+             4,
+             case.max_model_len,
+             29,
++            1,
+             100_003,
+             37,
+         )
+@@ -364,12 +370,10 @@ def test_uno_prepare_specialization_ignores_dynamic_target_view_lengths(
+     # pointer alignment and storage offset.
+     warmup_num_sampled = torch.empty(num_reqs, dtype=torch.int32, device=device)
+     warmup_num_rejected = torch.empty(num_reqs, dtype=torch.int32, device=device)
+-    served_num_sampled = torch.empty(num_reqs + 1, dtype=torch.int32, device=device)[
++    served_num_sampled = torch.empty(num_reqs + 1, dtype=torch.int32, device=device)[1:]
++    served_num_rejected = torch.empty(num_reqs + 1, dtype=torch.int32, device=device)[
+         1:
+     ]
+-    served_num_rejected = torch.empty(
+-        num_reqs + 1, dtype=torch.int32, device=device
+-    )[1:]
+     assert warmup_num_sampled.storage_offset() == 0
+     assert served_num_sampled.storage_offset() == 1
+ 
+@@ -380,6 +384,7 @@ def test_uno_prepare_specialization_ignores_dynamic_target_view_lengths(
+         block_size=16,
+         max_model_len=4096,
+         noise_seed=0,
++        noise_low=1,
+         noise_high=151_669,
+         has_rejected=True,
+         block=256,
+@@ -410,9 +415,8 @@ def test_uno_prepare_specialization_ignores_dynamic_target_view_lengths(
+     assert "TARGET_POSITION_CAP" not in dict(warmup_specialization)
+     import vllm.v1.worker.gpu.spec_decode.uno_prepare as uno_prepare
+ 
+-    assert 'do_not_specialize_on_alignment=["num_sampled_ptr", "num_rejected_ptr"]' in inspect.getsource(
+-        uno_prepare
+-    )
++    alignment = 'do_not_specialize_on_alignment=["num_sampled_ptr", "num_rejected_ptr"]'
++    assert alignment in inspect.getsource(uno_prepare)
+ 
+ 
+ def test_fused_uno_rejects_non_native_last_sampled_layout_on_cpu():
+@@ -434,6 +438,7 @@ def test_fused_uno_rejects_non_native_last_sampled_layout_on_cpu():
+             4,
+             case.max_model_len,
+             29,
++            1,
+             100_003,
+             37,
+         )
+@@ -458,6 +463,7 @@ def test_fused_uno_rejects_non_native_next_prefill_layout_on_cpu():
+             4,
+             case.max_model_len,
+             29,
++            1,
+             100_003,
+             37,
+         )
+diff --git a/vllm/config/speculative.py b/vllm/config/speculative.py
+index f7a22a2614..7ffbc65935 100644
+--- a/vllm/config/speculative.py
++++ b/vllm/config/speculative.py
+@@ -466,9 +466,14 @@ class SpeculativeConfig:
+     uno_lora_path: str | None = None
+     """Uno adapter directory in PEFT format, or its Hugging Face repository ID.
+     The adapter is active only on the noisy draft rows."""
+-    uno_mask_token_id: int | None = Field(default=None, gt=1)
+-    """Exclusive upper bound of Uno's uniform noise range [1, mask_token_id).
+-    Defaults to the target vocabulary size. Match the adapter's training range."""
++    uno_noise_low: int = Field(default=1, ge=0, strict=True)
++    """Inclusive lower bound of Uno's uniform noise range. The released
++    convention starts at 1; checkpoints trained over the full vocabulary
++    (e.g. Gemma) start at 0."""
++    uno_mask_token_id: int | None = Field(default=None, gt=0, strict=True)
++    """Exclusive upper bound of the noise range
++    [uno_noise_low, mask_token_id). Defaults to the target vocabulary size.
++    Match the adapter's training range."""
+     uno_noise_seed: int = 0
+     """Seed for Uno's deterministic draft-noise generator."""
+ 
+@@ -651,6 +656,13 @@ class SpeculativeConfig:
+                 )
+             )
+ 
++        if self.method == "uno":
++            # The noise range changes every drafted token id, so cached graphs
++            # and compiled kernels must not be shared across two ranges.
++            factors.append(
++                ("uno_noise_bounds", self.uno_noise_low, self.uno_mask_token_id)
++            )
++
+         hash_str = safe_hash(str(factors).encode(), usedforsecurity=False).hexdigest()
+         return hash_str
+ 
+@@ -1667,22 +1679,60 @@ class SpeculativeConfig:
+         if (
+             model_config.runner_type != "generate"
+             or model_config.is_diffusion
+-            or model_config.is_multimodal_model
+             or model_config.is_encoder_decoder
+         ):
+-            raise ValueError("Uno requires a text-only decoder model")
+-        if (
+-            model_config.is_hybrid
+-            or model_config.is_attention_free
+-            or model_config.get_sliding_window() is not None
+-        ):
+-            raise ValueError("Uno requires a model with full attention in every layer")
++            raise ValueError("Uno requires a text decoder model")
++        if model_config.is_multimodal_model:
++            if not self._target_is_language_only():
++                raise ValueError(
++                    "Uno requires a language-only model; a multimodal checkpoint "
++                    "is accepted only when it is served with "
++                    "--language-model-only, so no vision input can reach the "
++                    "draft rows"
++                )
++            if (
++                getattr(model_config.multimodal_config, "enable_mm_embeds", False)
++                is True
++            ):
++                raise ValueError(
++                    "Uno requires a text-only target; --enable-mm-embeds would "
++                    "deliver multimodal embeddings to the draft rows even with "
++                    "--language-model-only"
++                )
++        if model_config.is_hybrid or model_config.is_attention_free:
++            raise ValueError(
++                "Uno requires attention layers with a shared KV cache; hybrid "
++                "and attention-free models are not supported"
++            )
++        # A sliding window is admissible only when the KV allocation is full and
++        # every layer's window is enforced by the attention backend the draft
++        # rows use (see the draft-rows KV rule at setup). This predicate cannot
++        # see the resolved backend or KV groups, so it admits the model here and
++        # the runtime refuses an arrangement the draft cannot honor.
+ 
+         vocab_size = model_config.get_vocab_size()
+         if self.uno_mask_token_id is None:
+             self.uno_mask_token_id = vocab_size
+-        if not 1 < self.uno_mask_token_id <= vocab_size:
+-            raise ValueError("uno_mask_token_id must be in (1, target vocabulary size]")
++        if not 0 <= self.uno_noise_low < self.uno_mask_token_id <= vocab_size:
++            raise ValueError(
++                "Uno noise requires 0 <= uno_noise_low < uno_mask_token_id "
++                "<= target vocabulary size"
++            )
++
++    def _target_is_language_only(self) -> bool:
++        """Whether a multimodal checkpoint was loaded with text inputs only.
++
++        ``--language-model-only`` keeps ``multimodal_config`` (so
++        ``is_multimodal_model`` stays true) but zeroes every modality limit, so
++        the engine can never deliver an image or video to the draft rows.
++        Pre-computed embeddings bypass those limits when ``enable_mm_embeds`` is
++        set, so they are refused separately.
++        """
++        multimodal_config = self.target_model_config.multimodal_config
++        return (
++            multimodal_config is not None
++            and multimodal_config.language_model_only is True
++        )
+ 
+     @staticmethod
+     def _maybe_override_draft_max_model_len(
+diff --git a/vllm/config/vllm.py b/vllm/config/vllm.py
+index 7155dc2e2e..2a116d3b66 100644
+--- a/vllm/config/vllm.py
++++ b/vllm/config/vllm.py
+@@ -1292,6 +1292,18 @@ class VllmConfig:
+             or self.cache_config.kv_offloading_size is not None
+         ):
+             raise ValueError("Uno does not support KV cache transfer")
++        if self.ec_transfer_config is not None:
++            raise ValueError(
++                "Uno does not support EC cache transfer; an EC consumer "
++                "auto-enables multimodal embedding inputs, which Uno's "
++                "text-only draft rows cannot serve"
++            )
++        if self._uno_target_enables_mm_embeds():
++            raise ValueError(
++                "Uno requires a text-only target; --enable-mm-embeds (or the "
++                "EC/KV consumer auto-enablement that implies it) would deliver "
++                "multimodal embeddings to Uno's draft rows"
++            )
+         if self.cache_config.kv_sharing_fast_prefill:
+             raise ValueError(
+                 "Fast prefill optimization for KV sharing is not compatible "
+@@ -1313,6 +1325,21 @@ class VllmConfig:
+                 f"num_speculative_tokens ({required_tokens}) for draft LoRA routing"
+             )
+ 
++    def _uno_target_enables_mm_embeds(self) -> bool:
++        """Whether embedding inputs survive to a Uno target.
++
++        ``enable_mm_embeds`` is resolved late (a consumer role can set it), so
++        this is read only after the multimodal consumer configuration is final.
++        """
++        model_config = self.model_config
++        if model_config is None:
++            return False
++        mm_config = model_config.multimodal_config
++        return (
++            mm_config is not None
++            and getattr(mm_config, "enable_mm_embeds", False) is True
++        )
++
+     def __post_init__(self):
+         """Verify configs are valid & consistent with each other."""
+ 
+@@ -1909,9 +1936,13 @@ class VllmConfig:
+         # async scheduling).  Uno has no synchronous or V1 fallback, so rerun
+         # its narrow contract check after platform-specific updates and fail
+         # at initialization with the actionable reason.
++        # The multimodal consumer configuration resolves below, and it can
++        # enable embedding inputs; the Uno guard runs after it so those
++        # predicates are evaluated against the final configuration.
++        self._resolve_mm_embedding_inputs()
++
+         self._validate_uno_config()
+ 
+-        self._resolve_mm_embedding_inputs()
+         self._resolve_mm_processor_device()
+         self._resolve_mm_video_decode_device()
+         self._validate_mm_processor_device()
+diff --git a/vllm/v1/attention/backends/triton_attn.py b/vllm/v1/attention/backends/triton_attn.py
+index b7e2a41d00..88c36c1081 100644
+--- a/vllm/v1/attention/backends/triton_attn.py
++++ b/vllm/v1/attention/backends/triton_attn.py
+@@ -54,6 +54,49 @@ MIN_LAUNCH_GRID_SIZE_2D = 128  # Minimum launch grid size of 2D kernel
+ NUM_PAR_SOFTMAX_SEGMENTS = 16  # Number of parallel tiled softmax segments
+ 
+ 
++def _uno_static_query_width(
++    *,
++    use_uno: bool,
++    num_reqs: int,
++    num_actual_tokens: int,
++    max_query_len: int,
++    query_start_loc_cpu: torch.Tensor | None,
++    causal: bool | torch.Tensor,
++    uno_custom_mask: torch.Tensor | None,
++    mm_req_doc_ranges: dict[int, list[tuple[int, int]]] | None,
++    rswa_prefix_lens: torch.Tensor | None,
++) -> int | None:
++    """Return a validated C1 width for the opt-in Uno splitKV path.
++
++    This intentionally consumes the CPU copy of ``query_start_loc``.  The
++    result is static metadata selected before a CUDA graph is captured; the
++    attention kernel must never read a device QSL back to the host.
++    """
++    if not use_uno or num_reqs != 1:
++        return None
++    if max_query_len not in (2, 3, 4, 5):
++        return None
++    if num_actual_tokens != max_query_len or causal is not True:
++        return None
++    if (
++        uno_custom_mask is not None
++        or mm_req_doc_ranges is not None
++        or rswa_prefix_lens is not None
++    ):
++        return None
++    if query_start_loc_cpu is None:
++        return None
++    if query_start_loc_cpu.device.type != "cpu":
++        return None
++    if query_start_loc_cpu.ndim != 1 or query_start_loc_cpu.numel() != 2:
++        return None
++    if query_start_loc_cpu.dtype not in (torch.int32, torch.int64):
++        return None
++    if query_start_loc_cpu.tolist() != [0, max_query_len]:
++        return None
++    return max_query_len
++
++
+ @dataclass
+ class TritonAttentionMetadata:
+     # NOTE(sang): Definition of context_len, query_len, and seq_len.
+@@ -94,6 +137,8 @@ class TritonAttentionMetadata:
+     mm_prefix_range_tensor: torch.Tensor | None = None
+     rswa_prefix_lens: torch.Tensor | None = None
+     rswa_window: int | None = None
++    # Host-validated physical Uno query width.  None keeps the stock path.
++    uno_static_query_width: int | None = None
+ 
+ 
+ class TritonAttentionMetadataBuilder(AttentionMetadataBuilder[TritonAttentionMetadata]):
+@@ -113,6 +158,9 @@ class TritonAttentionMetadataBuilder(AttentionMetadataBuilder[TritonAttentionMet
+         self.block_size = kv_cache_spec.block_size
+ 
+         model_config = vllm_config.model_config
++        speculative_config = getattr(vllm_config, "speculative_config", None)
++        use_uno = getattr(speculative_config, "use_uno", None)
++        self._use_uno = bool(use_uno() if callable(use_uno) else use_uno)
+         # Compatible with models with non-uniform per-layer head counts.
+         self.num_heads_q = get_num_attention_heads_from_layers(
+             vllm_config, layer_names
+@@ -208,6 +256,20 @@ class TritonAttentionMetadataBuilder(AttentionMetadataBuilder[TritonAttentionMet
+         block_table_tensor = common_attn_metadata.block_table_tensor
+         slot_mapping = common_attn_metadata.slot_mapping
+ 
++        uno_static_query_width = _uno_static_query_width(
++            use_uno=self._use_uno,
++            num_reqs=num_reqs,
++            num_actual_tokens=num_actual_tokens,
++            max_query_len=max_query_len,
++            query_start_loc_cpu=getattr(
++                common_attn_metadata, "query_start_loc_cpu", None
++            ),
++            causal=common_attn_metadata.causal,
++            uno_custom_mask=getattr(common_attn_metadata, "uno_custom_mask", None),
++            mm_req_doc_ranges=getattr(common_attn_metadata, "mm_req_doc_ranges", None),
++            rswa_prefix_lens=getattr(common_attn_metadata, "rswa_prefix_lens", None),
++        )
++
+         use_cascade = common_prefix_len > 0
+ 
+         if use_cascade:
+@@ -245,6 +307,7 @@ class TritonAttentionMetadataBuilder(AttentionMetadataBuilder[TritonAttentionMet
+             softmax_segm_output=self.softmax_segm_output,
+             softmax_segm_max=self.softmax_segm_max,
+             softmax_segm_expsum=self.softmax_segm_expsum,
++            uno_static_query_width=uno_static_query_width,
+         )
+ 
+         mm_ranges = common_attn_metadata.mm_req_doc_ranges
+@@ -681,6 +744,7 @@ class TritonAttentionImpl(AttentionImpl):
+             output_scale=output_scale,
+             mm_prefix_range=mm_prefix_range_tensor,
+             rswa_prefix_lens=attn_metadata.rswa_prefix_lens,
++            uno_static_query_width=attn_metadata.uno_static_query_width,
+             rswa_window=attn_metadata.rswa_window,
+             kv_quant_mode=self._kv_quant_mode,
+             k_scale_cache=k_scale_cache,
+diff --git a/vllm/v1/attention/ops/triton_unified_attention.py b/vllm/v1/attention/ops/triton_unified_attention.py
+index b0231dd0c0..1a3902ddb0 100644
+--- a/vllm/v1/attention/ops/triton_unified_attention.py
++++ b/vllm/v1/attention/ops/triton_unified_attention.py
+@@ -7,6 +7,7 @@
+ #  - Chih-Chieh Yang <chih.chieh.yang@ibm.com>
+ #  - Thomas Parnell <tpa@zurich.ibm.com>
+ 
++import os
+ from typing import Any
+ 
+ import torch
+@@ -35,6 +36,148 @@ is_batch_invariant = envs.VLLM_BATCH_INVARIANT
+ float8_info = torch.finfo(current_platform.fp8_dtype())
+ 
+ 
++NUM_PAR_SOFTMAX_SEGMENTS = 16
++
++
++def _uno_splitkv_env_enabled() -> bool:
++    """Return the explicit opt-in for Gemma Uno's small-query splitKV path."""
++    return os.environ.get("UNO_GEMMA_SPLITKV", "").strip().lower() in {
++        "1",
++        "true",
++        "yes",
++        "on",
++    }
++
++
++def _uno_gemma_splitkv_admissible(
++    *,
++    q: torch.Tensor,
++    k: torch.Tensor,
++    v: torch.Tensor,
++    out: torch.Tensor,
++    max_seqlen_q: int,
++    num_seqs: int,
++    causal: bool | torch.Tensor,
++    window_size: tuple[int, int],
++    uno_static_query_width: int | None,
++    seq_threshold_3D: int | None,
++    num_par_softmax_segments: int | None,
++    softmax_segm_output: torch.Tensor | None,
++    softmax_segm_max: torch.Tensor | None,
++    softmax_segm_expsum: torch.Tensor | None,
++    mm_prefix_range: torch.Tensor | None,
++    rswa_prefix_lens: torch.Tensor | None,
++    rswa_window: int | None,
++    alibi_slopes: torch.Tensor | None,
++    qq_bias: torch.Tensor | None,
++    sinks: torch.Tensor | None,
++    output_scale: torch.Tensor | None,
++    q_descale: torch.Tensor | None,
++    k_descale: torch.Tensor | None,
++    v_descale: torch.Tensor | None,
++    kv_quant_mode: KVQuantMode,
++    chunk_lookback: int,
++) -> bool:
++    """Check the complete static contract for the opt-in C1 splitKV launch.
++
++    The scratch tensors are addressed by raw pointer arithmetic in both the
++    producer and reducer.  Contiguous storage is therefore a correctness
++    requirement; PyTorch view strides are not consulted by those kernels.
++    """
++    width = uno_static_query_width
++    if width not in (2, 3, 4, 5):
++        return False
++    if num_seqs != 1 or max_seqlen_q != width:
++        return False
++    if causal is not True or window_size not in ((1023, 0), (-1, -1)):
++        return False
++    if seq_threshold_3D is None or num_par_softmax_segments is None:
++        return False
++    if seq_threshold_3D < width or num_par_softmax_segments != NUM_PAR_SOFTMAX_SEGMENTS:
++        return False
++
++    # Gemma 4's two attention families are the only admitted BF16 layouts.
++    if (
++        q.ndim != 3
++        or k.ndim != 4
++        or v.ndim != 4
++        or out.ndim != 3
++        or q.dtype != torch.bfloat16
++        or k.dtype != torch.bfloat16
++        or v.dtype != torch.bfloat16
++        or out.dtype != torch.bfloat16
++    ):
++        return False
++    head_size = q.shape[2]
++    num_query_heads = q.shape[1]
++    num_kv_heads = k.shape[2]
++    if (head_size, num_kv_heads) not in ((256, 8), (512, 2)):
++        return False
++    if k.shape[-1] != head_size or v.shape[-1] != head_size:
++        return False
++    if num_query_heads != 16 or out.shape[0] != q.shape[0]:
++        return False
++    if out.shape[1] != num_query_heads or out.shape[2] != head_size:
++        return False
++    if q.shape[0] != width or k.device != q.device or v.device != q.device:
++        return False
++    if out.device != q.device:
++        return False
++
++    # These features alter the mask or numeric scale and stay on stock 2-D.
++    if (
++        mm_prefix_range is not None
++        or rswa_prefix_lens is not None
++        or rswa_window is not None
++        or alibi_slopes is not None
++        or qq_bias is not None
++        or sinks is not None
++        or output_scale is not None
++        or q_descale is not None
++        or kv_quant_mode != KVQuantMode.NONE
++        or chunk_lookback >= 0
++    ):
++        return False
++
++    segm_output = softmax_segm_output
++    segm_max = softmax_segm_max
++    segm_expsum = softmax_segm_expsum
++    if segm_output is None or segm_max is None or segm_expsum is None:
++        return False
++    if (
++        segm_output.dtype != torch.float32
++        or segm_max.dtype != torch.float32
++        or segm_expsum.dtype != torch.float32
++        or not segm_output.is_contiguous()
++        or not segm_max.is_contiguous()
++        or not segm_expsum.is_contiguous()
++    ):
++        return False
++    if (
++        segm_output.device != q.device
++        or segm_max.device != q.device
++        or segm_expsum.device != q.device
++    ):
++        return False
++
++    q_rows = q.shape[0]
++    return not (
++        segm_output.ndim != 4
++        or segm_max.ndim != 3
++        or segm_expsum.ndim != 3
++        or segm_output.shape[0] < q_rows
++        or segm_max.shape[0] < q_rows
++        or segm_expsum.shape[0] < q_rows
++        or segm_output.shape[1] != num_query_heads
++        or segm_max.shape[1] != num_query_heads
++        or segm_expsum.shape[1] != num_query_heads
++        or segm_output.shape[2] != num_par_softmax_segments
++        or segm_max.shape[2] != num_par_softmax_segments
++        or segm_expsum.shape[2] != num_par_softmax_segments
++        or segm_output.shape[3] < head_size
++    )
++
++
+ @triton.jit
+ def _cast_kv_tile(data, Q, tensor_scale, KV_QUANT_MODE: tl.constexpr):
+     """Cast a loaded KV tile to Q's dtype, dequantizing if needed.
+@@ -852,6 +995,8 @@ def unified_attention(
+     # Gemma4: clamp mm_prefix bidirectional ranges by the sliding window.
+     # Default False keeps the original behavior for every other model.
+     mm_prefix_clamp_sliding_window: bool = False,
++    # Host-validated physical Uno query width.  None keeps the stock path.
++    uno_static_query_width: int | None = None,
+ ):
+     # Resolve causal: bool or per-seq tensor.
+     use_per_seq_causal = isinstance(causal, torch.Tensor)
+@@ -1038,6 +1183,39 @@ def unified_attention(
+             f"(out.stride(1) = {out.stride(1)} != head_size = {head_size})."
+         )
+ 
++    uno_splitkv = (
++        uno_static_query_width is not None
++        and _uno_splitkv_env_enabled()
++        and _uno_gemma_splitkv_admissible(
++            q=q,
++            k=k,
++            v=v,
++            out=out,
++            max_seqlen_q=max_seqlen_q,
++            num_seqs=num_seqs,
++            causal=causal,
++            window_size=window_size,
++            uno_static_query_width=uno_static_query_width,
++            seq_threshold_3D=seq_threshold_3D,
++            num_par_softmax_segments=num_par_softmax_segments,
++            softmax_segm_output=softmax_segm_output,
++            softmax_segm_max=softmax_segm_max,
++            softmax_segm_expsum=softmax_segm_expsum,
++            mm_prefix_range=mm_prefix_range,
++            rswa_prefix_lens=rswa_prefix_lens,
++            rswa_window=rswa_window,
++            alibi_slopes=alibi_slopes,
++            qq_bias=qq_bias,
++            sinks=sinks,
++            output_scale=output_scale,
++            q_descale=q_descale,
++            k_descale=k_descale,
++            v_descale=v_descale,
++            kv_quant_mode=kv_quant_mode,
++            chunk_lookback=chunk_lookback,
++        )
++    )
++
+     # Launch the 2D kernel if
+     # 1. No intermediate tiled softmax buffers for the 3D kernel have been allocated, or
+     # 2. The batch includes at least one prefill request, or
+@@ -1049,10 +1227,24 @@ def unified_attention(
+         or softmax_segm_output is None
+         or softmax_segm_max is None
+         or softmax_segm_expsum is None
+-        or max_seqlen_q > 1
++        or (max_seqlen_q > 1 and not uno_splitkv)
+         or num_seqs > seq_threshold_3D
+         or is_batch_invariant
+     )
++    if uno_splitkv and use_3d:
++        assert uno_static_query_width is not None
++        # Keep the once-key arguments scalar and hashable: the logger uses an
++        # LRU-backed ``info_once`` implementation, and tensor/dict arguments
++        # would make the engagement receipt fail before the kernel launch.
++        logger.info_once(
++            "UNO_GEMMA_SPLITKV engaged width=%d head_size=%d q_heads=%d "
++            "kv_heads=%d segments=%d",
++            int(uno_static_query_width),
++            int(head_size),
++            int(num_query_heads),
++            int(num_kv_heads),
++            int(num_par_softmax_segments),
++        )
+ 
+     # The kernel signature is the same for 2D and 3D — only the launch
+     # grid + a handful of constexpr toggles differ.  Per-token-head scale
+diff --git a/vllm/v1/worker/gpu/cudagraph_utils.py b/vllm/v1/worker/gpu/cudagraph_utils.py
+index d197dbbc6d..c2bcf332ef 100644
+--- a/vllm/v1/worker/gpu/cudagraph_utils.py
++++ b/vllm/v1/worker/gpu/cudagraph_utils.py
+@@ -493,7 +493,23 @@ class CudaGraphManager:
+             {desc.num_tokens for desc in self.graphs if desc.num_active_loras == 0}
+         )
+ 
+-    def dispatch(
++    def dispatch_key(self, num_tokens: int, num_active_loras: int) -> tuple[int, int]:
++        """The ``(num_tokens, effective_loras)`` key dispatch looks up."""
++        return (num_tokens, self._resolve_effective_loras(num_active_loras))
++
++    def captured_dispatch_keys(self) -> list[tuple[int, int]]:
++        """The ``(num_tokens, effective_loras)`` keys dispatch resolves a graph for.
++
++        Enumerated from the same padded candidate key space ``dispatch`` looks
++        up, and empty until capture completes, so a receipt cannot advertise a
++        descriptor row count that only pads up to another graph or a key from an
++        unpopulated table.
++        """
++        if not self._graphs_captured:
++            return []
++        return sorted(key for key in self._candidates if key[0] > 0)
++
++    def resolve_dispatch(
+         self,
+         num_reqs: int,
+         num_tokens: int,
+@@ -501,28 +517,81 @@ class CudaGraphManager:
+         num_active_loras: int,
+         max_query_len: int | None = None,
+         num_ubatches: int = 1,
+-    ) -> BatchExecutionDescriptor:
+-        """Find matching cudagraph descriptor from priority-ordered candidates."""
++    ) -> BatchExecutionDescriptor | None:
++        """The descriptor dispatch resolves for this batch, or ``None``.
+ 
++        One resolution shared by ``dispatch``, ``key_is_covered`` and the
++        startup coverage receipt, so the key a receipt advertises is the key
++        dispatch consults and the captured-state condition cannot be applied at
++        one site only.
++        """
++        if not self._graphs_captured or num_tokens <= 0:
++            return None
+         effective_loras = self._resolve_effective_loras(num_active_loras)
+         key = (num_tokens, effective_loras)
+-        if self._graphs_captured and num_tokens > 0 and key in self._candidates:
+-            for desc in self._candidates[key]:
+-                if _is_compatible(
+-                    desc,
+-                    num_reqs,
+-                    num_tokens,
+-                    uniform_token_count,
+-                    effective_loras,
+-                    max_query_len,
+-                    num_ubatches,
+-                ):
+-                    return desc
++        for desc in self._candidates.get(key, ()):
++            if _is_compatible(
++                desc,
++                num_reqs,
++                num_tokens,
++                uniform_token_count,
++                effective_loras,
++                max_query_len,
++                num_ubatches,
++            ):
++                return desc
++        return None
++
++    def key_is_covered(
++        self,
++        num_reqs: int,
++        num_tokens: int,
++        uniform_token_count: int | None,
++        num_active_loras: int,
++        max_query_len: int | None = None,
++        num_ubatches: int = 1,
++    ) -> bool:
++        """Whether dispatch resolves a graph for this batch's key.
++
++        Mirrors ``dispatch`` exactly, including the captured-state condition.
++        """
++        return (
++            self.resolve_dispatch(
++                num_reqs,
++                num_tokens,
++                uniform_token_count,
++                num_active_loras,
++                max_query_len,
++                num_ubatches,
++            )
++            is not None
++        )
++
++    def dispatch(
++        self,
++        num_reqs: int,
++        num_tokens: int,
++        uniform_token_count: int | None,
++        num_active_loras: int,
++        max_query_len: int | None = None,
++        num_ubatches: int = 1,
++    ) -> BatchExecutionDescriptor:
++        """Find matching cudagraph descriptor from priority-ordered candidates."""
++        desc = self.resolve_dispatch(
++            num_reqs,
++            num_tokens,
++            uniform_token_count,
++            num_active_loras,
++            max_query_len,
++            num_ubatches,
++        )
++        if desc is not None:
++            return desc
+         return BatchExecutionDescriptor(
+             cg_mode=CUDAGraphMode.NONE,
+             num_tokens=num_tokens,
+             num_reqs=num_reqs,
+-            num_active_loras=effective_loras,
++            num_active_loras=self._resolve_effective_loras(num_active_loras),
+             num_ubatches=num_ubatches,
+         )
+ 
+diff --git a/vllm/v1/worker/gpu/model_runner.py b/vllm/v1/worker/gpu/model_runner.py
+index f55514805c..838cb1f451 100644
+--- a/vllm/v1/worker/gpu/model_runner.py
++++ b/vllm/v1/worker/gpu/model_runner.py
+@@ -1253,8 +1253,16 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+         num_rejected: torch.Tensor,
+         dp_sync: DPSyncState | None,
+         mm_inputs: tuple[list[torch.Tensor], torch.Tensor] | None,
++        dummy_run: bool = False,
++        is_profile: bool = False,
+     ) -> None:
+-        """Run one proposal and retain its device-resident draft tokens."""
++        """Run one proposal and retain its device-resident draft tokens.
++
++        ``dummy_run`` and ``is_profile`` carry this pass's own state from
++        ``execute_model`` so a speculator sees the same classification on this
++        call site as on ``_dummy_run``'s. A proposer that discards the result
++        (warmup, profiling) must not be mistaken for a serving shape.
++        """
+         assert self.speculator is not None
+         assert self.sampler is not None
+         if isinstance(self.sampler, GPUWatermarkSampler):
+@@ -1276,6 +1284,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+                 self.sampler.sampling_states.temperature.gpu,
+                 self.sampler.sampling_states.seeds.gpu,
+                 dp_sync=dp_sync,
++                dummy_run=dummy_run,
++                is_profile=is_profile,
+                 mm_inputs=mm_inputs,
+             )
+         self.req_states.draft_tokens[input_batch.idx_mapping] = draft_tokens
+@@ -2319,6 +2329,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+             skip_speculator_proposal=scheduler_output.skip_speculator_proposal,
+             zero_next_draft_req_ids=frozenset(scheduler_output.zero_next_draft_req_ids),
+             uno_step_trace=uno_step_trace,
++            dummy_run=dummy_run,
++            is_profile=is_profile,
+         )
+ 
+         if not self.is_last_pp_rank:
+@@ -2356,6 +2368,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+         skip_speculator_proposal = self.execute_model_state.skip_speculator_proposal
+         zero_next_draft_req_ids = self.execute_model_state.zero_next_draft_req_ids
+         uno_step_trace = self.execute_model_state.uno_step_trace
++        dummy_run = self.execute_model_state.dummy_run
++        is_profile = self.execute_model_state.is_profile
+         self.execute_model_state = None
+ 
+         if not self.is_last_pp_rank:
+@@ -2519,6 +2533,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+                 num_rejected,
+                 dp_sync,
+                 mm_inputs,
++                dummy_run=dummy_run,
++                is_profile=is_profile,
+             )
+             if uno_step_trace is not None:
+                 uno_step_trace.end_stage("propose")
+@@ -2693,6 +2709,11 @@ class ExecuteModelState(NamedTuple):
+     skip_speculator_proposal: bool = False
+     zero_next_draft_req_ids: frozenset[str] = frozenset()
+     uno_step_trace: UnoStepTimingTrace | None = None
++    # This pass's own classification, kept between execute_model and
++    # sample_tokens so the proposal call site classifies itself exactly as
++    # _dummy_run and profile runs do.
++    dummy_run: bool = False
++    is_profile: bool = False
+ 
+ 
+ class BatchReqState(NamedTuple):
+diff --git a/vllm/v1/worker/gpu/spec_decode/uno.py b/vllm/v1/worker/gpu/spec_decode/uno.py
+index 5a9e51a3ba..385f017b2b 100644
+--- a/vllm/v1/worker/gpu/spec_decode/uno.py
++++ b/vllm/v1/worker/gpu/spec_decode/uno.py
+@@ -19,7 +19,11 @@ from vllm.model_executor.layers.attention_layer_base import AttentionLayerBase
+ from vllm.platforms import current_platform
+ from vllm.v1.attention.backend import AttentionCGSupport
+ from vllm.v1.attention.backends.utils import PAD_SLOT_ID
+-from vllm.v1.kv_cache_interface import FullAttentionSpec, KVCacheConfig
++from vllm.v1.kv_cache_interface import (
++    KVCacheConfig,
++    is_full_attention_spec,
++    iter_layer_specs,
++)
+ from vllm.v1.spec_decode.uno_noise import fill_uno_noise
+ from vllm.v1.worker.gpu.attn_utils import build_slot_mappings_by_layer
+ from vllm.v1.worker.gpu.block_table import BlockTables
+@@ -32,6 +36,11 @@ from vllm.v1.worker.gpu.dp_utils import DPSyncState
+ from vllm.v1.worker.gpu.input_batch import InputBatch, InputBuffers
+ from vllm.v1.worker.gpu.model_states.interface import ModelState
+ from vllm.v1.worker.gpu.spec_decode.speculator import DraftModelSpeculator
++from vllm.v1.worker.gpu.spec_decode.uno_draft_moe import (
++    DraftMoECaptureState,
++    draft_moe_capture_scope,
++    refuse_uncaptured_eager_draft,
++)
+ from vllm.v1.worker.gpu.spec_decode.uno_prepare import prepare_uno_inputs_fused
+ from vllm.v1.worker.utils import AttentionGroup
+ 
+@@ -57,6 +66,7 @@ def prepare_uno_inputs_reference(
+     k: int,
+     max_model_len: int,
+     noise_seed: int,
++    noise_low: int,
+     noise_high: int,
+     step: int,
+ ) -> None:
+@@ -80,7 +90,9 @@ def prepare_uno_inputs_reference(
+     buffers.input_ids[:count].copy_(seed_tokens.repeat_interleave(k))
+     is_noise = (offsets != 0).repeat(n)
+     req_seeds = (seeds[state_idx] + noise_seed).repeat_interleave(k)
+-    fill_uno_noise(buffers.input_ids[:count], is_noise, req_seeds, step, 1, noise_high)
++    fill_uno_noise(
++        buffers.input_ids[:count], is_noise, req_seeds, step, noise_low, noise_high
++    )
+     # Keep unused, out-of-context rows in range for the model. Their KV writes
+     # are suppressed below; native verification bounds usable candidates.
+     buffers.positions[:count].copy_(positions.clamp(max=max_model_len - 1).flatten())
+@@ -133,6 +145,13 @@ def uncovered_draft_request_counts(
+     return [n for n in range(1, max_num_reqs + 1) if n * k > largest]
+ 
+ 
++def _format_dispatch_keys(keys: Sequence[tuple[int, int]]) -> str:
++    """Name draft dispatch keys in the form the refusal names them."""
++    return ", ".join(
++        f"num_tokens={num_tokens} effective_loras={loras}" for num_tokens, loras in keys
++    )
++
++
+ def draft_warmup_request_counts(max_num_reqs: int) -> list[int]:
+     """Request counts whose draft-input kernel must be compiled before serving.
+ 
+@@ -590,6 +609,9 @@ class UnoSpeculator(DraftModelSpeculator):
+         )
+         self.cudagraph_manager: CudaGraphManager | None = None
+         self._graph_attn_metadata: dict[BatchExecutionDescriptor, dict[str, Any]] = {}
++        # Set by capture(); the draft top-k variant is active only for graphs
++        # captured under it, and an uncaptured serving shape is refused.
++        self.draft_moe_state: DraftMoECaptureState | None = None
+         self._step = 0
+         self.num_graph_replays = 0
+         self.num_eager_proposals = 0
+@@ -632,8 +654,19 @@ class UnoSpeculator(DraftModelSpeculator):
+         if not self.draft_attn_layer_names:
+             raise ValueError("Uno requires shared target attention with a KV cache")
+         for name in self.draft_attn_layer_names:
+-            if layers[name].get_attn_backend().get_name() != "FLASH_ATTN":
+-                raise ValueError("Uno currently requires the FLASH_ATTN backend")
++            layer = layers[name]
++            backend = layer.get_attn_backend().get_name()
++            if backend not in ("FLASH_ATTN", "TRITON_ATTN"):
++                raise ValueError(
++                    "Uno requires FLASH_ATTN or TRITON_ATTN on every draft "
++                    f"layer; {name} uses {backend}"
++                )
++            # Admissible sliding windows are the ones the layer's own attention
++            # kernel bounds: each admitted backend reads the layer's window and
++            # masks keys per query, and the KV rule in set_attn keeps the
++            # allocation full so no window-owned row can be recycled under a
++            # draft write. A model whose layers reach any other backend is
++            # refused above rather than drafted with an unbounded window.
+         self.supports_mm_inputs = False
+ 
+     def set_attn(
+@@ -646,14 +679,24 @@ class UnoSpeculator(DraftModelSpeculator):
+     ) -> None:
+         groups = kv_cache_config.kv_cache_groups
+         if len(groups) != 1:
+-            raise ValueError("Uno requires one homogeneous full-attention KV group")
++            raise ValueError(
++                "Uno requires one KV cache group covering every draft layer"
++            )
+         spec = groups[0].kv_cache_spec
++        layer_specs = tuple(iter_layer_specs(spec))
+         if (
+-            type(spec) is not FullAttentionSpec
+-            or spec.sliding_window is not None
+-            or spec.attention_chunk_size is not None
++            not is_full_attention_spec(spec)
++            or getattr(spec, "sliding_window", None) is not None
++            or any(
++                getattr(layer_spec, "attention_chunk_size", None) is not None
++                or getattr(layer_spec, "non_causal", False)
++                for layer_spec in layer_specs
++            )
+         ):
+-            raise ValueError("Uno requires homogeneous full attention")
++            raise ValueError(
++                "Uno requires a causal full KV allocation shared by the draft "
++                "rows; a rolling-window or chunked allocation is not supported"
++            )
+         super().set_attn(
+             model_state,
+             kv_cache_config,
+@@ -671,6 +714,16 @@ class UnoSpeculator(DraftModelSpeculator):
+                 "native draft decode updates"
+             )
+ 
++    def _draft_dispatch_lora_case(self) -> int:
++        """The effective LoRA case draft graphs are captured and dispatched under.
++
++        The draft always runs with the adapter active, so capture and serving
++        dispatch must agree on one case. Deriving it separately at each site let
++        the dispatch key and the startup coverage receipt drift apart, which is
++        what made a coverage line name a shape the next request was refused for.
++        """
++        return 2 if self.k > 1 else 0
++
+     def init_cudagraph_manager(self, cudagraph_mode: CUDAGraphMode) -> None:
+         self._graph_attn_metadata.clear()
+         can_capture = (
+@@ -688,7 +741,7 @@ class UnoSpeculator(DraftModelSpeculator):
+             self.device,
+             CUDAGraphMode.FULL_DECODE_ONLY if can_capture else CUDAGraphMode.NONE,
+             decode_query_len=self.k,
+-            lora_capture_cases=[2 if self.k > 1 else 0],
++            lora_capture_cases=[self._draft_dispatch_lora_case()],
+         )
+ 
+     def capture(self) -> None:
+@@ -719,13 +772,17 @@ class UnoSpeculator(DraftModelSpeculator):
+                 desc.num_reqs, desc.num_tokens, attn_metadata, slots
+             )
+ 
+-        try:
+-            self.cudagraph_manager.capture(
+-                create_forward_fn, "Capturing Uno CUDA graphs"
+-            )
+-        finally:
+-            if self._lora_hook is not None:
+-                self._lora_hook(None)
++        with draft_moe_capture_scope(self) as draft_moe:
++            self.draft_moe_state = draft_moe
++            if draft_moe is not None:
++                draft_moe.log_capture_receipt(logger)
++            try:
++                self.cudagraph_manager.capture(
++                    create_forward_fn, "Capturing Uno CUDA graphs"
++                )
++            finally:
++                if self._lora_hook is not None:
++                    self._lora_hook(None)
+         self._log_draft_graph_coverage()
+ 
+     def draft_warmup_token_counts(self) -> list[int]:
+@@ -781,24 +838,33 @@ class UnoSpeculator(DraftModelSpeculator):
+         )
+ 
+     def _log_draft_graph_coverage(self) -> None:
+-        """Say once, at startup, which request counts have a draft graph.
++        """Say once, at startup, which draft dispatch keys have a graph.
+ 
+         Drafting eagerly costs far more per step than replaying a graph, and
+         the fallback is chosen per step with no other announcement: the
+         one-time eager line can only fire once, and it says nothing about the
+-        rest of the range. A deployment that will draft eagerly at its own
+-        concurrency should learn that at startup rather than from its latency.
++        rest of the range. Dispatch looks up an exact
++        ``(num_tokens, effective_loras)`` key, so this receipt states that
++        same key; a receipt of bare row counts can name a count as captured
++        while a dispatch for it still finds no graph.
+         """
+         assert self.cudagraph_manager is not None
+-        captured = sorted({desc.num_tokens for desc in self.cudagraph_manager.graphs})
+-        uncovered = uncovered_draft_request_counts(captured, self.k, self.max_num_reqs)
++        manager = self.cudagraph_manager
++        draft_loras = self._draft_dispatch_lora_case()
++        captured = manager.captured_dispatch_keys()
++        uncovered = [
++            manager.dispatch_key(n * self.k, draft_loras)
++            for n in range(1, self.max_num_reqs + 1)
++            if not manager.key_is_covered(n, n * self.k, self.k, draft_loras)
++        ]
+         if not captured:
+             logger.info(
+-                "Uno draft CUDA graphs: none captured, so every proposal "
+-                "drafts eagerly. A draft graph needs a cudagraph_capture_sizes "
+-                "entry of at least %d (num_speculative_tokens), and the "
+-                "largest usable entry is bounded by max_num_seqs * "
+-                "num_speculative_tokens = %d.",
++                "Uno draft CUDA graphs: nothing captured, so every proposal "
++                "drafts eagerly. Uncovered draft dispatch keys: %s. A draft "
++                "graph needs a cudagraph_capture_sizes entry of at least %d "
++                "(num_speculative_tokens), and the largest usable entry is "
++                "bounded by max_num_seqs * num_speculative_tokens = %d.",
++                _format_dispatch_keys(uncovered),
+                 self.k,
+                 self.max_num_reqs * self.k,
+             )
+@@ -806,27 +872,23 @@ class UnoSpeculator(DraftModelSpeculator):
+         if uncovered:
+             logger.warning(
+                 "Uno draft CUDA graphs cover %d of %d request counts: "
+-                "captured draft row counts %s serve up to %d concurrent "
+-                "requests, and %d..%d will draft eagerly because %d rows "
+-                "exceed the largest captured count %d. Add a "
+-                "cudagraph_capture_sizes entry at or above max_num_seqs * "
+-                "num_speculative_tokens = %d, or lower max_num_seqs.",
+-                uncovered[0] - 1,
++                "captured draft dispatch keys %s; %s will draft eagerly "
++                "because no captured graph serves that (num_tokens, "
++                "effective_loras) key. Add a cudagraph_capture_sizes entry "
++                "at or above max_num_seqs * num_speculative_tokens = %d, or "
++                "lower max_num_seqs.",
++                self.max_num_reqs - len(uncovered),
+                 self.max_num_reqs,
+-                captured,
+-                uncovered[0] - 1,
+-                uncovered[0],
+-                uncovered[-1],
+-                self.max_num_reqs * self.k,
+-                captured[-1],
++                _format_dispatch_keys(captured),
++                _format_dispatch_keys(uncovered),
+                 self.max_num_reqs * self.k,
+             )
+             return
+         logger.info(
+             "Uno draft CUDA graphs cover every request count: captured draft "
+-            "row counts %s serve all %d concurrent requests at "
++            "dispatch keys %s serve all %d concurrent requests at "
+             "num_speculative_tokens=%d.",
+-            captured,
++            _format_dispatch_keys(captured),
+             self.max_num_reqs,
+             self.k,
+         )
+@@ -912,6 +974,7 @@ class UnoSpeculator(DraftModelSpeculator):
+             self.k,
+             self.max_model_len,
+             self.speculative_config.uno_noise_seed,
++            self.speculative_config.uno_noise_low,
+             self.speculative_config.uno_mask_token_id,
+             self._step,
+         )
+@@ -919,7 +982,9 @@ class UnoSpeculator(DraftModelSpeculator):
+             self.block_tables.slot_mappings.fill_(PAD_SLOT_ID)
+             self.sample_idx_mapping.fill_(-1)
+         assert self.cudagraph_manager is not None
+-        desc = self.cudagraph_manager.dispatch(n, count, self.k, 2 if self.k > 1 else 0)
++        desc = self.cudagraph_manager.dispatch(
++            n, count, self.k, self._draft_dispatch_lora_case()
++        )
+         if is_profile:
+             desc = BatchExecutionDescriptor(CUDAGraphMode.NONE, count, n)
+         with self._draft_lora(n, desc.num_tokens):
+@@ -940,17 +1005,19 @@ class UnoSpeculator(DraftModelSpeculator):
+                     if self.num_graph_replays == 1:
+                         logger.info("Uno draft CUDA graph replay is active.")
+             else:
++                refuse_uncaptured_eager_draft(
++                    self, desc, warmup=dummy_run or is_profile
++                )
+                 self.draft_max_seq_len = min(
+                     int(input_batch.seq_lens_cpu_upper_bound[:n].max()) + self.k,
+                     self.max_model_len,
+                 )
+-                draft_attn = self._build_draft_attn_metadata(
++                draft_attn = self._build_uniform_attn_metadata(
++                    desc,
+                     n,
+-                    desc.num_reqs or n,
+-                    desc.num_tokens,
++                    self.k,
+                     input_batch.seq_lens_cpu_upper_bound,
+                     step=self.k,
+-                    num_query_per_req=self.k,
+                 )
+                 slots = build_slot_mappings_by_layer(
+                     self.block_tables.slot_mappings[:, : desc.num_tokens],
+diff --git a/vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py b/vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py
+new file mode 100644
+index 0000000000..00147868d7
+--- /dev/null
++++ b/vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py
+@@ -0,0 +1,697 @@
++# SPDX-License-Identifier: Apache-2.0
++# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++"""Narrow, opt-in Gemma MoE top-k variant for Uno draft graph capture.
++
++The process must be started with ``UNO_DRAFT_MOE_TOPK=4`` to enable this
++candidate.  The context manager is entered only by the startup draft-graph
++capture: it validates the loaded model/backend, changes the Gemma routers for
++the captured draft graphs, and restores every router before the context exits.
++The restored routers keep serving the target's own verification batches at the
++configured top-k, so the variant is confined to the captured draft graphs.  A
++serving shape without a captured graph is refused: an eager forward would
++otherwise route at the configured top-k while the deployment believes the
++reduced top-k is active.
++
++This candidate deliberately refuses unknown model, hardware, backend, routing
++replay, parallelism, or workspace arrangements.  It is an experiment guard,
++not a general dynamic top-k API.
++"""
++
++from __future__ import annotations
++
++import os
++from collections.abc import Iterator
++from contextlib import contextmanager
++from dataclasses import dataclass
++from typing import Any
++
++import torch
++
++from vllm.config.compilation import CUDAGraphMode
++
++ENV_NAME = "UNO_DRAFT_MOE_TOPK"
++BASE_TOP_K = 8
++DRAFT_TOP_K = 4
++SM86 = (8, 6)
++GEMMA_NUM_EXPERTS = 128
++_UNSET = object()
++_PROCESS_TOP_K: object = _UNSET
++
++
++class DraftMoEConfigurationError(ValueError):
++    """The loaded process is outside this experiment's safe contract."""
++
++
++def _requested_top_k() -> int | None:
++    raw = os.environ.get(ENV_NAME)
++    if raw is None or not raw.strip():
++        requested = None
++    elif raw.strip() == str(DRAFT_TOP_K):
++        requested = DRAFT_TOP_K
++    else:
++        raise DraftMoEConfigurationError(
++            f"{ENV_NAME} must be exactly {DRAFT_TOP_K} when set; got {raw!r}"
++        )
++
++    # Once an active candidate has been observed, do not permit a live process
++    # to switch between graph variants.  A disabled process may still opt in
++    # before its first capture, which keeps CPU fixtures composable.
++    global _PROCESS_TOP_K
++    if requested is not None:
++        if _PROCESS_TOP_K is _UNSET:
++            _PROCESS_TOP_K = requested
++        elif requested != _PROCESS_TOP_K:
++            raise DraftMoEConfigurationError(
++                f"{ENV_NAME} is process-fixed at {_PROCESS_TOP_K}; "
++                f"cannot switch to {requested}"
++            )
++    elif _PROCESS_TOP_K is not _UNSET:
++        raise DraftMoEConfigurationError(
++            f"{ENV_NAME} was enabled as {_PROCESS_TOP_K} and cannot be removed "
++            "after capture setup"
++        )
++    return requested
++
++
++def uno_draft_moe_enabled() -> bool:
++    """Return whether the explicit top-k=4 candidate is requested."""
++    return _requested_top_k() == DRAFT_TOP_K
++
++
++def _reset_process_variant_for_tests() -> None:
++    """Reset the process guard for isolated CPU fixtures."""
++    global _PROCESS_TOP_K
++    _PROCESS_TOP_K = _UNSET
++
++
++# The Gemma 4 identifiers vLLM itself registers. The architecture strings are
++# the registry entries in ``vllm/model_executor/models/registry.py``; the model
++# types are the values mapped by
++# ``vllm/transformers_utils/model_arch_config_convertor.py``. The guard accepts
++# exactly these strings and never scans arbitrary config text. Identity of the
++# loaded implementation is never decided by name: it is the class the model
++# registry resolves the loaded configuration's architecture to (see
++# ``_registered_implementation``).
++GEMMA4_ARCHITECTURES = frozenset(
++    {
++        "Gemma4ForCausalLM",
++        "Gemma4ForConditionalGeneration",
++        "Gemma4UnifiedForConditionalGeneration",
++        "Gemma4DSparkModel",
++        "Gemma4MTPModel",
++    }
++)
++GEMMA4_MODEL_TYPES = frozenset(
++    {
++        "gemma4",
++        "gemma4_text",
++        "gemma4_unified",
++        "gemma4_unified_text",
++        "gemma4_mtp",
++        "gemma4_dspark",
++        "gemma4_assistant",
++        "gemma4_unified_assistant",
++    }
++)
++
++
++def _class_path(cls: type) -> str:
++    return f"{cls.__module__}.{cls.__qualname__}"
++
++
++def _model_owners(proposer: Any) -> Iterator[Any]:
++    owners = [getattr(proposer, "model", None)]
++    runner = getattr(proposer, "runner", None)
++    owners.append(getattr(runner, "model", None))
++    for owner in owners:
++        if owner is not None:
++            yield owner
++
++
++def _config_candidates(owner: Any) -> Iterator[Any]:
++    for attr in ("config", "hf_config"):
++        config = getattr(owner, attr, None)
++        if config is not None:
++            yield config
++    model_config = getattr(owner, "model_config", None)
++    hf_config = getattr(model_config, "hf_config", None)
++    if hf_config is not None:
++        yield hf_config
++
++
++def _identity_configs(proposer: Any) -> Iterator[Any]:
++    """Yield the typed configuration objects that carry model identity.
++
++    Only the ``model_type`` and ``architectures`` fields of these objects are
++    read; no arbitrary configuration text is inspected.
++    """
++    owners = list(_model_owners(proposer))
++    runner = getattr(proposer, "runner", None)
++    vllm_config = getattr(proposer, "vllm_config", None)
++    if vllm_config is None:
++        vllm_config = getattr(runner, "vllm_config", None)
++    if vllm_config is not None:
++        owners.append(vllm_config)
++    seen: set[int] = set()
++    for owner in owners:
++        for config in _config_candidates(owner):
++            if id(config) in seen:
++                continue
++            seen.add(id(config))
++            yield config
++            text_config = getattr(config, "text_config", None)
++            if text_config is not None and id(text_config) not in seen:
++                seen.add(id(text_config))
++                yield text_config
++
++
++def _exact_markers(config: Any) -> Iterator[str]:
++    for attr in ("model_type", "architectures"):
++        value = getattr(config, attr, None)
++        if isinstance(value, str):
++            yield value
++        elif isinstance(value, (list, tuple, set)):
++            yield from (item for item in value if isinstance(item, str))
++
++
++def _identity_model_config(proposer: Any) -> Any | None:
++    """The model configuration the loader resolved the target class from."""
++    candidates: list[Any] = [getattr(proposer, "model_config", None)]
++    for holder in (proposer, getattr(proposer, "runner", None)):
++        if holder is None:
++            continue
++        candidates.append(getattr(holder, "model_config", None))
++        vllm_config = getattr(holder, "vllm_config", None)
++        if vllm_config is not None:
++            candidates.append(getattr(vllm_config, "model_config", None))
++    for candidate in candidates:
++        if candidate is not None:
++            return candidate
++    return None
++
++
++def _registered_implementation(proposer: Any) -> type:
++    """Resolve the loaded architecture through vLLM's own model registry.
++
++    The resolver is the one the loader used to turn ``architectures`` into a
++    class, so this binds to the registered implementation rather than to a
++    parallel table of names.
++    """
++    model_config = _identity_model_config(proposer)
++    if model_config is None:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 cannot identify the loaded model "
++            "configuration to resolve the registered implementation"
++        )
++    architectures = (
++        getattr(getattr(model_config, "hf_config", None), "architectures", None) or []
++    )
++    if not architectures:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires the loaded configuration to name the "
++            "architectures the model registry resolves"
++        )
++
++    from vllm.model_executor.model_loader.utils import get_model_architecture
++
++    try:
++        model_cls, _ = get_model_architecture(model_config)
++    except Exception as exc:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 cannot resolve the registered implementation "
++            f"for architectures {list(architectures)!r}"
++        ) from exc
++    return model_cls
++
++
++def _check_gemma4(proposer: Any) -> None:
++    """Require the registered Gemma 4 implementation and its exact markers.
++
++    Identity is bound to the class the model registry resolves the loaded
++    configuration's architecture to, and the guard requires the loaded model to
++    be that class (or a subclass). A same-named class is not identity, and an
++    architecture the registry cannot resolve is refused rather than falling
++    back to a name. Configuration text is never stringified, so an unrelated
++    configuration field cannot qualify a different implementation.
++    """
++    registered = _registered_implementation(proposer)
++    loaded = [type(owner) for owner in _model_owners(proposer)]
++    if not any(issubclass(cls, registered) for cls in loaded):
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires the loaded model to be the "
++            f"registered Gemma 4 implementation {_class_path(registered)}; "
++            "loaded " + ", ".join(sorted({_class_path(cls) for cls in loaded}))
++        )
++    markers = {
++        marker
++        for config in _identity_configs(proposer)
++        for marker in _exact_markers(config)
++    }
++    if not (markers & GEMMA4_ARCHITECTURES or markers & GEMMA4_MODEL_TYPES):
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires the exact Gemma 4 model_type or "
++            "architectures identifier in the loaded configuration"
++        )
++
++
++def _check_device_sm86(proposer: Any) -> None:
++    device = getattr(proposer, "device", None)
++    if device is None:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires an explicit CUDA proposer device"
++        )
++    try:
++        device = torch.device(device)
++    except (TypeError, RuntimeError) as exc:
++        raise DraftMoEConfigurationError(
++            f"cannot resolve proposer device {device!r}"
++        ) from exc
++    if device.type != "cuda":
++        raise DraftMoEConfigurationError(
++            f"UNO_DRAFT_MOE_TOPK=4 requires CUDA SM86; got {device}"
++        )
++    if not torch.cuda.is_available():
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires an available CUDA device"
++        )
++    capability = tuple(torch.cuda.get_device_capability(device))
++    if capability != SM86:
++        raise DraftMoEConfigurationError(
++            f"UNO_DRAFT_MOE_TOPK=4 requires SM86; got SM{capability[0]}{capability[1]}"
++        )
++
++
++def _check_parallelism(proposer: Any) -> None:
++    configs = [getattr(proposer, "vllm_config", None)]
++    runner = getattr(proposer, "runner", None)
++    configs.append(getattr(runner, "vllm_config", None))
++    parallel = None
++    for config in configs:
++        if config is None:
++            continue
++        parallel = getattr(config, "parallel_config", None)
++        if parallel is not None:
++            break
++    if parallel is None:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 cannot identify parallel_config"
++        )
++    for name in (
++        "tensor_parallel_size",
++        "pipeline_parallel_size",
++        "data_parallel_size",
++        "decode_context_parallel_size",
++        "prefill_context_parallel_size",
++    ):
++        try:
++            value = getattr(parallel, name)
++        except Exception as exc:
++            raise DraftMoEConfigurationError(
++                f"UNO_DRAFT_MOE_TOPK=4 cannot identify {name}"
++            ) from exc
++        if value != 1:
++            raise DraftMoEConfigurationError(
++                f"UNO_DRAFT_MOE_TOPK=4 requires {name}=1; got {value}"
++            )
++
++
++def _named_modules(proposer: Any) -> Iterator[tuple[str, Any]]:
++    roots = [getattr(proposer, "model", None)]
++    runner = getattr(proposer, "runner", None)
++    roots.append(getattr(runner, "model", None))
++    seen: set[int] = set()
++    found = False
++    for root in roots:
++        if root is None or id(root) in seen:
++            continue
++        seen.add(id(root))
++        named = getattr(root, "named_modules", None)
++        if not callable(named):
++            continue
++        found = True
++        yield from named()
++    if not found:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 cannot enumerate model modules"
++        )
++
++
++@dataclass(frozen=True)
++class MoERouterBinding:
++    name: str
++    runner: Any
++    router: Any
++    backend: str
++    prepare_finalize: str
++    fixed_top_k: int
++
++
++@dataclass
++class DraftMoECaptureState:
++    top_k: int
++    bindings: tuple[MoERouterBinding, ...]
++    _mutated: list[MoERouterBinding]
++
++    @staticmethod
++    def variant_name(top_k: int) -> str:
++        """The variant name the capture receipt and every refusal quote."""
++        return f"gemma4-sm86-marlin-topk{top_k}"
++
++    @property
++    def variant(self) -> str:
++        return self.variant_name(self.top_k)
++
++    def activate(self) -> None:
++        if self.top_k != DRAFT_TOP_K:
++            raise DraftMoEConfigurationError(
++                f"unsupported draft MoE top-k {self.top_k}; expected {DRAFT_TOP_K}"
++            )
++        for binding in self.bindings:
++            if int(getattr(binding.router, "top_k", -1)) != binding.fixed_top_k:
++                raise DraftMoEConfigurationError(
++                    f"router {binding.name!r} changed before draft capture"
++                )
++            binding.router.top_k = self.top_k
++            self._mutated.append(binding)
++
++    def restore(self) -> None:
++        errors: list[Exception] = []
++        for binding in reversed(self._mutated):
++            try:
++                binding.router.top_k = binding.fixed_top_k
++            except Exception as exc:  # pragma: no cover - pathological setter
++                errors.append(exc)
++        self._mutated.clear()
++        if errors:
++            raise RuntimeError(
++                "UNO_DRAFT_MOE_TOPK=4 could not restore all Gemma router states"
++            ) from errors[0]
++
++    def receipt(self) -> tuple[dict[str, Any], ...]:
++        return tuple(
++            {
++                "router": binding.name,
++                "top_k": self.top_k,
++                "backend": binding.backend,
++                "prepare_finalize": binding.prepare_finalize,
++                "configured_top_k": binding.fixed_top_k,
++            }
++            for binding in self.bindings
++        )
++
++    def log_capture_receipt(self, logger: Any) -> None:
++        for item in self.receipt():
++            logger.info(
++                "UNO_DRAFT_MOE capture router=%s top_k=%d backend=%s "
++                "prepare_finalize=%s configured_top_k=%d",
++                item["router"],
++                item["top_k"],
++                item["backend"],
++                item["prepare_finalize"],
++                item["configured_top_k"],
++            )
++
++
++def _fixed_top_k(value: Any, label: str) -> int:
++    try:
++        value = int(value)
++    except (TypeError, ValueError) as exc:
++        raise DraftMoEConfigurationError(f"cannot identify {label} top-k") from exc
++    if value != BASE_TOP_K:
++        raise DraftMoEConfigurationError(
++            f"{label} must remain configured at {BASE_TOP_K}; got {value}"
++        )
++    return value
++
++
++def _moe_contract_classes() -> tuple[type, type, type]:
++    """The loaded MoE contract classes, taken from their own modules."""
++    from vllm.model_executor.layers.fused_moe.experts.marlin_moe import (
++        MarlinExperts,
++    )
++    from vllm.model_executor.layers.fused_moe.prepare_finalize.no_dp_ep import (
++        MoEPrepareAndFinalizeNoDPEPModular,
++    )
++    from vllm.model_executor.layers.fused_moe.router.custom_routing_router import (
++        CustomRoutingRouter,
++    )
++
++    return CustomRoutingRouter, MarlinExperts, MoEPrepareAndFinalizeNoDPEPModular
++
++
++def _bindings(proposer: Any) -> tuple[MoERouterBinding, ...]:
++    result: list[MoERouterBinding] = []
++    seen: set[int] = set()
++    router_cls, experts_cls, prepare_cls = _moe_contract_classes()
++    for name, module in _named_modules(proposer):
++        router = getattr(module, "router", None)
++        routed_experts = getattr(module, "routed_experts", None)
++        if router is None or routed_experts is None or id(module) in seen:
++            continue
++        seen.add(id(module))
++
++        if not isinstance(router, router_cls):
++            raise DraftMoEConfigurationError(
++                f"MoE router {name or type(module).__name__!r} is "
++                f"{_class_path(type(router))}, expected {_class_path(router_cls)}"
++            )
++        if not callable(getattr(router, "custom_routing_function", None)):
++            raise DraftMoEConfigurationError(
++                f"MoE router {name or type(module).__name__!r} has no custom route"
++            )
++        fixed_top_k = _fixed_top_k(
++            getattr(router, "top_k", None), f"router {name or type(module).__name__}"
++        )
++
++        quant_method = getattr(routed_experts, "quant_method", None)
++        kernel = getattr(quant_method, "moe_kernel", None)
++        fused_experts = getattr(kernel, "fused_experts", None)
++        if not isinstance(fused_experts, experts_cls):
++            backend = type(fused_experts).__name__ if fused_experts is not None else ""
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} backend "
++                f"{backend or '<unknown>'!r} "
++                f"is not {_class_path(experts_cls)}"
++            )
++        backend = experts_cls.__name__
++        if bool(getattr(quant_method, "is_monolithic", True)):
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} is monolithic"
++            )
++        prepare = getattr(kernel, "prepare_finalize", None)
++        if not isinstance(prepare, prepare_cls):
++            prepare_name = type(prepare).__name__ if prepare is not None else ""
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} prepare/finalize "
++                f"{prepare_name or '<unknown>'!r} is not "
++                f"{_class_path(prepare_cls)}"
++            )
++        prepare_name = prepare_cls.__name__
++        if not callable(getattr(fused_experts, "workspace_shapes", None)):
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} has no shape-driven workspace"
++            )
++        max_tokens_fn = getattr(prepare, "max_num_tokens_per_rank", None)
++        if not callable(max_tokens_fn):
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} workspace contract is unknown"
++            )
++        try:
++            max_tokens = max_tokens_fn()
++        except Exception as exc:
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} workspace contract is unknown"
++            ) from exc
++        if max_tokens is not None:
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} has a fixed dispatch workspace"
++            )
++
++        config = getattr(module, "moe_config", None) or getattr(
++            routed_experts, "moe_config", None
++        )
++        if config is None:
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} has no FusedMoEConfig"
++            )
++        _fixed_top_k(
++            getattr(config, "experts_per_token", None),
++            f"MoE {name or type(module).__name__} config",
++        )
++        _fixed_top_k(
++            getattr(routed_experts, "top_k", None),
++            f"MoE {name or type(module).__name__} RoutedExperts",
++        )
++        if int(getattr(config, "num_experts", -1)) != GEMMA_NUM_EXPERTS:
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} must expose "
++                f"{GEMMA_NUM_EXPERTS} experts"
++            )
++        parallel = getattr(config, "moe_parallel_config", None)
++        if parallel is None:
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} has no parallel config"
++            )
++        for attr in ("tp_size", "pcp_size", "ep_size", "dp_size", "sp_size"):
++            try:
++                value = getattr(parallel, attr)
++            except Exception as exc:
++                raise DraftMoEConfigurationError(
++                    f"MoE {name or type(module).__name__} cannot identify {attr}"
++                ) from exc
++            if value != 1:
++                raise DraftMoEConfigurationError(
++                    f"MoE {name or type(module).__name__} "
++                    f"requires {attr}=1; got {value}"
++                )
++        for attr in ("use_ep", "use_all2all_kernels", "enable_eplb"):
++            try:
++                value = getattr(parallel, attr)
++            except Exception as exc:
++                raise DraftMoEConfigurationError(
++                    f"MoE {name or type(module).__name__} cannot identify {attr}"
++                ) from exc
++            if bool(value):
++                raise DraftMoEConfigurationError(
++                    f"MoE {name or type(module).__name__} uses {attr}"
++                )
++        if getattr(parallel, "use_ep", None) is None:
++            raise DraftMoEConfigurationError(
++                f"MoE {name or type(module).__name__} has unknown expert dispatch state"
++            )
++
++        for owner, label in (
++            (router, "router routing replay"),
++            (kernel, "kernel routing replay"),
++            (fused_experts, "expert routing replay"),
++        ):
++            for attr in (
++                "_routing_replay_out",
++                "routing_replay_capture_fn",
++                "_routing_replay_buffer",
++            ):
++                if getattr(owner, attr, None) is not None:
++                    raise DraftMoEConfigurationError(
++                        f"MoE {name or type(module).__name__} has {label} state"
++                    )
++
++        label = name or getattr(module, "layer_name", None) or type(module).__name__
++        result.append(
++            MoERouterBinding(
++                name=str(label),
++                runner=module,
++                router=router,
++                backend=backend,
++                prepare_finalize=prepare_name,
++                fixed_top_k=fixed_top_k,
++            )
++        )
++    if not result:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires the Gemma MoE routing contract "
++            "(MoERunner with CustomRoutingRouter and MarlinExperts); the "
++            "loaded implementation exposes none"
++        )
++    return tuple(result)
++
++
++def validate_draft_moe(proposer: Any, top_k: int = DRAFT_TOP_K) -> DraftMoECaptureState:
++    """Validate the fixed experiment contract and snapshot router state."""
++    if top_k != DRAFT_TOP_K:
++        raise DraftMoEConfigurationError(f"only draft top-k={DRAFT_TOP_K} is supported")
++    _check_gemma4(proposer)
++    _check_device_sm86(proposer)
++    _check_parallelism(proposer)
++    sc = getattr(proposer, "speculative_config", None)
++    use_uno = getattr(sc, "use_uno", None)
++    if sc is None or not callable(use_uno) or not use_uno():
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires the Uno speculator"
++        )
++    # The captured graphs bake the routed top-k into their kernel shapes, so
++    # the variant needs a draft graph capture; an eager-only draft never
++    # reaches the capture scope and must not silently serve top-k 8 rows.
++    manager = getattr(proposer, "cudagraph_manager", None)
++    mode = getattr(manager, "cudagraph_mode", None)
++    if manager is None or mode is None or mode == CUDAGraphMode.NONE:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires captured Uno draft graphs"
++        )
++    if getattr(proposer, "lora_request", None) is None:
++        raise DraftMoEConfigurationError(
++            "UNO_DRAFT_MOE_TOPK=4 requires the Uno adapter routing"
++        )
++    bindings = _bindings(proposer)
++    return DraftMoECaptureState(top_k=top_k, bindings=bindings, _mutated=[])
++
++
++@contextmanager
++def draft_moe_capture_scope(proposer: Any) -> Iterator[DraftMoECaptureState | None]:
++    """Activate top-k=4 only while the private startup graph is captured."""
++    requested = _requested_top_k()
++    if requested is None:
++        yield None
++        return
++    state = validate_draft_moe(proposer, requested)
++    try:
++        state.activate()
++        yield state
++    finally:
++        state.restore()
++
++
++def _uncaptured_refusal_message(
++    desc: Any, shape: str, *, top_k: int, captured: bool
++) -> str:
++    """Name the dispatch key, the environment variable and the variant.
++
++    ``captured`` separates a deployment whose capture ran and lost this key
++    from one whose capture never created the variant state; both refusals must
++    name the same three identifiers, so a reader can line the message up with
++    the startup coverage receipt whichever path refused.
++    """
++    variant = DraftMoECaptureState.variant_name(top_k)
++    if not captured:
++        return (
++            f"{ENV_NAME}={top_k} requires captured Uno draft graphs and never "
++            f"created the {variant} capture state; the uncaptured serving shape "
++            f"{shape} has none, and falling back to eager would route at the "
++            "configured top-k"
++        )
++    return (
++        f"{ENV_NAME}={top_k} captured the {variant} draft graphs; the "
++        f"uncaptured serving shape {shape} has none to replay, and an eager "
++        "forward would route at the configured top-k. Refusing to fall back; "
++        f"add a cudagraph_capture_sizes entry covering {desc.num_tokens} draft "
++        "rows or lower max_num_seqs"
++    )
++
++
++def refuse_uncaptured_eager_draft(proposer: Any, desc: Any, *, warmup: bool) -> None:
++    """Refuse an uncaptured serving shape while the draft top-k variant is on.
++
++    A captured draft graph bakes the reduced top-k into its kernel shapes, so a
++    serving shape without a captured graph cannot run under this variant: an
++    eager forward would route at the configured top-k instead, silently mixing
++    the two routings. Warmup and profiling forwards discard their result and
++    stay exempt, but a real proposal is refused before any forward.
++    """
++    if warmup:
++        return
++    state = getattr(proposer, "draft_moe_state", None)
++    # The dispatch this desc came from resolved its effective-LoRA case, so the
++    # key named here is the same (num_tokens, effective_loras) key the startup
++    # coverage receipt reports as covered or uncovered.
++    shape = (
++        f"num_reqs={desc.num_reqs} num_tokens={desc.num_tokens} "
++        f"effective_loras={desc.num_active_loras}"
++    )
++    if state is None:
++        if not uno_draft_moe_enabled():
++            return
++        raise DraftMoEConfigurationError(
++            _uncaptured_refusal_message(desc, shape, top_k=DRAFT_TOP_K, captured=False)
++        )
++    raise DraftMoEConfigurationError(
++        _uncaptured_refusal_message(desc, shape, top_k=state.top_k, captured=True)
++    )
+diff --git a/vllm/v1/worker/gpu/spec_decode/uno_prepare.py b/vllm/v1/worker/gpu/spec_decode/uno_prepare.py
+index 95ee3c7fe3..cb635cf5d7 100644
+--- a/vllm/v1/worker/gpu/spec_decode/uno_prepare.py
++++ b/vllm/v1/worker/gpu/spec_decode/uno_prepare.py
+@@ -38,7 +38,7 @@ _LAUNCH_KEY_DEBUG_ENABLED = _launch_key_debug_enabled()
+ if _LAUNCH_KEY_DEBUG_ENABLED:
+     from vllm.v1.worker.gpu.launch_key_debug import record_triton_launch
+ else:
+-    record_triton_launch = None
++    record_triton_launch = None  # type: ignore[assignment]
+ 
+ 
+ # Keep this contract shared with the CPU launch-key test.  These arguments
+@@ -307,6 +307,7 @@ def _prepare_uno_specialization_kwargs(
+     block_size: int,
+     max_model_len: int,
+     noise_seed: int,
++    noise_low: int,
+     noise_high: int,
+     has_rejected: bool,
+     block: int,
+@@ -333,7 +334,7 @@ def _prepare_uno_specialization_kwargs(
+         "BLOCK_SIZE": block_size,
+         "MAX_MODEL_LEN": max_model_len,
+         "NOISE_SEED": noise_seed,
+-        "NOISE_LOW": 1,
++        "NOISE_LOW": noise_low,
+         "NOISE_HIGH": noise_high,
+         "HAS_REJECTED": has_rejected,
+         "PAD_ID": PAD_SLOT_ID,
+@@ -357,6 +358,7 @@ def prepare_uno_launch_key(
+     block_size: int,
+     max_model_len: int,
+     noise_seed: int,
++    noise_low: int,
+     noise_high: int,
+     has_rejected: bool,
+     block: int,
+@@ -392,6 +394,7 @@ def prepare_uno_launch_key(
+                 block_size=block_size,
+                 max_model_len=max_model_len,
+                 noise_seed=noise_seed,
++                noise_low=noise_low,
+                 noise_high=noise_high,
+                 has_rejected=has_rejected,
+                 block=block,
+@@ -415,6 +418,7 @@ def prepare_uno_inputs_fused(
+     k: int,
+     max_model_len: int,
+     noise_seed: int,
++    noise_low: int,
+     noise_high: int,
+     step: int,
+ ) -> None:
+@@ -457,7 +461,7 @@ def prepare_uno_inputs_fused(
+         raise ValueError(
+             "Uno preparation requires positive K, block size, and max length"
+         )
+-    if noise_high <= 1:
++    if not 0 <= noise_low < noise_high:
+         raise ValueError("Uno noise range must include at least one token")
+ 
+     num_reqs = int(input_batch.num_reqs)
+@@ -516,6 +520,7 @@ def prepare_uno_inputs_fused(
+             block_size=int(block_size),
+             max_model_len=int(max_model_len),
+             noise_seed=int(noise_seed),
++            noise_low=int(noise_low),
+             noise_high=int(noise_high),
+             has_rejected=num_rejected is not None,
+             block=block,
+diff --git a/vllm/v1/worker/gpu_worker.py b/vllm/v1/worker/gpu_worker.py
+index d06d0e2ea1..5f26ad4240 100644
+--- a/vllm/v1/worker/gpu_worker.py
++++ b/vllm/v1/worker/gpu_worker.py
+@@ -8,6 +8,7 @@ import time
+ from collections.abc import Callable
+ from contextlib import AbstractContextManager, contextmanager, nullcontext
+ from datetime import timedelta
++from functools import partial
+ from types import NoneType
+ from typing import TYPE_CHECKING, Any, cast
+ 
+@@ -809,7 +810,15 @@ class Worker(WorkerBase):
+ 
+         if self.use_v2_model_runner:
+             # A workspace resize after capture frees what the graphs point at.
+-            warmup_kernels(self.model_runner, self.execute_model, self.sample_tokens)
++            # The startup warmup forwards are discarded; mark them as a
++            # profiling pass so a proposal made before capture is not mistaken
++            # for a serving shape by a speculator that must refuse uncaptured
++            # serving shapes.
++            warmup_kernels(
++                self.model_runner,
++                self._discarded_startup_forward(),
++                self.sample_tokens,
++            )
+ 
+         cuda_graph_memory_bytes = 0
+         if not self.model_config.enforce_eager:
+@@ -937,7 +946,9 @@ class Worker(WorkerBase):
+         # Run the Uno-only startup assertion while the monitor is armed but
+         # before launch-key receipts begin labeling customer work as served.
+         run_uno_served_jit_self_check(
+-            self.model_runner, self.execute_model, self.sample_tokens
++            self.model_runner,
++            self._discarded_startup_forward(),
++            self.sample_tokens,
+         )
+         mark_launch_key_serving_ready()
+ 
+@@ -959,6 +970,22 @@ class Worker(WorkerBase):
+             encoder=self.compilation_config.encoder_compilation_time,
+         )
+ 
++    def _discarded_startup_forward(
++        self,
++    ) -> Callable[
++        ["SchedulerOutput"], ModelRunnerOutput | AsyncModelRunnerOutput | None
++    ]:
++        """A startup forward whose proposal result is discarded.
++
++        ``warmup_kernels`` and the startup JIT self-check feed
++        scheduler-realistic batches through ``execute_model``, so their
++        proposals reach the speculator as ordinary forwards. Marking them with
++        ``is_profile`` -- the flag the runner already uses for its own discarded
++        passes -- keeps a speculator that must refuse uncaptured serving shapes
++        from mistaking a startup batch for a request.
++        """
++        return partial(self.execute_model, is_profile=True)
++
+     def _get_cudagraph_capture_context(self) -> AbstractContextManager[None]:
+         """Let the configured profiler observe CUDA graph capture."""
+         if not self.use_v2_model_runner:
+@@ -1154,7 +1181,7 @@ class Worker(WorkerBase):
+     @torch.inference_mode()
+     @with_gpu_sync_check
+     def execute_model(
+-        self, scheduler_output: "SchedulerOutput"
++        self, scheduler_output: "SchedulerOutput", *, is_profile: bool = False
+     ) -> ModelRunnerOutput | AsyncModelRunnerOutput | None:
+         # Wait for the previous step's sends so this forward pass cannot
+         # overwrite buffers they are still reading.
+@@ -1213,9 +1240,13 @@ class Worker(WorkerBase):
+                 comm_postprocess=comm_postprocess,
+             )
+ 
++        # `is_profile` classifies a pass for the V2 runner; the V1 runner's
++        # execute_model takes no such keyword. Send it only where it is
++        # accepted, which leaves the V1 path byte-identical.
++        pass_state = {"is_profile": is_profile} if self.use_v2_model_runner else {}
+         with self.annotate_profile(scheduler_output):
+             output = self.model_runner.execute_model(
+-                scheduler_output, intermediate_tensors
++                scheduler_output, intermediate_tensors, **pass_state
+             )
+             if (
+                 self.use_v2_model_runner

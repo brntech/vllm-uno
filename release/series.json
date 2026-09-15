@@ -1,10 +1,12 @@
 {
-  "base_commit": "b87339888d29329c42c42573e34cc2beebdcc48b",
-  "final_tree": "6ceef9dfa043d9a2d3f930522ecc7480105aa5a7",
+  "base_commit": "00972dfd72988942138a7a6089eaee08580210b8",
+  "code_base": "3ad49350281a6b73de58449aadb293a8b398fb5d",
+  "head_commit": "cf87916880b051e8782521dfe2afa12e0627e172",
+  "final_tree": "7e90f900b039c96565100524700b2da8ef6761bd",
   "patches": [
     {
-      "file": "0001-uno-vllm.patch",
-      "sha256_lf": "447acf006163385ec2b1d902f9cff1e04c60b7e8dac001941f1130164262e382",
+      "file": "0001-uno-mrv2-base.patch",
+      "sha256_lf": "7dbf33d21401ce14b7d2d8b000069669edc530a05db90b862a60bf6d4d7d62dd",
       "files": [
         ".buildkite/test_areas/spec_decode.yaml",
         "docs/features/speculative_decoding/README.md",
@@ -30,7 +32,6 @@
         "vllm/v1/core/sched/output.py",
         "vllm/v1/core/sched/scheduler.py",
         "vllm/v1/engine/input_processor.py",
-        "vllm/v1/sample/ops/topk_topp_triton.py",
         "vllm/v1/spec_decode/uno_noise.py",
         "vllm/v1/worker/gpu/launch_key_debug.py",
         "vllm/v1/worker/gpu/model_runner.py",
@@ -41,6 +42,29 @@
         "vllm/v1/worker/gpu/spec_decode/uno_prepare.py",
         "vllm/v1/worker/gpu/uno_step_timing.py",
         "vllm/v1/worker/gpu/warmup.py",
+        "vllm/v1/worker/gpu_worker.py"
+      ]
+    },
+    {
+      "file": "0002-uno-gemma4.patch",
+      "sha256_lf": "49f961994d888d2bbcecda962134156b36e6d7760c0217030b7c366afdc23f60",
+      "files": [
+        "tests/v1/spec_decode/UNO_DRAFT_GUARD_CALL_SITES.md",
+        "tests/v1/spec_decode/test_triton_uno_splitkv.py",
+        "tests/v1/spec_decode/test_uno_config.py",
+        "tests/v1/spec_decode/test_uno_draft_moe.py",
+        "tests/v1/spec_decode/test_uno_draft_rows_kv.py",
+        "tests/v1/spec_decode/test_uno_mrv2.py",
+        "tests/v1/spec_decode/test_uno_prepare_mrv2.py",
+        "vllm/config/speculative.py",
+        "vllm/config/vllm.py",
+        "vllm/v1/attention/backends/triton_attn.py",
+        "vllm/v1/attention/ops/triton_unified_attention.py",
+        "vllm/v1/worker/gpu/cudagraph_utils.py",
+        "vllm/v1/worker/gpu/model_runner.py",
+        "vllm/v1/worker/gpu/spec_decode/uno.py",
+        "vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py",
+        "vllm/v1/worker/gpu/spec_decode/uno_prepare.py",
         "vllm/v1/worker/gpu_worker.py"
       ]
     }

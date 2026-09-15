@@ -127,10 +127,10 @@ index 48cd9fd0f6..7aa8033f04 100644
  # CuTeDSL hook
  # ------------------------------------------------------------------
 diff --git a/tests/v1/core/test_prefix_caching.py b/tests/v1/core/test_prefix_caching.py
-index 1760ca14d0..42e4cdd2ad 100644
+index d91260e30a..5c5f5b1ad5 100644
 --- a/tests/v1/core/test_prefix_caching.py
 +++ b/tests/v1/core/test_prefix_caching.py
-@@ -1515,6 +1515,65 @@ def test_hash_block_correct_reuse():
+@@ -2529,6 +2529,65 @@ def test_hash_block_correct_reuse():
      assert manager.block_pool.blocks[blocks.blocks[0][0].block_id].block_hash is None
  
  
@@ -197,10 +197,10 @@ index 1760ca14d0..42e4cdd2ad 100644
      """
      Test that the computed blocks are not evicted when getting new blocks
 diff --git a/tests/v1/core/test_scheduler.py b/tests/v1/core/test_scheduler.py
-index 1c56eaa6a5..c8f67c54dd 100644
+index 3a972e682e..cf5e5b1cd7 100644
 --- a/tests/v1/core/test_scheduler.py
 +++ b/tests/v1/core/test_scheduler.py
-@@ -1407,6 +1407,567 @@ def test_draft_slots_budgeted_per_scheduled_request(tmp_path, monkeypatch):
+@@ -1476,6 +1476,567 @@ def test_draft_slots_budgeted_per_scheduled_request(tmp_path, monkeypatch):
      assert scheduler.schedule().num_scheduled_tokens == {"0": 10, "1": 4}
  
  
@@ -4338,10 +4338,10 @@ index 0000000000..e23940227c
 +    assert cache.stats()["misses"] == 5
 diff --git a/tests/v1/spec_decode/test_uno_mrv2.py b/tests/v1/spec_decode/test_uno_mrv2.py
 new file mode 100644
-index 0000000000..8297fae701
+index 0000000000..7e115d0225
 --- /dev/null
 +++ b/tests/v1/spec_decode/test_uno_mrv2.py
-@@ -0,0 +1,3619 @@
+@@ -0,0 +1,3632 @@
 +# SPDX-License-Identifier: Apache-2.0
 +# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 +"""CPU contracts for Uno's MRV2 inputs and adapter ownership.
@@ -5377,6 +5377,7 @@ index 0000000000..8297fae701
 +        decode_query_len=k + 1,
 +        max_model_len=4096,
 +        adaptive_verification=None,
++        rejection_sampler=None,
 +        is_pooling_model=False,
 +        is_encoder_decoder=False,
 +        is_last_pp_rank=True,
@@ -5466,6 +5467,7 @@ index 0000000000..8297fae701
 +    runner.device = torch.device("cpu")
 +    adaptive = object()
 +    runner.adaptive_verification = adaptive
++    runner.rejection_sampler = None
 +    runner._dummy_run = Mock(return_value=(None, None))
 +    enumerate_launches = Mock(return_value=UnoServedLaunches((1,), ()))
 +
@@ -5587,6 +5589,7 @@ index 0000000000..8297fae701
 +    sampler.penalties_state.apply_staged_writes = lambda: None
 +    rejection = object.__new__(rejection_module.RejectionSampler)
 +    rejection.sampler = sampler
++    rejection.watermark_key = None
 +    rejection.num_speculative_steps = 8
 +    rejection.enable_adaptive_verification = False
 +    rejection.synthetic_conditional_rates = None
@@ -5616,13 +5619,21 @@ index 0000000000..8297fae701
 +
 +            return launch
 +
-+    for name in (
-+        "_topk_topp_kernel",
-+        "_topp_sb_stats_kernel",
-+        "_topp_sb_step_kernel",
-+        "_topp_sb_mask_kernel",
++    # The sampler's Triton kernels are reached through warmup dispatchers that
++    # bind their kernel at import, so replacing the module attribute no longer
++    # intercepts the launch; replace the kernel the dispatcher holds instead.
++    # The dispatcher binds every launch argument by name, so recorded launches
++    # carry their parameters in kwargs rather than positionally.
++    for wrapper_name, kernel_name in (
++        ("_topk_topp", "_topk_topp_kernel"),
++        ("_topp_split_stats", "_topp_sb_stats_kernel"),
++        ("_topp_split_step", "_topp_sb_step_kernel"),
++        ("_topp_split_mask", "_topp_sb_mask_kernel"),
 +    ):
-+        monkeypatch.setattr(topk_topp_triton, name, LaunchRecorder(name))
++        wrapper = getattr(topk_topp_triton, wrapper_name)
++        recorder = LaunchRecorder(kernel_name)
++        recorder.arg_names = tuple(wrapper.kernel.arg_names)
++        monkeypatch.setattr(wrapper, "kernel", recorder)
 +    monkeypatch.setattr(topk_topp_sampler, "HAS_TRITON", True)
 +    monkeypatch.setattr(topk_topp_triton, "num_compute_units", lambda _: 82)
 +    for name in ("_TRITON_SPLIT_CACHE", "_TRITON_BUFFER_CACHE", "_TRITON_TABLE_CACHE"):
@@ -5659,7 +5670,7 @@ index 0000000000..8297fae701
 +            for _, _, kw in split_launches
 +        )
 +        assert [
-+            args[6] for name, args, _ in split_launches if "_step_" in name
++            kw["ROUND"] for name, _, kw in split_launches if "_step_" in name
 +        ] == list(range(5))
 +    verification_launches = [
 +        (name, args, kw) for name, args, kw in launches if "HAS_DRAFT_LOGITS" in kw
@@ -6418,6 +6429,7 @@ index 0000000000..8297fae701
 +    runner = SimpleNamespace(
 +        speculator=object.__new__(UnoSpeculator),
 +        adaptive_verification=adaptive,
++        rejection_sampler=None,
 +        max_num_tokens=2048,
 +        decode_query_len=9,
 +        device=torch.device("cpu"),
@@ -6459,6 +6471,7 @@ index 0000000000..8297fae701
 +    runner = SimpleNamespace(
 +        speculator=object.__new__(UnoSpeculator),
 +        adaptive_verification=adaptive,
++        rejection_sampler=None,
 +        max_num_tokens=2048,
 +        decode_query_len=9,
 +        device=torch.device("cpu"),
@@ -9341,7 +9354,7 @@ index 1176857dff..e6976fd256 100644
              num_reqs=2, idx_mapping=torch.zeros(2, dtype=torch.int32)
          ),
 diff --git a/vllm/config/speculative.py b/vllm/config/speculative.py
-index ae56e58803..fe4b42a8ce 100644
+index 1861266820..f7a22a2614 100644
 --- a/vllm/config/speculative.py
 +++ b/vllm/config/speculative.py
 @@ -79,6 +79,7 @@ SpeculativeMethod = Literal[
@@ -9468,7 +9481,7 @@ index ae56e58803..fe4b42a8ce 100644
      @staticmethod
      def _maybe_override_draft_max_model_len(
          speculative_max_model_len: int | None,
-@@ -1854,6 +1936,7 @@ class SpeculativeConfig:
+@@ -1855,6 +1937,7 @@ class SpeculativeConfig:
          P-EAGLE              eagle3        Yes      K - 1
          DFlash               dflash        Yes      K
          DSpark               dspark        Yes      K - 1
@@ -9476,7 +9489,7 @@ index ae56e58803..fe4b42a8ce 100644
          MTP                  mtp           No       0
          N-gram               ngram         No       0
          Draft model          draft_model   No       1
-@@ -1862,6 +1945,10 @@ class SpeculativeConfig:
+@@ -1863,6 +1946,10 @@ class SpeculativeConfig:
          """
          num_draft_tokens = self.num_speculative_tokens
  
@@ -9487,7 +9500,7 @@ index ae56e58803..fe4b42a8ce 100644
          if self.use_dflash():
              # DFlash uses one bonus query followed by K mask queries.
              return num_draft_tokens
-@@ -1913,6 +2000,9 @@ class SpeculativeConfig:
+@@ -1914,6 +2001,9 @@ class SpeculativeConfig:
      def use_dspark(self) -> bool:
          return self.method == "dspark"
  
@@ -9498,10 +9511,10 @@ index ae56e58803..fe4b42a8ce 100644
          return self.num_speculative_tokens_per_batch_size is not None
  
 diff --git a/vllm/config/vllm.py b/vllm/config/vllm.py
-index 05377a2735..6f13badfa2 100644
+index 7d2baea26c..7155dc2e2e 100644
 --- a/vllm/config/vllm.py
 +++ b/vllm/config/vllm.py
-@@ -630,6 +630,10 @@ class VllmConfig:
+@@ -637,6 +637,10 @@ class VllmConfig:
          speculative_config = self.speculative_config
          if speculative_config is None:
              return 0
@@ -9512,8 +9525,8 @@ index 05377a2735..6f13badfa2 100644
          if speculative_config.use_dflash():
              # DFlash requires an extra lookahead slot since it uses in-fill-style
              # decoding instead of standard next-token sampling, so it has a query
-@@ -1168,6 +1172,64 @@ class VllmConfig:
-         self.engram_config.verify_parallel_config(self.parallel_config)
+@@ -1251,6 +1255,64 @@ class VllmConfig:
+         self.engram_config.verify_load_config(self.load_config)
          logger.info_once("Resolved Engram configuration: %s", str(self.engram_config))
  
 +    def _validate_uno_config(self) -> None:
@@ -9577,7 +9590,7 @@ index 05377a2735..6f13badfa2 100644
      def __post_init__(self):
          """Verify configs are valid & consistent with each other."""
  
-@@ -1337,10 +1399,11 @@ class VllmConfig:
+@@ -1420,10 +1482,11 @@ class VllmConfig:
                      and self.speculative_config.method not in get_args(NgramGPUTypes)
                      and self.speculative_config.method != "draft_model"
                      and self.speculative_config.method != "dspark"
@@ -9590,7 +9603,7 @@ index 05377a2735..6f13badfa2 100644
                          "speculative decoding"
                      )
                  if self.speculative_config.disable_padded_drafter_batch:
-@@ -1370,6 +1433,7 @@ class VllmConfig:
+@@ -1453,6 +1516,7 @@ class VllmConfig:
                  and self.speculative_config.method not in get_args(NgramGPUTypes)
                  and self.speculative_config.method != "draft_model"
                  and self.speculative_config.method != "dspark"
@@ -9598,7 +9611,7 @@ index 05377a2735..6f13badfa2 100644
              ):
                  logger.warning_once(
                      "Async scheduling not supported with %s-based "
-@@ -1403,6 +1467,8 @@ class VllmConfig:
+@@ -1486,6 +1550,8 @@ class VllmConfig:
              else:
                  self.scheduler_config.async_scheduling = True
  
@@ -9607,7 +9620,7 @@ index 05377a2735..6f13badfa2 100644
          if self.parallel_config.disable_nccl_for_dp_synchronization is None:
              if self.scheduler_config.async_scheduling:
                  if self.parallel_config.data_parallel_size > 1 and (
-@@ -1734,6 +1800,13 @@ class VllmConfig:
+@@ -1838,6 +1904,13 @@ class VllmConfig:
              breakable_cudagraph_enabled=breakable_cudagraph_enabled
          )
  
@@ -9621,7 +9634,7 @@ index 05377a2735..6f13badfa2 100644
          self._resolve_mm_embedding_inputs()
          self._resolve_mm_processor_device()
          self._resolve_mm_video_decode_device()
-@@ -2724,6 +2797,7 @@ class VllmConfig:
+@@ -2839,6 +2912,7 @@ class VllmConfig:
                  "dflash",
                  "dspark",
                  "extract_hidden_states",
@@ -9629,7 +9642,7 @@ index 05377a2735..6f13badfa2 100644
              ):
                  unsupported.append(f"speculative method '{speculative_config.method}'")
  
-@@ -2732,7 +2806,7 @@ class VllmConfig:
+@@ -2847,7 +2921,7 @@ class VllmConfig:
              # own speculators.
              if (
                  speculative_config.parallel_drafting
@@ -9638,7 +9651,7 @@ index 05377a2735..6f13badfa2 100644
              ):
                  unsupported.append("parallel drafting for EAGLE speculative decoding")
  
-@@ -2767,6 +2841,8 @@ class VllmConfig:
+@@ -2882,6 +2956,8 @@ class VllmConfig:
  
          # DSpark is implemented only by the V2 GPU model runner.
          if self.speculative_config:
@@ -9761,7 +9774,7 @@ index 56a532b809..449e003179 100644
              if self.use_v2_model_runner:
                  # Set the next step index in which this request is eligible to be
 diff --git a/vllm/v1/core/sched/output.py b/vllm/v1/core/sched/output.py
-index 93fc2d83c1..d27efc64b2 100644
+index 3a46fa40a7..1de3030bc0 100644
 --- a/vllm/v1/core/sched/output.py
 +++ b/vllm/v1/core/sched/output.py
 @@ -1,14 +1,32 @@
@@ -9798,7 +9811,7 @@ index 93fc2d83c1..d27efc64b2 100644
  if TYPE_CHECKING:
      import numpy as np
      import numpy.typing as npt
-@@ -301,6 +319,20 @@ class SchedulerOutput:
+@@ -304,6 +322,20 @@ class SchedulerOutput:
      # Number of spec tokens to schedule for the next step.
      num_spec_tokens_to_schedule: int = 0
  
@@ -9820,7 +9833,7 @@ index 93fc2d83c1..d27efc64b2 100644
      def make_empty(cls) -> "SchedulerOutput":
          return cls(
 diff --git a/vllm/v1/core/sched/scheduler.py b/vllm/v1/core/sched/scheduler.py
-index 8b2a551b55..673d77eed8 100644
+index 1b17eb3b15..86b20e01da 100644
 --- a/vllm/v1/core/sched/scheduler.py
 +++ b/vllm/v1/core/sched/scheduler.py
 @@ -40,6 +40,7 @@ from vllm.v1.core.kv_cache_metrics import KVCacheMetricsCollector
@@ -9859,7 +9872,7 @@ index 8b2a551b55..673d77eed8 100644
          # Positions past the computed tokens that the drafter reads mid-prefill.
          # Eagle-family drafters read 1 ahead, but multi-module MTP reads
          # num_spec_tokens ahead at chunked-prefill boundaries. Determines the
-@@ -561,6 +569,7 @@ class Scheduler(SchedulerInterface):
+@@ -560,6 +568,7 @@ class Scheduler(SchedulerInterface):
          return max(num_new_tokens, 0)
  
      def schedule(self, throttle_prefills: bool = False) -> SchedulerOutput:
@@ -9867,7 +9880,7 @@ index 8b2a551b55..673d77eed8 100644
          self.current_step += 1
          # NOTE(woosuk) on the scheduling algorithm:
          # There's no "decoding phase" nor "prefill phase" in the scheduler.
-@@ -725,6 +734,10 @@ class Scheduler(SchedulerInterface):
+@@ -724,6 +733,10 @@ class Scheduler(SchedulerInterface):
                  req_index += 1
                  continue
  
@@ -9878,7 +9891,7 @@ index 8b2a551b55..673d77eed8 100644
              # Schedule newly needed KV blocks for the request.
              with record_function_or_nullcontext("schedule: allocate_slots"):
                  while True:
-@@ -1053,11 +1066,14 @@ class Scheduler(SchedulerInterface):
+@@ -1058,11 +1071,14 @@ class Scheduler(SchedulerInterface):
                              + self.num_sampled_tokens_per_step
                              <= self.max_model_len
                          ):
@@ -9894,7 +9907,7 @@ index 8b2a551b55..673d77eed8 100644
  
                      threshold = self.scheduler_config.long_prefill_token_threshold
                      if 0 < threshold < num_new_tokens:
-@@ -1124,6 +1140,13 @@ class Scheduler(SchedulerInterface):
+@@ -1129,6 +1145,13 @@ class Scheduler(SchedulerInterface):
                          # The request cannot be scheduled.
                          break
  
@@ -9908,7 +9921,7 @@ index 8b2a551b55..673d77eed8 100644
                  # During async KV load, no forward pass is run yet.
                  # Allocate speculative lookahead slots later to avoid
                  # mismatching local and remote block counts.
-@@ -1400,6 +1423,47 @@ class Scheduler(SchedulerInterface):
+@@ -1405,6 +1428,47 @@ class Scheduler(SchedulerInterface):
                  scheduled_encoder_inputs
              )
  
@@ -9956,7 +9969,7 @@ index 8b2a551b55..673d77eed8 100644
          scheduler_output = SchedulerOutput(
              scheduled_new_reqs=new_reqs_data,
              scheduled_cached_reqs=cached_reqs_data,
-@@ -1421,6 +1485,8 @@ class Scheduler(SchedulerInterface):
+@@ -1426,6 +1490,8 @@ class Scheduler(SchedulerInterface):
              kv_cache_block_copies=pending_kv_cache_block_copies,
              kv_connector_block_state=kv_connector_block_state,
              num_spec_tokens_to_schedule=num_spec_tokens_to_schedule,
@@ -9965,7 +9978,7 @@ index 8b2a551b55..673d77eed8 100644
              ec_manager_metadata=self.encoder_cache_manager.get_manager_metadata(),
          )
  
-@@ -1449,8 +1515,71 @@ class Scheduler(SchedulerInterface):
+@@ -1454,8 +1520,71 @@ class Scheduler(SchedulerInterface):
  
          with record_function_or_nullcontext("schedule: update_after_schedule"):
              self._update_after_schedule(scheduler_output)
@@ -10037,7 +10050,7 @@ index 8b2a551b55..673d77eed8 100644
      def _build_kv_connector_meta(
          self, connector: KVConnectorBase_V1, scheduler_output: SchedulerOutput
      ) -> KVConnectorMetadata:
-@@ -1572,6 +1701,8 @@ class Scheduler(SchedulerInterface):
+@@ -1577,6 +1706,8 @@ class Scheduler(SchedulerInterface):
          Discards the last sampled output token from the prior input chunk.
          """
  
@@ -10046,7 +10059,7 @@ index 8b2a551b55..673d77eed8 100644
          # Current streaming input behaviour: Keep only computed output tokens
          # (discard final sampled output token).
          num_computed_tokens = session.num_computed_tokens
-@@ -2041,6 +2172,30 @@ class Scheduler(SchedulerInterface):
+@@ -2052,6 +2183,30 @@ class Scheduler(SchedulerInterface):
                  request.status = RequestStatus.FINISHED_STOPPED
                  stopped = True
  
@@ -10077,7 +10090,7 @@ index 8b2a551b55..673d77eed8 100644
              if new_token_ids and self.structured_output_manager.should_advance(
                  request, new_token_ids=new_token_ids
              ):
-@@ -2191,6 +2346,16 @@ class Scheduler(SchedulerInterface):
+@@ -2202,6 +2357,16 @@ class Scheduler(SchedulerInterface):
              self.waiting.remove_requests(stopped_preempted_reqs)
              self.skipped_waiting.remove_requests(stopped_preempted_reqs)
  
@@ -10094,7 +10107,7 @@ index 8b2a551b55..673d77eed8 100644
          error_req_ids = set(self.grammar_compile_error_reqs)
          self.grammar_compile_error_reqs.clear()
          if failed_kv_load_req_ids and not self.recompute_kv_load_failures:
-@@ -2416,8 +2581,8 @@ class Scheduler(SchedulerInterface):
+@@ -2427,8 +2592,8 @@ class Scheduler(SchedulerInterface):
                  # The request may have been finished. Skip.
                  continue
  
@@ -10105,7 +10118,7 @@ index 8b2a551b55..673d77eed8 100644
                  if request.spec_token_ids:
                      request.spec_token_ids = []
                  continue
-@@ -2571,6 +2736,7 @@ class Scheduler(SchedulerInterface):
+@@ -2582,6 +2747,7 @@ class Scheduler(SchedulerInterface):
      ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
          assert request.is_finished()
  
@@ -10129,84 +10142,6 @@ index 4cc433cbfe..34b0f8042a 100644
          # LoRA request passed in while LoRA is not enabled
          if not self.lora_config:
              raise VLLMValidationError(
-diff --git a/vllm/v1/sample/ops/topk_topp_triton.py b/vllm/v1/sample/ops/topk_topp_triton.py
-index 7c1f080fcd..83a52e2c64 100755
---- a/vllm/v1/sample/ops/topk_topp_triton.py
-+++ b/vllm/v1/sample/ops/topk_topp_triton.py
-@@ -18,7 +18,6 @@ from vllm.utils.platform_utils import num_compute_units
- 
- _TRITON_TABLE_CACHE: dict[tuple[torch.device], tuple[torch.Tensor, torch.Tensor]] = {}
- _TRITON_BUFFER_CACHE: dict[tuple[torch.device, torch.dtype, int], torch.Tensor] = {}
--
- # fmt: off
- _NORMAL_CDF_TO_SIGMA_TABLE = [
-   3.656,  3.650,  3.650,  3.650,  3.626,  3.626,  3.626,  3.514,  3.514,  3.503, 
-@@ -892,6 +891,14 @@ _SPLIT_ROUNDS = 5
- _TRITON_SPLIT_CACHE: dict[torch.device, dict[str, torch.Tensor]] = {}
- 
- 
-+def _topp_split_count(batch_size: int, num_sm: int) -> int:
-+    """Return the split-row specialization selected for this sampler extent."""
-+    splits = 1
-+    while splits < _SPLIT_MAX_SPLITS and splits * 2 * batch_size <= num_sm:
-+        splits *= 2
-+    return splits
-+
-+
- @triton.jit
- def _topp_sb_stats_kernel(
-     LOGITS,
-@@ -1322,9 +1329,7 @@ def _apply_topp_split(
- ) -> None:
-     """Split-row top-p pipeline for small batches; masks logits in place."""
-     batch_size, vocab_size = logits.shape
--    splits = 1
--    while splits < _SPLIT_MAX_SPLITS and splits * 2 * batch_size <= num_sm:
--        splits *= 2
-+    splits = _topp_split_count(batch_size, num_sm)
- 
-     ws = _TRITON_SPLIT_CACHE.get(logits.device)
-     if ws is None:
-@@ -1339,7 +1344,8 @@ def _apply_topp_split(
-     k_ptr = k if k is not None else logits  # dummy pointer when HAS_K=False
-     has_k = k is not None
- 
--    _topp_sb_stats_kernel[(batch_size * splits,)](
-+    stats_grid = (batch_size * splits,)
-+    _topp_sb_stats_kernel[stats_grid](
-         logits,
-         logits.stride(0),
-         ws["stats"],
-@@ -1352,7 +1358,8 @@ def _apply_topp_split(
-         num_warps=8,
-     )
-     for round_i in range(_SPLIT_ROUNDS):
--        _topp_sb_step_kernel[(batch_size * splits,)](
-+        step_grid = (batch_size * splits,)
-+        _topp_sb_step_kernel[step_grid](
-             logits,
-             logits.stride(0),
-             ws["stats"],
-@@ -1368,7 +1375,8 @@ def _apply_topp_split(
-             BLOCK=2048,
-             num_warps=8,
-         )
--    _topp_sb_mask_kernel[(batch_size * splits,)](
-+    mask_grid = (batch_size * splits,)
-+    _topp_sb_mask_kernel[mask_grid](
-         logits,
-         logits.stride(0),
-         ws["stats"],
-@@ -1493,7 +1501,8 @@ def apply_top_k_top_p_triton(
-         # faster on every arch measured (SM90, SM100, SM120, gfx950); 16 is not.
-         launch_kwargs["num_warps"] = 8
- 
--    _topk_topp_kernel[(NUM_PROGRAMS,)](
-+    launch_grid = (NUM_PROGRAMS,)
-+    _topk_topp_kernel[launch_grid](
-         logits,
-         logits.stride(0),
-         buffer,
 diff --git a/vllm/v1/spec_decode/uno_noise.py b/vllm/v1/spec_decode/uno_noise.py
 new file mode 100644
 index 0000000000..12939dedc4
@@ -10579,7 +10514,7 @@ index 0000000000..8afdf27f48
 +    "serving_launches",
 +]
 diff --git a/vllm/v1/worker/gpu/model_runner.py b/vllm/v1/worker/gpu/model_runner.py
-index f41a5a8d3a..208a34c7fc 100644
+index 4b1520f276..f55514805c 100644
 --- a/vllm/v1/worker/gpu/model_runner.py
 +++ b/vllm/v1/worker/gpu/model_runner.py
 @@ -64,8 +64,13 @@ from vllm.sequence import IntermediateTensors
@@ -10595,9 +10530,9 @@ index f41a5a8d3a..208a34c7fc 100644
 +    SchedulerOutput,
 +)
  from vllm.v1.kv_cache_interface import (
-     CircularBufferSpec,
      KVCacheConfig,
-@@ -129,6 +134,11 @@ from vllm.v1.worker.gpu.kv_connector import (
+     MambaSpec,
+@@ -132,6 +137,11 @@ from vllm.v1.worker.gpu.kv_connector import (
      KVConnector,
      get_kv_connector,
  )
@@ -10609,7 +10544,7 @@ index f41a5a8d3a..208a34c7fc 100644
  from vllm.v1.worker.gpu.lora_utils import (
      LoraState,
      create_lora_capture_hook,
-@@ -164,6 +174,12 @@ from vllm.v1.worker.gpu.spec_decode.rejection_sampler import (
+@@ -167,6 +177,12 @@ from vllm.v1.worker.gpu.spec_decode.rejection_sampler import (
      get_max_chunk_logits,
  )
  from vllm.v1.worker.gpu.spec_decode.speculator import DraftModelSpeculator
@@ -10622,7 +10557,7 @@ index f41a5a8d3a..208a34c7fc 100644
  from vllm.v1.worker.gpu.spec_decode.utils import DraftTokensHandler
  from vllm.v1.worker.gpu.states import RequestState
  from vllm.v1.worker.gpu.structured_outputs import StructuredOutputsWorker
-@@ -172,6 +188,10 @@ from vllm.v1.worker.gpu.ubatch_utils import (
+@@ -175,6 +191,10 @@ from vllm.v1.worker.gpu.ubatch_utils import (
      UBatchState,
      maybe_build_ubatch_runner,
  )
@@ -10633,7 +10568,7 @@ index f41a5a8d3a..208a34c7fc 100644
  from vllm.v1.worker.lora_model_runner_mixin import LoRAModelRunnerMixin
  from vllm.v1.worker.utils import (
      KVBlockZeroer,
-@@ -202,6 +222,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -205,6 +225,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          self.jit_warmup_registry = JitWarmupRegistry(vllm_config)
  
          self.device = device
@@ -10643,7 +10578,7 @@ index f41a5a8d3a..208a34c7fc 100644
          self.dtype = self.model_config.dtype
          self.kv_cache_dtype = self.dtype
          if self.cache_config.cache_dtype != "auto":
-@@ -289,6 +312,12 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -292,6 +315,12 @@ class GPUModelRunner(LoRAModelRunnerMixin):
  
          # Draft tokens propagation - for spec-dec + struct outputs.
          self.draft_tokens_handler = DraftTokensHandler(self.device)
@@ -10656,7 +10591,7 @@ index f41a5a8d3a..208a34c7fc 100644
  
          self.pcp_manager: pcp.PCPManager | None = None
  
-@@ -419,6 +448,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -422,6 +451,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
              if isinstance(self.speculator, DraftModelSpeculator):
                  with use_workspace_lane(self._draft_workspace_lane):
                      self.speculator.load_model(self.model)
@@ -10665,7 +10600,7 @@ index f41a5a8d3a..208a34c7fc 100644
                      eplb_models_added = self.eplb.maybe_register_speculator(
                          self.speculator, self.speculative_config, load_dummy_weights
                      )
-@@ -523,6 +554,26 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -539,6 +570,26 @@ class GPUModelRunner(LoRAModelRunnerMixin):
      def get_model(self) -> nn.Module:
          return self.model
  
@@ -10692,7 +10627,7 @@ index f41a5a8d3a..208a34c7fc 100644
      def get_draft_model(self) -> nn.Module | None:
          speculator = self.speculator
          if not isinstance(speculator, DraftModelSpeculator):
-@@ -889,19 +940,136 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -918,19 +969,136 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          sample_hidden_states = hidden_states[input_batch.logits_indices]
          return hidden_states, sample_hidden_states
  
@@ -10833,7 +10768,7 @@ index f41a5a8d3a..208a34c7fc 100644
  
      @torch.inference_mode()
      def _dummy_pooler_run(self, hidden_states: torch.Tensor) -> None:
-@@ -958,6 +1126,146 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -987,6 +1155,151 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          """Estimate the GPU memory required to capture CUDA graphs."""
          return _profile_cudagraph_memory(self)
  
@@ -10939,6 +10874,11 @@ index f41a5a8d3a..208a34c7fc 100644
 +        """Run one proposal and retain its device-resident draft tokens."""
 +        assert self.speculator is not None
 +        assert self.sampler is not None
++        if isinstance(self.sampler, GPUWatermarkSampler):
++            self.speculator.prepare_watermarking(
++                self.sampler._get_contexts(input_batch.idx_mapping),
++                self.sampler.watermarking.gpu[input_batch.idx_mapping],
++            )
 +        with use_workspace_lane(self._draft_workspace_lane):
 +            draft_tokens = self.speculator.propose(
 +                input_batch,
@@ -10977,10 +10917,10 @@ index f41a5a8d3a..208a34c7fc 100644
 +        if self.pp_handler is not None:
 +            self.pp_handler.broadcast_drafts(self.req_states.draft_tokens, input_batch)
 +
-     @torch.inference_mode()
-     def capture_model(self, *, profile_only: bool = False) -> int:
-         assert self.cudagraph_manager is not None
-@@ -1007,6 +1315,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+     def needs_cudagraph_capture(self) -> bool:
+         """Whether capture_model() has any CUDA graphs left to capture."""
+         return (
+@@ -1046,6 +1359,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
                      if self.speculator is not None:
                          with use_workspace_lane(self._draft_workspace_lane):
                              self.speculator.capture()
@@ -10988,7 +10928,7 @@ index f41a5a8d3a..208a34c7fc 100644
                      if self.adaptive_verification is not None:
                          with self.step_timing.collect() as timings:
                              for batch in self.adaptive_verification.batches_to_profile(
-@@ -1597,6 +1906,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -1640,6 +1954,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          context_len: int = 0,
          valid_dummy_state_slots: bool = False,
      ) -> ModelRunnerOutput | IntermediateTensors | None:
@@ -10996,7 +10936,7 @@ index f41a5a8d3a..208a34c7fc 100644
          if not dummy_run:
              # Update the request states.
              self.update_pp_decode_requests()
-@@ -1611,7 +1921,15 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -1654,7 +1969,15 @@ class GPUModelRunner(LoRAModelRunnerMixin):
                  return self._merge_ec_connector_no_forward(
                      scheduler_output, empty_output
                  )
@@ -11012,7 +10952,7 @@ index f41a5a8d3a..208a34c7fc 100644
          # Get batch descriptor and sync across DP ranks.
          num_reqs = len(scheduler_output.num_scheduled_tokens)
          num_toks = scheduler_output.total_num_scheduled_tokens
-@@ -1661,6 +1979,10 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -1704,6 +2027,10 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          if batch_desc.num_tokens == 0:
              # All DP ranks have zero tokens to run.
              empty_output = self.kv_connector.no_forward(scheduler_output)
@@ -11023,7 +10963,7 @@ index f41a5a8d3a..208a34c7fc 100644
              return self._merge_ec_connector_no_forward(scheduler_output, empty_output)
  
          cudagraph_stats = None
-@@ -1685,7 +2007,12 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -1728,7 +2055,12 @@ class GPUModelRunner(LoRAModelRunnerMixin):
                  self.req_states.num_computed_tokens.gpu,
              )
  
@@ -11037,7 +10977,7 @@ index f41a5a8d3a..208a34c7fc 100644
                  # Activate LoRA adapters.
                  lora_inputs = self.lora_state.make_lora_inputs(
                      input_batch.req_ids,
-@@ -1839,6 +2166,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -1886,6 +2218,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          self.step_timing.record_batch(
              input_batch, batch_desc.cg_mode == CUDAGraphMode.FULL
          )
@@ -11046,18 +10986,17 @@ index f41a5a8d3a..208a34c7fc 100644
 +            uno_step_trace.start_stage("model_forward")
          self.step_timing.forward_start()
  
-         # Run model.
-@@ -1889,6 +2219,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+         connector_kwargs = dict(
+@@ -1945,6 +2280,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
                      # Eager (NONE): call the raw model directly.
                      model_output = self.model(**model_inputs)
  
 +        if uno_step_trace is not None:
 +            uno_step_trace.end_stage("model_forward")
-+
+         self.kv_connector.finish_forward()
+ 
          if self.is_last_pp_rank:
-             if self.use_aux_hidden_state_outputs:
-                 assert isinstance(model_output, tuple)
-@@ -1921,12 +2254,18 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -1979,12 +2316,18 @@ class GPUModelRunner(LoRAModelRunnerMixin):
              ec_connector_output=ec_connector_output,
              routed_experts=routed_experts,
              cudagraph_stats=cudagraph_stats,
@@ -11076,7 +11015,7 @@ index f41a5a8d3a..208a34c7fc 100644
              return self.pp_handler.relay_aux_hidden_states(
                  model_inputs["intermediate_tensors"], output_intermediate_tensors
              )
-@@ -1934,6 +2273,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -1992,6 +2335,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
  
      @torch.inference_mode()
      @step_eplb_after()
@@ -11084,7 +11023,7 @@ index f41a5a8d3a..208a34c7fc 100644
      def sample_tokens(
          self, grammar_output: GrammarOutput | None
      ) -> AsyncOutput | ModelRunnerOutput | None:
-@@ -1951,6 +2291,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -2009,6 +2353,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          ec_connector_output = self.execute_model_state.ec_connector_output
          routed_experts = self.execute_model_state.routed_experts
          cudagraph_stats = self.execute_model_state.cudagraph_stats
@@ -11094,7 +11033,7 @@ index f41a5a8d3a..208a34c7fc 100644
          self.execute_model_state = None
  
          if not self.is_last_pp_rank:
-@@ -1979,15 +2322,33 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -2037,15 +2384,33 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          hidden_states, input_batch = pcp.maybe_restore_pcp_for_sampling(
              self.pcp_manager, hidden_states, input_batch
          )
@@ -11128,7 +11067,7 @@ index f41a5a8d3a..208a34c7fc 100644
  
          if self.pp_handler is not None:
              # Broadcast to non-last PP ranks (handles spec decode multi-token).
-@@ -2018,7 +2379,11 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -2076,7 +2441,11 @@ class GPUModelRunner(LoRAModelRunnerMixin):
              prompt_logprobs_dict=prompt_logprobs_dict,  # type: ignore[arg-type]
              cudagraph_stats=cudagraph_stats,
          )
@@ -11141,7 +11080,7 @@ index f41a5a8d3a..208a34c7fc 100644
          async_output = AsyncOutput(
              model_runner_output=model_runner_output,
              sampler_output=sampler_output,
-@@ -2053,8 +2418,13 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -2117,8 +2486,13 @@ class GPUModelRunner(LoRAModelRunnerMixin):
              num_rejected,
              input_batch.query_start_loc,
          )
@@ -11156,10 +11095,15 @@ index f41a5a8d3a..208a34c7fc 100644
              assert self.sampler is not None
              # Let the target override the hidden state fed to the drafter
              # (e.g. DeepSeek V4 MTP needs the pre-hc_head residual). The
-@@ -2064,39 +2434,45 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -2128,44 +2502,45 @@ class GPUModelRunner(LoRAModelRunnerMixin):
              if hasattr(self.model, "get_mtp_target_hidden_states"):
                  pre_hc_hidden_states = self.model.get_mtp_target_hidden_states()
                  spec_hidden_states = pre_hc_hidden_states[: draft_hidden_states.size(0)]
+-            if isinstance(self.sampler, GPUWatermarkSampler):
+-                self.speculator.prepare_watermarking(
+-                    self.sampler._get_contexts(input_batch.idx_mapping),
+-                    self.sampler.watermarking.gpu[input_batch.idx_mapping],
+-                )
 -            with use_workspace_lane(self._draft_workspace_lane):
 -                draft_tokens = self.speculator.propose(
 -                    input_batch,
@@ -11204,7 +11148,11 @@ index f41a5a8d3a..208a34c7fc 100644
 +                num_rejected,
 +                dp_sync,
 +                mm_inputs,
-+            )
+             )
+-            if self.pp_handler is not None:
+-                self.pp_handler.broadcast_drafts(
+-                    self.req_states.draft_tokens, input_batch
+-                )
 +            if uno_step_trace is not None:
 +                uno_step_trace.end_stage("propose")
 +        elif self.speculator is not None and UNO_STEP_TIMING_DEBUG:
@@ -11218,11 +11166,7 @@ index f41a5a8d3a..208a34c7fc 100644
 +                int(skip_speculator_proposal),
 +                tail_mode_rows,
 +                len(input_batch.req_ids),
-             )
--            if self.pp_handler is not None:
--                self.pp_handler.broadcast_drafts(
--                    self.req_states.draft_tokens, input_batch
--                )
++            )
 +
 +        # Spec-decode and diffusion LLMs both use draft tokens but the latter does
 +        # not have a speculator (i.e. self.speculator is None).
@@ -11233,7 +11177,7 @@ index f41a5a8d3a..208a34c7fc 100644
  
          # Post-step KV connector related operations.
          kv_connector_output = self.kv_connector.post_forward(finished_req_ids)
-@@ -2106,7 +2482,13 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -2175,7 +2550,13 @@ class GPUModelRunner(LoRAModelRunnerMixin):
          return async_output
  
      def take_draft_token_ids(self) -> DraftTokenIds | None:
@@ -11248,7 +11192,7 @@ index f41a5a8d3a..208a34c7fc 100644
  
      @torch.inference_mode()
      @step_eplb_after()
-@@ -2163,6 +2545,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+@@ -2232,6 +2613,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
      def shutdown(self) -> None:
          """Release GPU tensors (model weights, KV caches, workspace) so that
          memory is reclaimable when running in the same process."""
@@ -11257,7 +11201,7 @@ index f41a5a8d3a..208a34c7fc 100644
          torch.accelerator.synchronize()
          self.cudagraph_manager = None
          self.fast_prefill = None
-@@ -2238,6 +2622,9 @@ class ExecuteModelState(NamedTuple):
+@@ -2307,6 +2690,9 @@ class ExecuteModelState(NamedTuple):
      ec_connector_output: ECConnectorOutput | None
      routed_experts: RoutedExpertsTensors | None
      cudagraph_stats: CUDAGraphStat | None
@@ -13583,7 +13527,7 @@ index 0000000000..d2109e2ae0
 +        for thread in threads:
 +            thread.join()
 diff --git a/vllm/v1/worker/gpu/warmup.py b/vllm/v1/worker/gpu/warmup.py
-index 7072210cb7..620769cca9 100644
+index 56f7d438fc..287ca383ed 100644
 --- a/vllm/v1/worker/gpu/warmup.py
 +++ b/vllm/v1/worker/gpu/warmup.py
 @@ -1,9 +1,10 @@
@@ -13900,8 +13844,8 @@ index 7072210cb7..620769cca9 100644
              pooling_params=None,
              block_ids=tuple(_alloc_blocks(n) for n in prefill_block_counts),
              num_computed_tokens=0,
-@@ -226,10 +483,199 @@ def warmup_kernels(
-     model_runner.adaptive_verification = None
+@@ -233,6 +490,16 @@ def warmup_kernels(
+         rejection_sampler.enable_adaptive_verification = False
      try:
          _warmup_kernels(model_runner, worker_execute_model, worker_sample_tokens)
 +        from vllm.v1.worker.gpu.spec_decode.uno import UnoSpeculator
@@ -13916,6 +13860,9 @@ index 7072210cb7..620769cca9 100644
 +                model_runner._warm_up_draft_kernels()
      finally:
          model_runner.adaptive_verification = adaptive_verification
+         if adaptive_sampling:
+@@ -240,6 +507,185 @@ def warmup_kernels(
+             rejection_sampler.enable_adaptive_verification = True
  
  
 +@torch.inference_mode()
@@ -14100,7 +14047,7 @@ index 7072210cb7..620769cca9 100644
  def _warmup_kernels(
      model_runner: GPUModelRunner,
      worker_execute_model: Callable[[SchedulerOutput], Any],
-@@ -239,6 +685,11 @@ def _warmup_kernels(
+@@ -249,6 +695,11 @@ def _warmup_kernels(
          return
  
      num_spec_steps = model_runner.num_speculative_steps
@@ -14112,7 +14059,7 @@ index 7072210cb7..620769cca9 100644
      decode_query_len = model_runner.decode_query_len
      # Use decode_query_len + 1 tokens so the prefill batch's per-request query
      # length exceeds decode_query_len, preventing it from being misclassified as
-@@ -249,6 +700,11 @@ def _warmup_kernels(
+@@ -259,6 +710,11 @@ def _warmup_kernels(
      num_decode_steps = 1
      if not model_runner.is_pooling_model:
          num_decode_steps = 5 if num_spec_steps > 0 else 3
@@ -14124,7 +14071,7 @@ index 7072210cb7..620769cca9 100644
      # Size the block allocation for the worst case: every request advancing
      # decode_query_len tokens on every decode step.
      decode_len = prompt_len + num_decode_steps * decode_query_len
-@@ -418,6 +874,8 @@ def _warmup_kernels(
+@@ -428,6 +884,8 @@ def _warmup_kernels(
              (all_indices, [use_spec_decode] * num_reqs),
          ]
          if num_reqs >= 2:
@@ -14134,10 +14081,10 @@ index 7072210cb7..620769cca9 100644
              # as a prefill and split the batch into spec/non-spec token indices.
              decode_steps.append(([0, 1], [use_spec_decode, False]))
 diff --git a/vllm/v1/worker/gpu_worker.py b/vllm/v1/worker/gpu_worker.py
-index 53bc0550a5..b3bfcd9928 100644
+index 3f457b9b7b..d06d0e2ea1 100644
 --- a/vllm/v1/worker/gpu_worker.py
 +++ b/vllm/v1/worker/gpu_worker.py
-@@ -86,6 +86,7 @@ from vllm.v1.outputs import (
+@@ -88,6 +88,7 @@ from vllm.v1.outputs import (
      ModelRunnerOutput,
  )
  from vllm.v1.utils import compute_iteration_details, report_usage_stats
@@ -14145,7 +14092,7 @@ index 53bc0550a5..b3bfcd9928 100644
  from vllm.v1.worker.sentinel.gpu_worker_sentinel import WorkerSentinel
  from vllm.v1.worker.startup_plan import (
      maybe_apply_startup_plan,
-@@ -96,7 +97,7 @@ from vllm.v1.worker.worker_base import CompilationTimes, WorkerBase
+@@ -98,7 +99,7 @@ from vllm.v1.worker.worker_base import CompilationTimes, WorkerBase
  from vllm.v1.worker.workspace import init_workspace_manager
  
  from ...model_executor.model_loader import TensorizerLoader
@@ -14154,7 +14101,7 @@ index 53bc0550a5..b3bfcd9928 100644
  from .utils import request_memory
  
  logger = init_logger(__name__)
-@@ -921,6 +922,12 @@ class Worker(WorkerBase):
+@@ -933,6 +934,12 @@ class Worker(WorkerBase):
              mode=self.observability_config.jit_monitor_mode,
              verbose=self.observability_config.jit_monitor_verbose,
          )
