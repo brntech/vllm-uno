@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Gemma 4 26B A4B support on the Model Runner V2 Uno path: MoE drafting, sliding-window attention, and language-only multimodal admission, released as a second validated profile beside Qwen3-8B (`UNO_PROFILE=gemma4`: AWQ 4-bit weights, `TRITON_ATTN`, K=4, `max_num_seqs=4`, `max_model_len=8192`, `gpu_memory_utilization=0.85`, and sixteen base capture cells covering the 16-draft-row bound).
+- Gemma 4 26B A4B support on the Model Runner V2 Uno path: MoE drafting, sliding-window attention, and language-only multimodal admission, shipped as a second serving profile beside Qwen3-8B (`UNO_PROFILE=gemma4`: AWQ 4-bit weights, `TRITON_ATTN`, K=4, `max_num_seqs=4`, `max_model_len=8192`, `gpu_memory_utilization=0.85`, and sixteen base capture cells covering the 16-draft-row bound). Its distributional gate does not pass on this build; see **Verified** and **Scope** below.
 - Split-KV attention opt-in for the Gemma draft path (`UNO_GEMMA_SPLITKV=1`), which segments the draft attention over the KV axis and logs the engaged `width`, `head_size`, `q_heads`, `kv_heads` and `segments` per head family.
 - Draft MoE top-k opt-in (`UNO_DRAFT_MOE_TOPK=4`): the drafter's MoE routers are captured and replayed at top-4 while the verifier keeps the configured top-8, with a partial-capture path that restores every router and clears the draft LoRA hook.
 - Fail-closed admission for the top-k variant: an uncaptured serving shape is refused by dispatch key, environment variable and variant name instead of silently falling back to eager routing, and the startup receipt names the captured draft-row counts.
@@ -24,13 +24,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Verified
 
-- Gemma 4 26B A4B AWQ with the step-1900 pilot adapter, language-only, K=4, on an RTX 3090 (24 GiB): matched plain-versus-Uno greedy decode over five 384-token requests reports 166.713 versus 143.694 tokens/s (sum over sum), 1.16x for the Uno arm, with the same card, workload, sampling and repeat convention for both arms.
-- The sampled-distribution lossless gate passes on the Gemma profile (three pinned prefixes, 36 tests, 35,999 permutations, Bonferroni alpha `2.778e-4`, tightest p `0.0003333`, TV advisory) beside a plain-versus-plain floor measured in the same run.
-- The Qwen3-8B BF16 K=8 profile re-passes its v0.2.0 gate set on the v0.3.0 image.
+- Qwen3-8B BF16 K=8 re-passes its v0.2.0 gate set on the v0.3.0 image: the shipped verifier reports PASS for the functional greedy pass and for the sampled chunk-1 and mixed chunk-8 distributional gates against a matched plain reference, speculation counters advance (2,751 drafts, 22,008 draft tokens, 8,131 accepted tokens across the candidate run), the live API and capacity checks pass, and the serving slice contains zero `JIT compilation during inference` warnings.
+- The Gemma 4 profile does **not** pass its distributional gate on this build. On the released image, with both arms on the same flags (two LoRA slots, `TRITON_ATTN`, `--language-only`, `max_num_seqs=4`, K=4), the Uno arm's sampled token distribution differs from the matched plain arm's at every position and joint the gate tests: 36 of 44 tests red at the shipped chunk-1 convention and 34 of 36 at the mixed chunk-8 convention, against a plain-versus-plain control on the same image and flags that is clean (0 of 36, tightest p `0.0587`). The sharpest single signature is the first sampled token of the prose prefix, where the Uno arm returns one token for all 256 draws and plain spreads over four. The fault is therefore on the Gemma profile, not on the instrument, and the profile is not certified in this release.
+- Gemma-specific gates that do pass and are recorded with receipts: functional greedy decoding, the live API and capacity checks (health, models, greedy, sampled, streaming, shared-prefix, C=8, C=32), the fail-closed vision refusal (`Uno requires a language-only model`, exit 1), and the draft MoE top-k variant, which boots, serves a captured request, and refuses the uncaptured 16-draft-row shape by dispatch key, environment variable and variant name.
+- The port's own serving evaluation, carried here as the bounded scenario the release notes describe, measures matched plain-versus-Uno greedy decode on Gemma 4 with K=4 at 166.713 versus 143.694 tokens/s (sum over sum, five 384-token requests, same card) — 1.16x for the Uno arm. That measurement is a throughput result from the port's evaluation record; it is not a losslessness result and does not survive the gate above as evidence of equivalence.
 
 ### Scope
 
 - G2 preparation/KV, G3 attention, and broader G4/G7 qualification remain CUDA_UNVERIFIED; the available receipts support only the bounded scenarios exercised.
+- The Gemma 4 profile is **not certified** by this release. Its distributional gate is red against a matched plain reference, so the Qwen3-8B profile is the only profile the v0.3.0 receipts certify. The gate cannot separate a semantically different verification path from a kernel-selection difference between the two arms, and a control in the same session shows the instrument is sensitive to a pure LoRA-slot change; either cause still blocks a losslessness claim on the profile as served.
 
 ## [0.2.0] - 2026-09-14
 

@@ -1,10 +1,12 @@
 # Uno for vLLM
 
-**v0.3.0** is the validated Model Runner V2 release kit for Uno on vLLM
-`00972dfd72988942138a7a6089eaee08580210b8`. It ships two validated serving
-profiles: Qwen3-8B BF16 at `K=8` and Gemma 4 26B A4B AWQ at `K=4`. It is ready
-for the maintainer's tag, registry push, and release publication steps recorded
-in this repository.
+**v0.3.0** is the Model Runner V2 release kit for Uno on vLLM
+`00972dfd72988942138a7a6089eaee08580210b8`. It ships two serving
+profiles: Qwen3-8B BF16 at `K=8`, which passes its full v0.2.0 gate set on this
+image, and Gemma 4 26B A4B AWQ at `K=4`, which passes every functional,
+capacity and refusal gate but **fails the sampled-distribution gate** and is
+therefore not certified. Read [docs/validation.md](docs/validation.md) before
+serving the Gemma profile.
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter
 through vLLM's OpenAI-compatible server. The integration provides a native
@@ -50,6 +52,15 @@ sliding-window MoE model with `K=4` speculative tokens:
   `UNO_DRAFT_MOE_TOPK=4` opts into top-4 draft MoE routing under captured
   graphs and refuses any serving shape it did not capture.
 
+**Status:** this profile is not certified. Greedy decoding, the live API and
+capacity checks, the vision refusal and the draft MoE top-k variant all pass on
+the released image, but the Uno arm's sampled token distribution differs from a
+matched plain reference at every position the gate tests (35 of 44 tests red,
+against a plain-versus-plain control on the same image and flags that is clean).
+The cause is not yet separated between a verification path that differs from
+plain and a plain control that runs a different attention kernel; the separating
+run is described in [docs/validation.md](docs/validation.md).
+
 The digest-pinned per-commit base image is AMD64-only. An ARM64 image follows
 when vLLM publishes a release image containing this base.
 
@@ -62,9 +73,9 @@ docker pull ghcr.io/brntech/vllm-uno:0.3.0
 ```
 
 Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured
-with the NVIDIA Container Toolkit. The validated Qwen3-8B profile ran on a
-24 GiB RTX 3090, and so did the Gemma 4 26B A4B profile. Allow space for the
-CUDA image and model cache.
+with the NVIDIA Container Toolkit. The Qwen3-8B profile ran on a 24 GiB RTX
+3090, and so did the Gemma 4 26B A4B profile, which is served but not certified.
+Allow space for the CUDA image and model cache.
 
 Start the default Qwen3-8B server with a named Hugging Face cache and a
 loopback-only API:
@@ -150,7 +161,8 @@ and in [docs/validation.md](docs/validation.md).
 The release record identifies the exact image, source patch series, and the
 RTX 3090 checks for both profiles. See [docs/validation.md](docs/validation.md)
 and the concise [v0.3.0 lane record](docs/lanes/release-0.3.0.md). The default
-verifier uses sampled-distribution and mixed-chunk gates.
+verifier uses sampled-distribution and mixed-chunk gates; the Qwen3-8B profile
+passes them on this image and the Gemma 4 profile does not.
 
 ## Repository map
 

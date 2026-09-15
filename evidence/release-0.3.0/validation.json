@@ -1,0 +1,185 @@
+{
+  "schema": 2,
+  "release": "0.3.0",
+  "status": "NOT_CERTIFIED",
+  "status_reason": [
+    "The Qwen3-8B profile re-passes its full v0.2.0 gate set on the released image.",
+    "The Gemma 4 26B A4B profile passes every functional, capacity and refusal gate but fails the sampled-distribution gate against a matched plain reference, so the release certifies the Qwen3-8B profile only.",
+    "The gate cannot separate a verification path that differs semantically from plain from a plain control that runs a different attention kernel than the Uno verify pass; both are release-blocking for a losslessness claim on the profile as served."
+  ],
+  "source": {
+    "implementation_head": "cf87916880b051e8782521dfe2afa12e0627e172",
+    "upstream_base": "00972dfd72988942138a7a6089eaee08580210b8",
+    "code_base": "3ad49350281a6b73de58449aadb293a8b398fb5d",
+    "final_tree": "0149f03eb8287bdfdcc916752b3851405695d350",
+    "series_sha256_lf": "75d6abeefc7ff2094dce35f49198421c2ff973553e8c185a0d82b1148b0e2198",
+    "patches": [
+      {
+        "file": "0001-uno-mrv2-base.patch",
+        "sha256_lf": "7dbf33d21401ce14b7d2d8b000069669edc530a05db90b862a60bf6d4d7d62dd",
+        "files": 35
+      },
+      {
+        "file": "0002-uno-gemma4.patch",
+        "sha256_lf": "49f961994d888d2bbcecda962134156b36e6d7760c0217030b7c366afdc23f60",
+        "files": 17
+      }
+    ],
+    "audit": "AUDIT_PASS: 2 patch files; Python, Markdown, and approved Buildkite metadata only",
+    "image_build_provenance_patched_tree": "0149f03eb8287bdfdcc916752b3851405695d350"
+  },
+  "image": {
+    "platform": "linux/amd64",
+    "base_digest": "sha256:d55cb6858435cda5ab080987213b4a6b6bfce14ca9e0ffa2ecfab2b222818497",
+    "base_vllm_version": "0.29.1rc1.dev99+g00972dfd7",
+    "base_image_bytes": 9650300635,
+    "base_platforms": ["linux/amd64"],
+    "id": "sha256:06e2266b10c2eaf1783f3c8a671ec4a43118ccb0540d6a4ed2e2ae46076a4ca9",
+    "size_bytes": 9992635623,
+    "saved_archive_name": "vllm-uno-0.3.0.tar",
+    "saved_archive_bytes": 9992681472,
+    "saved_archive_sha256": "356edc6dbea34053a03492fb1a960be73fa59b31c25a6e9b1e0ef4fa93cb06cc",
+    "labels": {
+      "org.opencontainers.image.version": "0.3.0",
+      "ai.uno.head.commit": "cf87916880b051e8782521dfe2afa12e0627e172",
+      "ai.uno.upstream.commit": "00972dfd72988942138a7a6089eaee08580210b8"
+    },
+    "entrypoint": ["bash", "/opt/uno-kit/release/serve.sh"]
+  },
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 3090",
+    "driver": "615.71.09",
+    "memory_total_mib": 24576
+  },
+  "local_package_gates": {
+    "package_check": {"exit_code": 0, "assets": 33, "receipt": "release/.work/local-gates-r2/package-check.log"},
+    "stack_audit": {"exit_code": 0, "receipt": "release/.work/local-gates-r2/stack-audit.log"},
+    "test_release_green": {"exit_code": 0, "tests": 18, "receipt": "release/.work/local-gates-r2/test-release-green.log"},
+    "test_release_inverted_base": {
+      "exit_code": 1,
+      "mutations": 1,
+      "test": "tests.test_release.ReleaseTests.test_frozen_manifest",
+      "expected_error": "Manifest base does not match the supported upstream commit",
+      "receipt": "release/.work/local-gates-r2/test-release-inverted-manifest-base.log"
+    }
+  },
+  "profiles": {
+    "qwen3": {
+      "model": "Qwen/Qwen3-8B",
+      "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "adapter": "s-sahoo/uno-qwen3-8B",
+      "adapter_revision": "8819e09ac901e7290d8d89d62c98b9f756c602fe",
+      "dtype": "bfloat16",
+      "attention": "FLASH_ATTN with FlashAttention 2",
+      "num_speculative_tokens": 8,
+      "max_num_seqs": 16,
+      "max_num_batched_tokens": 2048,
+      "kv_cache_memory_bytes": 2147483648,
+      "capture_sizes": [1, 2, 4, 8, 16, 32, 64, 128, 144],
+      "max_loras": 2,
+      "plain_arm_speculative_config": false,
+      "arms_matched": true,
+      "reference": {"status": "PASS", "n": 256, "receipt": "runs/qwen/reference/reference.json"},
+      "greedy_functional": {"status": "PASS", "prompts": 4, "tokens_per_prompt": 256, "receipt": "runs/qwen/candidate/uno-greedy-functional.jsonl"},
+      "sampled_chunk1": {"status": "PASS", "tests": 32, "fails_p": 0, "permutations": 5000, "minimum_p": 0.1967606478704259, "max_tv": 0.1406, "receipt": "runs/qwen/candidate/sampled-compare.perm-5000.json"},
+      "mixed_chunk8": {"status": "PASS", "tests": 32, "fails_p": 0, "permutations": 5000, "minimum_p": 0.032993401319736056, "max_tv": 0.1562, "receipt": "runs/qwen/candidate/mixed-compare.perm-5000.json"},
+      "speculation_counters": {"chunk1": {"drafts": 768, "draft_tokens": 6144, "accepted_tokens": 2750}, "total": {"drafts": 2751, "draft_tokens": 22008, "accepted_tokens": 8131}, "receipt": "runs/qwen/candidate/speculation-metrics.json"},
+      "live_http": {"status": "PASS", "checks": ["health", "models", "greedy", "sampled", "streaming", "shared_prefix", "c8", "c32"], "c8": "8/8", "c32": "32/32", "prefix_cache_convention": "cold_validation_only", "receipt": "runs/qwen/live-uno.json"},
+      "serving_compilations": {"count": 0, "status": "PASS", "receipt": "logs/uno030-qwen-uno.serving-compilations.txt"},
+      "known_red": {"mutation": "wrong adapter revision under HF_HUB_OFFLINE=1", "inner_exit_code": 1, "receipt": "logs/uno030-qwen-knownred.exit"},
+      "residency": {"samples": 8, "device_memory_mib": [21418, 21418, 21418, 21418, 21418, 21418, 21418, 21418], "device_total_mib": 24576, "training_loop": false, "allocated_reserved_collected": false, "receipt": "runs/qwen/residency.csv"}
+    },
+    "gemma4": {
+      "model": "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit",
+      "model_revision": "0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba",
+      "adapter": "step-1900 pilot adapter, local directory",
+      "adapter_model_sha256": "cabc83cbb098cd526f07fc872822e5af157820743215951f5c3a22bde4d7642d",
+      "dtype": "bfloat16",
+      "quantization": "compressed-tensors AWQ 4-bit",
+      "attention": "TRITON_ATTN",
+      "language_only": true,
+      "num_speculative_tokens": 4,
+      "max_num_seqs": 4,
+      "max_model_len": 8192,
+      "gpu_memory_utilization": 0.85,
+      "max_loras": 2,
+      "draft_row_bound": 16,
+      "capture_sizes": [1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16],
+      "split_kv": "engaged: width=2 head_size=512 q_heads=16 kv_heads=2 segments=16",
+      "plain_arm_speculative_config": false,
+      "arms_matched": true,
+      "reference": {"status": "PASS", "n": 256, "receipt": "runs/gemma/reference-r2/reference.json"},
+      "greedy_functional": {"status": "PASS", "prompts": 4, "tokens_per_prompt": 256, "receipt": "runs/gemma/candidate-r2/uno-greedy-functional.jsonl"},
+      "sampled_chunk1": {"status": "FAIL", "tests": 44, "fails_p": 35, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.918, "receipt": "runs/gemma/candidate-r2/sampled-compare.json"},
+      "mixed_chunk8": {"status": "FAIL", "tests": 36, "fails_p": 34, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.938, "receipt": "runs/gemma/candidate-r2/mixed-compare.json"},
+      "controls": {
+        "plain_vs_plain_same_flags": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.058694444444444445, "max_tv": 0.6914, "receipt": "runs/gemma/cmp-b-vs-c.perm-35999.json"},
+        "plain_vs_plain_across_lora_slots": {"status": "FAIL", "tests": 36, "fails_p": 32, "permutations": 35999, "max_tv": 0.9297, "receipt": "runs/gemma/cmp-a-vs-b.perm-35999.json"},
+        "plain_vs_uno_chunk32": {"status": "FAIL", "tests": 36, "fails_p": 23, "permutations": 35999, "max_tv": 0.9023, "receipt": "runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json"},
+        "uno_vs_uno_chunk32": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.0007777777777777777, "max_tv": 0.875, "receipt": "runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json"},
+        "uno_vs_uno_chunk1": {"status": "FAIL", "tests": 44, "fails_p": 10, "permutations": 35999, "max_tv": 0.8984, "receipt": "runs/gemma/candidate-r2/cmp-uno-a-vs-uno-b.perm-35999.json"},
+        "plain_chunk1_vs_chunk32": {"status": "FAIL", "tests": 36, "fails_p": 35, "permutations": 35999, "max_tv": 1.0, "receipt": "runs/gemma/candidate-r2/cmp-plain-chunk1-vs-chunk32.perm-35999.json"},
+        "first_token_census_prose_chunk1": {
+          "plain": {"236772": 134, "954": 81, "140": 37, "100": 4},
+          "uno": {"954": 256},
+          "command": "tools/first_token.py over the two sample files",
+          "receipt": "runs/gemma/cmp-matched-chunk1.perm-35999.json"
+        }
+      },
+      "speculation_counters": {"chunk1": {"drafts": 2656, "draft_tokens": 10624, "accepted_tokens": 4289}, "total": {"drafts": 8173, "draft_tokens": 32692, "accepted_tokens": 14934}, "receipt": "runs/gemma/candidate/speculation-metrics.json"},
+      "live_http": {"status": "PASS", "checks": ["health", "models", "greedy", "sampled", "streaming", "shared_prefix", "c8", "c32"], "c8": "8/8", "c32": "32/32", "prefix_cache_convention": "cold_validation_only", "receipt": "runs/gemma/live-uno.json"},
+      "vision_refusal": {"status": "expected-red", "exit_code": 1, "hits": 1, "named_error": "Uno requires a language-only model", "receipt": "logs/uno030-gemma-vision.hits.txt"},
+      "draft_moe_topk": {
+        "status": "PASS",
+        "boot": "captured shapes admitted",
+        "served": "single request 200; four sequential requests 200",
+        "refused": "concurrent four-request batch 500 x4; 16 draft rows above the reduced capture list",
+        "named_error": "DraftMoEConfigurationError: UNO_DRAFT_MOE_TOPK=4 captured the gemma4-sm86-marlin-topk4 draft graphs; the uncaptured serving shape num_reqs=4 num_tokens=16 effective_loras=2 has none to replay",
+        "env_hits": 1,
+        "variant_hits": 1,
+        "receipt": "runs/gemma/topk4-shapes.json"
+      },
+      "serving_compilations": {"count": 2, "status": "profile warm-up coverage gap, identical in both arms", "kernels": "kernel_unified_attention, head sizes 256/512", "receipt": "logs/uno030-gemma-uno.serving-compilations.txt"},
+      "residency": {"samples": 8, "device_memory_mib": [19674, 19674, 19674, 19674, 19674, 19674, 19674, 19674], "device_total_mib": 24576, "training_loop": false, "allocated_reserved_collected": false, "receipt": "runs/gemma/residency.csv"}
+    }
+  },
+  "strict_greedy_protocol": {
+    "status": "NOT_A_RELEASE_GATE",
+    "reason": "Documented RTX 3090 CUDA-graph instrument limitation carried from v0.2.0; the functional greedy pass is recorded and no token-identity claim is made.",
+    "qwen_receipt": "runs/qwen/candidate/verdict.json",
+    "gemma_receipt": "runs/gemma/candidate-r2/verdict.json"
+  },
+  "receipts_sha256": {
+    "runs/gemma/candidate-r2/verdict.json": "0da6309d1e3ecc7e04e23b126ef3282fe02f3154b29ec0b1a3664fa3754ffa4a",
+    "runs/gemma/reference-r2/reference.json": "93b15fd765c60f549abdc955560ff5f2828f5a189a6627f0ad2f8550500ad336",
+    "runs/gemma/candidate-r2/sampled-compare.json": "fd1afea13d5c100c0e3ccf6c8de03119357426bde4ed6dd762c34417537c6cda",
+    "runs/gemma/candidate-r2/mixed-compare.json": "4f73ab5c6a0ac772add3ee5627e27f8ffce4144b0520484a8da7786384733e2b",
+    "runs/gemma/candidate-r2/speculation-metrics.json": "bb7975b30e2a27753d44d2816c69670817d10cb26fe166864833973cdd64b4b8",
+    "runs/gemma/topk4-shapes.json": "4360dd0789ba02c7ef572922e170705c4ad8ed0f7cc1d14c46d3449b006b5c53",
+    "runs/gemma/live-uno.json": "ec4048f890684cece01c5e74c1c2bac8fe1823bc4d1edc99ffdb224cb88e858b",
+    "runs/gemma/residency.csv": "38e15be373f97c0d1e6154dc01e78eae5aeb1ece8f480258cc260534d5709da8",
+    "runs/gemma/cmp-b-vs-c.perm-35999.json": "99e6eec92ce942775128f5f4cac29189d8f9535a66b8b2ee9e1b3c093422ea06",
+    "runs/gemma/cmp-a-vs-b.perm-35999.json": "41c41bfd3234bbbb111af97fe30480a34c06d52f34e7f2885d1b4be58880b0fd",
+    "runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json": "86a677f3edc09d6f91ac5e58bcf487b50c98f126658e79670187ea107f8fba8c",
+    "runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json": "25229b1e33d19593f3e271f555d6e81db1e668779d1a82cb7ac4c3510580563f",
+    "runs/gemma/candidate-r2/cmp-plain-chunk1-vs-chunk32.perm-35999.json": "4f9fb26ccf15357f3957452ec0c2d237a0fc783e94ff0bbe7739de66ec318e79",
+    "runs/gemma/candidate-r2/cmp-uno-a-vs-uno-b.perm-35999.json": "9f259f510ddeef5e1eb489a21aa41fd3f5eae3987c37dce638577a87b105f202",
+    "runs/qwen/candidate/verdict.json": "31836c6ddcc880fb018ab3a725f62a50d03436562db706a1aaed64a7234c6ff4",
+    "runs/qwen/live-uno.json": "70fe778da272d05c50e79e43ed2a5fa81f5db2db1437001a3e967280e92edcf5",
+    "runs/qwen/residency.csv": "97c3aae0ff03de5af8de88db4ca38fbbcb5c550439940e21f2d7eccf871e0168",
+    "evidence/build-provenance.json": "c8fec839d6f3240a2488e5b83d6a76ae3d15d67464f893285ba40d50adb34712",
+    "logs/uno030-gemma-vision.log": "ecbbb5825c16db340dd2ea9d9017d628b385f06245236ca55decaf15ab087cbe"
+  },
+  "comparison_conventions": {
+    "gate": "gates/lossless_spec.py samples; gates/lossless_spec_compare.py adjudicates per prefix and position with exchangeable-label permutation tests and a Bonferroni cutoff",
+    "sampling": "temperature 1.0, top_p 0.95, top_k 50, n=256 samples per prefix, 16 generated tokens, three pinned prefixes",
+    "chunk": "samples per HTTP request; compared only where both arms use the same chunk, since a chunk change alone is red 35 of 36 on the plain arm",
+    "arms": "same image, model revision, precision, attention backend, LoRA rank and slots, prefix caching, async scheduling, admission limit and seed; the arms differ only by --speculative-config"
+  },
+  "reporting_scope": {
+    "performance_cells": false,
+    "ratios_reported_from_this_run": false,
+    "carried_port_measurement": "166.713 vs 143.694 tokens/s, matched plain versus Uno greedy decode, five 384-token requests, sum over sum; a throughput result from the port's evaluation record, not losslessness evidence",
+    "fixture_classification": "CPU_OBSERVED/CUDA_UNVERIFIED"
+  }
+}

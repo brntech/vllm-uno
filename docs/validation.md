@@ -1,5 +1,169 @@
 # Validation
 
+## v0.3.0 release status: Qwen3-8B certified, Gemma 4 not certified
+
+The v0.3.0 AMD64 candidate is built from release head
+`cf87916880b051e8782521dfe2afa12e0627e172` over the v0.2.0 content base
+`3ad49350281a6b73de58449aadb293a8b398fb5d`; the ordered two-layer series
+reconstructs tree `0149f03eb8287bdfdcc916752b3851405695d350`, which the image's
+own `build-provenance.json` records. The tested image is
+`sha256:06e2266b10c2eaf1783f3c8a671ec4a43118ccb0540d6a4ed2e2ae46076a4ca9`,
+9,992,635,623 bytes; its saved archive is 9,992,681,472 bytes, SHA-256
+`356edc6dbea34053a03492fb1a960be73fa59b31c25a6e9b1e0ef4fa93cb06cc`.
+
+Both profiles were exercised on one RTX 3090 (24 GiB) from the released image
+with `release/serve.sh` defaults. Qwen3-8B BF16 K=8 re-passes the full v0.2.0
+gate set. **Gemma 4 26B A4B AWQ does not pass the sampled-distribution gate**,
+so this release certifies the Qwen3-8B profile only.
+
+The machine-readable record is
+[`evidence/release-0.3.0/validation.json`](../evidence/release-0.3.0/validation.json);
+receipt paths below are relative to the validation working directory, and the
+raw host logs are preserved beside the kit off-repository.
+
+### Qwen3-8B profile (regression, green)
+
+| Check | Result | Receipt |
+|---|---|---|
+| Digest-pinned AMD64 build | PASS | `evidence/build.log`, `evidence/image.inspect.json` |
+| Plain reference, matched flags | PASS, n=256 | `runs/qwen/reference/reference.json` |
+| Candidate functional greedy | PASS, 4 prompts × 256 tokens | `runs/qwen/candidate/uno-greedy-functional.jsonl` |
+| Sampled gate, chunk 1 | PASS, 32 tests, 0 red, min p `0.196761`, max TV `0.1406` | `runs/qwen/candidate/sampled-compare.perm-5000.json` |
+| Mixed gate, chunk 8 | PASS, 32 tests, 0 red, min p `0.032993`, max TV `0.1562` | `runs/qwen/candidate/mixed-compare.perm-5000.json` |
+| Live HTTP, streaming, prefix, C=8, C=32 | PASS | `runs/qwen/live-uno.json` |
+| In-serving JIT | PASS, 0 warnings in the serving slice | `logs/uno030-qwen-uno.serving-compilations.txt` |
+| Wrong adapter revision | expected-red, exit 1 | `logs/uno030-qwen-knownred.exit` |
+
+Both Qwen arms ran `--enable-lora --max-lora-rank 128 --max-loras 2`, and the
+plain record shows no `--speculative-config`. Candidate speculation counters
+advanced 2,751 drafts / 22,008 draft tokens / 8,131 accepted tokens.
+
+### Gemma 4 26B A4B profile
+
+| Check | Result | Receipt |
+|---|---|---|
+| Profile boots and serves | PASS | `runs/gemma/candidate-r2/verdict.json` |
+| Plain reference, matched flags (two LoRA slots) | PASS, n=256 | `runs/gemma/reference-r2/reference.json` |
+| Candidate functional greedy | PASS, 4 prompts × 256 tokens | `runs/gemma/candidate-r2/uno-greedy-functional.jsonl` |
+| **Shipped sampled gate, chunk 1** | **FAIL**, 35 of 44 tests red, max TV `0.918` | `runs/gemma/candidate-r2/sampled-compare.json` |
+| **Shipped mixed gate, chunk 8** | **FAIL**, 34 of 36 tests red, max TV `0.938` | `runs/gemma/candidate-r2/mixed-compare.json` |
+| Plain-versus-plain control, same flags | PASS, 0 of 36 red, tightest p `0.058694`, max TV `0.691` | `runs/gemma/cmp-b-vs-c.perm-35999.json` |
+| Plain-versus-plain across the LoRA-slot flag | FAIL, 32 of 36 red, max TV `0.930` | `runs/gemma/cmp-a-vs-b.perm-35999.json` |
+| Plain-versus-Uno, chunk 32 convention | FAIL, 23 of 36 red, max TV `0.902` | `runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json` |
+| Uno-versus-Uno, chunk 32 convention | PASS, 0 of 36 red | `runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json` |
+| Live HTTP, streaming, prefix, C=8, C=32 | PASS | `runs/gemma/live-uno.json` |
+| Vision refusal | expected-red, exit 1, `Uno requires a language-only model` | `logs/uno030-gemma-vision.hits.txt` |
+| Draft MoE top-k variant | boots, serves, refuses the uncaptured shape by name | `runs/gemma/topk4-shapes.json` |
+| In-serving JIT | 2 warnings, identical in both arms | `logs/uno030-gemma-uno.serving-compilations.txt` |
+| Residency | 8 real updates, flat 19,674 MiB / 24,576 MiB | `runs/gemma/residency.csv` |
+
+#### The distributional failure, stated with its controls
+
+The Gemma plain and Uno arms ran identical serving flags — two LoRA slots,
+`TRITON_ATTN`, `--language-only`, `max_num_seqs=4`, `max_model_len=8192`,
+K=4, prefix caching, async scheduling — and differ only by
+`--speculative-config`. Under the shipped gate at its chunk-1 convention the
+Uno arm differs from the matched plain arm at every position and joint tested:
+36 of 36 red on the three-prefix set, 35 of 44 on the reference-r2 set, with
+the p-value at the minimum the permutation budget can express
+(`1/36000 = 2.78e-05`, against a Bonferroni cutoff of `2.78e-04`). The same
+result holds at the mixed chunk-8 convention (34 of 36) and at the chunk-32
+convention the port's own evaluation used (23 of 36).
+
+Three controls in the same session bound the reading:
+
+- **Same-configuration plain-versus-plain is clean.** Two passes of one plain
+  server, same flags, give 0 of 36 red (tightest p `0.058694`, 211x the
+  cutoff). The instrument is not producing false positives at this sample size.
+- **The first sampled token is the sharpest signature.** On the prose prefix at
+  chunk 1, the Uno arm returns token `954` for all 256 draws while plain spreads
+  over four tokens (`236772` x134, `954` x81, `140` x37, `100` x4). A decoder
+  whose verification is exact cannot turn a four-token law into a point mass;
+  position 1 is the first draft-and-verify cycle, before any later cycle can
+  compound an error.
+- **The control is flag-sensitive, so a kernel-path difference cannot be
+  excluded.** Plain with one LoRA slot against plain with two — no semantic
+  difference at all — is itself red 32 of 36 (max TV `0.930`). Changing a single
+  kernel-selection flag moves the served distribution on this target as much as
+  the Uno treatment does.
+
+The sampler's `--chunk` is therefore a measured convention, not a detail: plain
+chunk 1 against plain chunk 32 is red 35 of 36 (max TV `1.000`). Every
+comparison reported here holds `--chunk` equal on both arms.
+
+What the gate cannot separate: a verification path in the port that differs
+semantically from plain, from a plain arm whose kernel selection is not the
+kernel selection the Uno verify pass uses. Both are release-blocking for a
+losslessness claim on the profile *as served*, and neither is settled by these
+receipts. The smallest follow-up that separates them is a forced all-reject arm
+(the draft-rejection switch the port already carries) compared against the same
+plain reference: if the recovery path is the site, an all-reject arm differs
+from plain as well; if it is not, the acceptance side is. Either way the gate
+and the plain arm must first be proven to run the same attention kernel, which
+a dispatch-key line in the server log settles.
+
+#### Engagement, refusals and capacity
+
+Candidate startup records the Uno launch line, `UNO_GEMMA_SPLITKV engaged
+width=2 head_size=512 q_heads=16 kv_heads=2 segments=16`, the 16-cell capture
+list, and speculation counters of 2,656 drafts / 10,624 draft tokens / 4,289
+accepted tokens on the chunk-1 pass rising to 8,173 / 32,692 / 14,934 across the
+whole candidate run, so the drafted path is engaged rather than inferred.
+
+The vision refusal is a config-time admission check: the same profile with
+`--language-model-only` removed exits 1 and logs `Uno requires a language-only
+model` once. The draft MoE top-k variant boots with `UNO_DRAFT_MOE_TOPK=4` on a
+reduced capture list, serves one request (HTTP 200), serves four sequential
+requests, and refuses the concurrent four-request batch — 16 draft rows, above
+the reduced list — with HTTP 500 and one named error that carries the dispatch
+key, the environment variable and the variant together:
+`num_reqs=4 num_tokens=16 effective_loras=2`, `UNO_DRAFT_MOE_TOPK=4`,
+`gemma4-sm86-marlin-topk4`.
+
+Both Gemma arms compile the same two `kernel_unified_attention` shapes during
+serving (head size 256 with a 1024 sliding window, and head size 512 without
+one), so the profile does not reach zero in-serving compilations; this is a
+warm-up coverage gap of the profile, not a Uno-specific cost, and it is
+identical in the plain arm. Residency was sampled by host `nvidia-smi` after
+eight real served updates and is flat at 19,674 MiB of 24,576 MiB. Allocated,
+reserved, peak and retained-tensor claims are not supported: this build does not
+expose them on `/metrics`, and no leak conclusion is drawn.
+
+#### Live API convention
+
+The checker's fixed order is health, models, greedy, sampled, streaming, then
+two shared-prefix requests, then the C=8 and C=32 batches. Health, greedy,
+sampled and streaming precede the shared-prefix pair, so the convention is
+`cold_validation_only` and the shared-prefix cell is not a comparison cell. C=8
+completes 8 of 8 and C=32 completes 32 of 32; with `max_num_seqs=4` the C=32
+batch queues behind the admission limit and is a functional capacity check, not
+a claim that 32 sequences ran concurrently.
+
+### Fixture scope, inversion and known-red
+
+Source fixture evidence remains **CPU_OBSERVED/CUDA_UNVERIFIED** until a device
+receipt proves the device path; the device receipts for this release are the
+served profiles above. The Gemma profile's draft-row bound is `max_num_seqs=4`
+times `K=4` = 16 draft rows, which the sixteen capture cells cover, and the
+failure recorded here is a served-distribution result, not a fixture result.
+
+The manifest guard is inverted with one mutation: `release/series.json`'s
+`base_commit` reverted to zeroes makes
+`tests.test_release.ReleaseTests.test_frozen_manifest` exit 1 with `Manifest
+base does not match the supported upstream commit`, not with a missing symbol.
+The green run beside it is 18 tests, exit 0. The known-red arm for the Qwen
+runner replaces only the pinned adapter revision with forty zeroes under
+`HF_HUB_OFFLINE=1` and exits 1.
+
+### Reporting scope
+
+No performance cell is measured by this release run, and no ratio is reported
+from it. The 1.16x Gemma figure carried in the release notes and the changelog
+is the port's own evaluation record (matched plain-versus-Uno greedy decode,
+five 384-token requests, sum over sum), not a measurement this release's gate
+run produced, and it is not losslessness evidence. This run reports no repeat
+medians, ranges or overlaps.
+
 ## v0.2.0 release status: READY
 
 The v0.2.0 AMD64 candidate was built from Model Runner V2 head

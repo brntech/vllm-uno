@@ -74,12 +74,28 @@ fixed 384-token greedy requests:
 | Uno K=4 | 166.713 | 18.7893 | 0.5296 |
 
 Both arms are the same card, session, workload and repeat convention; the
-ratio is 166.713 / 143.694 = 1.16x. The sampled-distribution lossless gate
-passes at its own power (three prefixes, 36 tests, 35,999 permutations,
-Bonferroni alpha `2.778e-4`, tightest p `0.0003333`, TV advisory), adjudicated
-against a plain-versus-plain floor measured in the same run. Startup completes
-with zero kernel compilations, and the CUDA-graph replay path and the MoE
-capture path both report their own receipts.
+ratio is 166.713 / 143.694 = 1.16x.
+
+**The sampled-distribution gate does not pass on the released image.** With both
+arms on identical flags, the Uno arm differs from the matched plain arm at every
+position and joint the gate tests: 35 of 44 tests red at the shipped chunk-1
+convention, 34 of 36 at chunk 8, and 23 of 36 at chunk 32, with the p-value at
+the minimum the permutation budget can express. A plain-versus-plain control on
+the same image and flags is clean (0 of 36, tightest p `0.0587`). The sharpest
+signature is the first sampled token of the prose prefix, where the Uno arm
+returns one token for all 256 draws and plain spreads over four; position one is
+the first draft-and-verify cycle, before any later cycle can compound an error.
+The controls do not separate a verification path that differs semantically from
+plain from a plain control that runs a different attention kernel than the Uno
+verify pass — a pure LoRA-slot change on the plain arm alone is red 32 of 36 —
+so the distributional claim is withdrawn and the separating run is named in
+[docs/validation.md](validation.md).
+
+Startup reports zero compilations for its own warm-up, and its self-check
+already says it cannot prove launch coverage on this profile; the serving slice
+then carries two `kernel_unified_attention` compilations, identical in both
+arms. That is a warm-up coverage gap of the profile rather than a Uno cost. The
+CUDA-graph replay path and the MoE capture path both report their own receipts.
 
 Scope limits, stated plainly: G2 preparation/KV, G3 attention, and broader
 G4/G7 qualification remain CUDA_UNVERIFIED; the available receipts support
