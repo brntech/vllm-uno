@@ -52,15 +52,15 @@
     "memory_total_mib": 24576
   },
   "local_package_gates": {
-    "package_check": {"exit_code": 0, "assets": 33, "receipt": "release/.work/local-gates-r2/package-check.log"},
-    "stack_audit": {"exit_code": 0, "receipt": "release/.work/local-gates-r2/stack-audit.log"},
-    "test_release_green": {"exit_code": 0, "tests": 18, "receipt": "release/.work/local-gates-r2/test-release-green.log"},
+    "package_check": {"exit_code": 0, "assets": 33, "receipt": "release/.work/local-gates-final/package-check.log"},
+    "stack_audit": {"exit_code": 0, "receipt": "release/.work/local-gates-final/stack-audit.log"},
+    "test_release_green": {"exit_code": 0, "tests": 18, "receipt": "release/.work/local-gates-final/test-release-green.log"},
     "test_release_inverted_base": {
       "exit_code": 1,
       "mutations": 1,
       "test": "tests.test_release.ReleaseTests.test_frozen_manifest",
       "expected_error": "Manifest base does not match the supported upstream commit",
-      "receipt": "release/.work/local-gates-r2/test-release-inverted-manifest-base.log"
+      "receipt": "release/.work/local-gates-final/test-release-inverted-manifest-base.log"
     }
   },
   "profiles": {
