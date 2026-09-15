@@ -12,7 +12,7 @@ model and KV cache, while the adapter is active only on noisy draft rows.
 | Upstream vLLM base commit | `00972dfd72988942138a7a6089eaee08580210b8` |
 | Code base (v0.2.0 content) | `3ad49350281a6b73de58449aadb293a8b398fb5d` |
 | Release head (Gemma 4 layer) | `cf87916880b051e8782521dfe2afa12e0627e172` |
-| Reconstructed release tree | `7e90f900b039c96565100524700b2da8ef6761bd` |
+| Reconstructed release tree | `0149f03eb8287bdfdcc916752b3851405695d350` |
 | Base image | `public.ecr.aws/q9t5s3a7/vllm-ci-postmerge-repo:00972dfd72988942138a7a6089eaee08580210b8@sha256:d55cb6858435cda5ab080987213b4a6b6bfce14ca9e0ffa2ecfab2b222818497` |
 | Base vLLM version | `0.29.1rc1.dev99+g00972dfd7` |
 | Patch series | `0001-uno-mrv2-base.patch`, then `0002-uno-gemma4.patch` |
@@ -89,7 +89,9 @@ It is not a 32-active-sequence profile or a performance cell.
 | Maximum batched tokens | 2,048 |
 | GPU memory utilization | `0.85` |
 | CUDA graph capture sizes | `[1,2,3,4,5,6,7,8,13,14,15,16]` |
-| LoRA capacity | rank 16, 1 slot, target modules `qkv_proj o_proj gate_up_proj down_proj` |
+| LoRA capacity | rank 16, 2 slots (the Uno path reserves one for its shared adapter), target modules `qkv_proj o_proj gate_up_proj down_proj` |
+| Split-KV draft attention | off by default; `UNO_GEMMA_SPLITKV=1` opts in, and that is the configuration the release measurements used |
+| Draft MoE top-k | off by default; `UNO_DRAFT_MOE_TOPK=4` opts in (SM86 only) |
 | Generation defaults | `--generation-config vllm` |
 
 The Gemma capacity bound is `max_num_seqs=4` times `K=4`, so the largest served

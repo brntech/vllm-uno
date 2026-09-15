@@ -19,7 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- The patch manifest is an ordered two-layer series against the digest-pinned upstream commit `00972dfd72988942138a7a6089eaee08580210b8`: `0001-uno-mrv2-base.patch` (the Model Runner V2 Uno base, tree `6ceef9dfa043d9a2d3f930522ecc7480105aa5a7`, the same tree v0.2.0 shipped) and `0002-uno-gemma4.patch` (the Gemma 4 port, head `cf87916880b051e8782521dfe2afa12e0627e172`). The reconstructed release tree is `7e90f900b039c96565100524700b2da8ef6761bd`.
+- The patch manifest is an ordered two-layer series against the digest-pinned upstream commit `00972dfd72988942138a7a6089eaee08580210b8`: `0001-uno-mrv2-base.patch` (the Model Runner V2 Uno base, tree `6ceef9dfa043d9a2d3f930522ecc7480105aa5a7`, the same tree v0.2.0 shipped) and `0002-uno-gemma4.patch` (the Gemma 4 port, head `cf87916880b051e8782521dfe2afa12e0627e172`). The reconstructed release tree is `0149f03eb8287bdfdcc916752b3851405695d350`, the squashed head's own tree.
 - The base image is the postmerge CI image for that upstream commit, pinned by amd64 manifest digest `sha256:d55cb6858435cda5ab080987213b4a6b6bfce14ca9e0ffa2ecfab2b222818497`; the release remains Linux AMD64 only and preserves the base image's compiled CUDA libraries.
 
 ### Verified

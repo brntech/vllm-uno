@@ -125,6 +125,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("--language-model-only", flags)
         self.assertIn("--disable-hybrid-kv-cache-manager", flags)
         self.assertIn("--max-lora-rank 16", flags)
+        self.assertIn("--max-loras 2", flags)
         self.assertIn("${UNO_K:-4}", block)
         self.assertIn("${UNO_MASK_TOKEN_ID:-262144}", block)
         match = re.search(

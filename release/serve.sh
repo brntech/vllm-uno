@@ -50,7 +50,7 @@ case $profile in
       --disable-hybrid-kv-cache-manager --enable-prefix-caching --seed 29
       --max-model-len 8192 --max-num-seqs 4 --max-num-batched-tokens 2048
       --gpu-memory-utilization 0.85
-      --enable-lora --lora-dtype bfloat16 --max-lora-rank 16 --max-loras 1 --max-cpu-loras 1
+      --enable-lora --lora-dtype bfloat16 --max-lora-rank 16 --max-loras 2 --max-cpu-loras 2
       --lora-target-modules qkv_proj o_proj gate_up_proj down_proj
       --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[1,2,3,4,5,6,7,8,13,14,15,16]}')
     ;;
