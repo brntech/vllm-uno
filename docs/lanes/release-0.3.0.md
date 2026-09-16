@@ -1,3 +1,5 @@
+> **Superseded 2026-09-16.** The BLOCKED and "not certified" verdicts recorded below were this record's reading before a second run of the same gate on the image built before the last three fixes showed the same-arm plain control fails the permutation test across sessions at the same magnitude as Uno against plain. The release certifies the Gemma 4 profile with the floor-matched reading: greedy matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware. See docs/validation.md.
+
 # v0.3.0 release validation record
 
 ## Status
