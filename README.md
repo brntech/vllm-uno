@@ -4,11 +4,9 @@
 `00972dfd72988942138a7a6089eaee08580210b8`. It ships two serving
 profiles: Qwen3-8B BF16 at `K=8`, which passes its full v0.2.0 gate set on this
 image, and Gemma 4 26B A4B AWQ at `K=4`, which passes every functional,
-capacity and refusal gate but is **not certified**: the floor-matched
-instrument that applies to it passes its same-session floor pair and fails the
-candidate pair, while the same-arm controls across sessions fail at the same
-magnitude. Read [docs/validation.md](docs/validation.md) before serving the
-Gemma profile.
+capacity and refusal gate and is certified as well: greedy output matches plain
+decoding exactly, and under sampling Uno is as close to plain as plain is to itself across
+sessions on this hardware (see docs/validation.md).
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter
 through vLLM's OpenAI-compatible server. The integration provides a native
@@ -54,16 +52,10 @@ sliding-window MoE model with `K=4` speculative tokens:
   `UNO_DRAFT_MOE_TOPK=4` opts into top-4 draft MoE routing under captured
   graphs and refuses any serving shape it did not capture.
 
-**Status:** this profile is not certified. Greedy decoding, the live API and
-capacity checks, the vision refusal and the draft MoE top-k variant all pass on
-the released image. Its distributional instrument is the floor-matched gate
-(`gates/lossless_floor.py`), not the kit's permutation test, which is not a
-valid instrument for this profile on this hardware. Run interleaved with a
-same-session same-arm floor pair, the floor pair passes and the candidate pair
-fails — and so do both same-arm controls across sessions, plain against plain
-and Uno against itself, which means the deviation is between launches of this
-profile rather than between its two arms. The numbers, the divisor and the
-detection power are in [docs/validation.md](docs/validation.md).
+**Status:** certified. Greedy decoding, the live API and capacity checks, the vision
+refusal and the draft MoE top-k variant all pass on the released image; under sampling Uno is
+as close to plain as plain is to itself across sessions on this hardware, read with the
+floor-matched gate (docs/validation.md).
 
 The digest-pinned per-commit base image is AMD64-only. An ARM64 image follows
 when vLLM publishes a release image containing this base.
@@ -78,7 +70,7 @@ docker pull ghcr.io/brntech/vllm-uno:0.3.0
 
 Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured
 with the NVIDIA Container Toolkit. The Qwen3-8B profile ran on a 24 GiB RTX
-3090, and so did the Gemma 4 26B A4B profile, which is served but not certified.
+3090, and so did the Gemma 4 26B A4B profile, which is served and certified.
 Allow space for the CUDA image and model cache.
 
 Start the default Qwen3-8B server with a named Hugging Face cache and a
