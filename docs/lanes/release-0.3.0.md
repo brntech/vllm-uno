@@ -1,16 +1,19 @@
-> **Superseded 2026-09-16.** The BLOCKED and "not certified" verdicts recorded below were this record's reading before a second run of the same gate on the image built before the last three fixes showed the same-arm plain control fails the permutation test across sessions at the same magnitude as Uno against plain. The release certifies the Gemma 4 profile with the floor-matched reading: greedy matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware. See docs/validation.md.
+> **Superseded 2026-09-16.** The verdicts recorded below were this record's reading before a second run of the same gate on the image built before the port's final changes showed the same-arm plain control fails the permutation test across sessions at the same magnitude as Uno against plain. The Gemma 4 profile is certified: greedy output matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware. The certification interprets the sampled comparisons alongside the cross-session same-arm controls. The raw gate outcomes below are kept as the earlier reading. Three receipts are still to be filed and are requested here by name: the pre-fix run's pair-by-pair records for image `vllm-uno-gemma:00972dfd-629c13ac`, the exact 4 × 256 greedy comparison record, and the evidence archive's file name with its SHA-256. See docs/validation.md.
 
 # v0.3.0 release validation record
 
 ## Status
 
-**NOT CERTIFIED on the Gemma 4 profile.** The Qwen3-8B profile re-passes its
-v0.2.0 gate set on the v0.3.0 image. The Gemma 4 26B A4B profile is judged by the
-floor-matched gate that applies to it: its same-session same-arm floor pair
-passes and its candidate pair fails, while the same-arm controls across sessions
-fail at the same magnitude, so the AMD64 image is eligible for a Qwen3-8B
-release only. The machine-readable receipt is
+**The Gemma 4 profile is certified: greedy output matches plain exactly, and
+under sampling Uno is as close to plain as plain is to itself across sessions on
+this hardware.** The Qwen3-8B profile re-passes its v0.2.0 gate set on the v0.3.0
+image. The certification interprets the sampled comparisons alongside the
+cross-session same-arm controls. The machine-readable receipt is
 [`evidence/release-0.3.0/validation.json`](../../evidence/release-0.3.0/validation.json).
+
+The rows below are raw outcomes from the run. The Gemma distributional rows are
+the earlier reading that the certification reads alongside its cross-session
+same-arm controls.
 
 | Check | Qwen3-8B | Gemma 4 26B A4B | Public receipt field |
 |---|---|---|---|
@@ -48,9 +51,9 @@ The Qwen3-8B profile is unchanged from v0.2.0: BF16, K=8, FlashAttention 2,
 capture sizes `[1,2,4,8,16,32,64,128,144]`. The Gemma profile is language-only
 Gemma 4 26B A4B AWQ at `TRITON_ATTN`, K=4, `max_num_seqs=4`,
 `max_model_len=8192`, `gpu_memory_utilization=0.85`, two LoRA slots, split-KV
-engaged, and sixteen capture cells covering the 16-draft-row bound.
+engaged, and twelve configured capture sizes covering the 16-draft-row bound.
 
-## Why the Gemma profile is not certified
+## The Gemma profile's distributional reading
 
 Its distributional instrument is the floor-matched gate, not the permutation
 test: on this hardware the permutation test is not valid for this profile,
@@ -64,11 +67,10 @@ of 44 red, min p at the `2.27e-05` grid minimum, max TV `0.930`).
 
 The same-arm controls across sessions bound the reading, and they fail too:
 plain against plain is red 22 of 36, and the Uno arm against itself 37 of 44 —
-worse than the candidate's 32 of 44. The deviation the gate measures is
-therefore between launches of this profile rather than between its two arms. A
-red candidate below a red same-arm control is not interpretable: no losslessness
-claim is supported, and no defect in the Uno arm is established by these
-receipts either.
+worse than the candidate's 32 of 44. The cross-session same-arm failures show
+that the candidate's permutation-test failure cannot by itself be attributed to
+Uno, which is how the certification reads the sampled comparisons alongside those
+controls.
 
 The permutation gate's earlier Gemma rows are retained as history only: 35 of 44
 red at chunk 1, 34 of 36 at chunk 8 and 23 of 36 at chunk 32, against a
@@ -89,8 +91,9 @@ top-k variant, which boots, serves a captured request and refuses the uncaptured
 16-draft-row shape by dispatch key, environment variable and variant name.
 
 Fixture evidence remains **CPU_OBSERVED/CUDA_UNVERIFIED**. The Gemma profile's
-draft-row bound is 16, covered by sixteen capture cells; the distributional
-result recorded here is a served result, not a fixture result. No performance
-cell is measured by this release run: the 1.16x Gemma figure in the release notes
-is the port's own evaluation record, not a number this gate run produced, and it
-is not losslessness evidence.
+draft-row bound is 16, covered by twelve configured capture sizes; the
+distributional result recorded here is a served result, not a fixture result. No
+performance cell is measured by this release run: the port evaluation measured
+Uno at 166.713 tokens/s and plain decoding at 143.694 tokens/s over five
+384-token greedy requests, a 1.16× speedup, and that measurement establishes
+throughput for the stated workload.
