@@ -87,11 +87,9 @@ CUDA-graph replay path and the MoE capture path both report their own receipts.
 
 Scope limits, stated plainly: G2 preparation/KV, G3 attention, and broader
 G4/G7 qualification remain CUDA_UNVERIFIED; the available receipts support
-only the bounded scenarios exercised. The strict greedy exact-token instrument
-is not discriminating on this target (its own plain-versus-plain control matches
-the candidate); the greedy comparison across sessions (plain against plain
-and plain against Uno, four prompts × 256 tokens) is recorded with its receipts in
-[docs/validation.md](validation.md).
+only the bounded scenarios exercised. Across fresh servers, greedy token streams were identical on 2 of 4 prompts
+between the plain runs and on 1 of 4 prompts between Uno and either plain run;
+the records are in [docs/validation.md](validation.md).
 
 ## AI assistance
 

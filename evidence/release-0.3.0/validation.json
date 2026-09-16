@@ -521,7 +521,7 @@
   },
   "strict_greedy_protocol": {
     "status": "NOT_A_RELEASE_GATE",
-    "reason": "The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike. The strict greedy comparison is not a release gate on this RTX 3090 CUDA-graph instrument (carried from v0.2.0): across fresh servers plain matches its own greedy output on 2 of 4 prompts and Uno matches plain on 1 of 4, with the first divergence between tokens 4 and 67 in every non-identical pair.",
+    "reason": "Across fresh servers on this RTX 3090 CUDA-graph instrument, greedy token streams were identical on 2 of 4 prompts between two plain runs and on 1 of 4 prompts between Uno and either plain run, with the first divergence between tokens 4 and 67 in every non-identical pair; the strict greedy comparison is therefore not a release gate here (carried from v0.2.0). The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike.",
     "qwen_receipt": "runs/qwen/candidate/verdict.json",
     "gemma_receipt": "runs/gemma/candidate-r2/verdict.json",
     "gemma_cross_session_receipts": {
@@ -591,7 +591,12 @@
   },
   "evidence_archive": {
     "file": "vllm-uno-0.3.0-gemma-evidence.tar.gz",
-    "sha256": "560e9e2d432a203e55430a341770b863d47dec5ee2d9501179340115dd966d3a",
-    "prefix_image_judge": "evidence/release-0.3.0/gemma-prefix/judge/"
+    "sha256": "6ff2af2fa1ea77171fe66f242fb1220e94b28f88410377cca1296bccffcbe6cd",
+    "prefix_image_judge": "evidence/release-0.3.0/gemma-prefix/judge/",
+    "roots": [
+      "release-run/",
+      "prefix-image-run/",
+      "greedy-receipt/"
+    ]
   }
 }

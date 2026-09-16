@@ -42,8 +42,9 @@ advanced 2,751 drafts / 22,008 draft tokens / 8,131 accepted tokens.
 
 **The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike.** The certification interprets the sampled comparisons alongside the cross-session
 same-arm controls. On this hardware the quantized model's own sampled output is not
-reproducible across sessions on near-tie tokens: plain against plain fails the permutation
-test across sessions at the candidate's magnitude or worse, so the cross-server permutation
+reproducible across sessions on near-tie tokens: both cross-session same-arm comparisons fail the permutation
+test (plain against plain 22 of 36 tests red at maximum TV 0.844; the Uno arm against itself
+37 of 44 at 0.988) beside the candidate's 32 of 44 at 0.930, so the cross-server permutation
 gate does not apply to this profile. The comparison in the certified run places Uno against
 plain in the same band as the target's own run-to-run movement, the greedy comparison
 across sessions (four prompts × 256 tokens, plain against plain and plain against Uno) is filed
@@ -95,12 +96,13 @@ steps at that cutoff; position 1 is smoke only.
   cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit <adapter directory>`; the plain arm runs the same
   command without the Uno speculative configuration (`--enable-lora` retained, no
   `--speculative-config`).
-- Sample, one pass per server: `python3 gates/lossless_spec.py --model uno-gemma4-26b-a4b
+- Sample, five passes across four fresh servers: `p1-plain`, `p2-uno`, `p3-plain` and
+  `p4-plain` on the same plain server without restarting, then `p5-uno`: `python3 gates/lossless_spec.py --model uno-gemma4-26b-a4b
   --n 256 --max-tokens 16 --chunk 1 --out runs/passes/<pass>.json` — temperature 1.0, top_p
   0.95, top_k 50 over the three frozen prefixes in `gates/prefixes_spec.json`, position 1
   smoke only.
-- Pass order: `p1-plain`, `p2-uno`, `p3-plain`, `p4-plain`, `p5-uno`, arms alternating by
-  server, with the floor pair taken inside the second plain session.
+- Pass order: `p1-plain`, `p2-uno`, `p3-plain`, `p4-plain`, `p5-uno`; the floor pair (`p3`, `p4`)
+  is the same-session pair inside the second plain server.
 - Compare, pairs in the recorded order, summary paths as the receipts above name them:
 
   ```bash
@@ -111,9 +113,20 @@ steps at that cutoff; position 1 is smoke only.
   python3 gates/lossless_floor.py runs/passes/p4-plain.json runs/passes/p5-uno.json --summary runs/judge/boundary-other.json
   ```
 
-- Archive: `vllm-uno-0.3.0-gemma-evidence.tar.gz` (SHA-256 `560e9e2d432a203e55430a341770b863d47dec5ee2d9501179340115dd966d3a`), attached to the GitHub release,
-  carries the pass files, the summary records and the raw logs of all three runs: `release-run/`,
-  `prefix-image-run/` and `greedy-receipt/`, each with its own `SHA256SUMS`/`receipts.sha256`.
+- Archive: `vllm-uno-0.3.0-gemma-evidence.tar.gz` (SHA-256 `6ff2af2fa1ea77171fe66f242fb1220e94b28f88410377cca1296bccffcbe6cd`), attached to the GitHub release,
+  carries three run directories, each with its own `SHA256SUMS`/`receipts.sha256` and the exact
+  launch scripts under `tools/`: `release-run/` (the passes and judge records above, paths relative
+  to that root), `prefix-image-run/` (the pre-fix image's passes and judge records) and
+  `greedy-receipt/` (the greedy comparison).
+- Greedy comparison, one fresh server per arm in the order `plain-a`, `uno`, `plain-b`, the plain
+  launch being `tools/bl-rel2-plain-gemma.sh` from the archive and the Uno launch the profile above:
+
+  ```bash
+  python3 gates/golden.py --url http://127.0.0.1:8000 --model uno-gemma4-26b-a4b --prompts gates/prompts_dbg_chat.json --temperature 0 --max-tokens 256 --out runs/<arm>.jsonl
+  python3 gates/compare.py runs/plain-a.jsonl runs/uno.jsonl
+  python3 gates/compare.py runs/plain-a.jsonl runs/plain-b.jsonl
+  python3 gates/compare.py runs/plain-b.jsonl runs/uno.jsonl
+  ```
 
 **Filed receipts.** The pre-fix run's pair-by-pair records for image `vllm-uno-gemma:00972dfd-629c13ac`
 (floor 0 of 36 PASS; candidate 31 of 44 red at max TV `0.879`; plain against plain across sessions
@@ -134,9 +147,9 @@ identical sampling configs, chunk 1 on both arms, matched serving flags.
 
 The candidate pair is red. The cross-session same-arm failures show that the
 candidate's permutation-test failure cannot by itself be attributed to Uno. Both
-same-arm pairs taken **across** sessions are red at the candidate's magnitude or
-worse: plain against plain 22 of 36 (min p at the grid minimum), and the Uno arm
-against itself 37 of 44 against the candidate's 32 of 44. The deviation the gate
+same-arm pairs taken **across** sessions are red: plain against plain 22 of 36 tests at
+maximum TV 0.844 (min p at the grid minimum), the Uno arm against itself 37 of 44 at 0.988,
+beside the candidate's 32 of 44 at 0.930. The deviation the gate
 measures tracks *launches* of this profile, which is the movement the diagnosis
 attributes to a near-tie prefix whose per-row law the batching resolves
 differently on each launch, so the certification reads the sampled comparisons
