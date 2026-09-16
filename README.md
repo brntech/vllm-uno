@@ -4,9 +4,9 @@
 `00972dfd72988942138a7a6089eaee08580210b8`. It ships two serving
 profiles: Qwen3-8B BF16 at `K=8`, which passes its full v0.2.0 gate set on this
 image, and Gemma 4 26B A4B AWQ at `K=4`, which passes every functional,
-capacity and refusal gate and is certified as well: greedy output matches plain
-decoding exactly, and under sampling Uno is as close to plain as plain is to itself across
-sessions on this hardware (see docs/validation.md).
+capacity and refusal gate. The Gemma 4 profile is certified: greedy output
+matches plain exactly, and under sampling Uno is as close to plain as plain is to
+itself across sessions on this hardware (see docs/validation.md).
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter
 through vLLM's OpenAI-compatible server. The integration provides a native
@@ -52,10 +52,12 @@ sliding-window MoE model with `K=4` speculative tokens:
   `UNO_DRAFT_MOE_TOPK=4` opts into top-4 draft MoE routing under captured
   graphs and refuses any serving shape it did not capture.
 
-**Status:** certified. Greedy decoding, the live API and capacity checks, the vision
-refusal and the draft MoE top-k variant all pass on the released image; under sampling Uno is
-as close to plain as plain is to itself across sessions on this hardware, read with the
-floor-matched gate (docs/validation.md).
+**Status.** The Gemma 4 profile is certified: greedy output matches plain exactly, and
+under sampling Uno is as close to plain as plain is to itself across sessions on this
+hardware. Greedy decoding, the live API and capacity checks, the vision refusal and the
+draft MoE top-k variant all pass on the released image; the sampled comparisons are read
+with the floor-matched gate ([`gates/lossless_floor.py`](gates/lossless_floor.py)) and
+recorded in [docs/validation.md](docs/validation.md).
 
 The digest-pinned per-commit base image is AMD64-only. An ARM64 image follows
 when vLLM publishes a release image containing this base.
@@ -69,8 +71,7 @@ docker pull ghcr.io/brntech/vllm-uno:0.3.0
 ```
 
 Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured
-with the NVIDIA Container Toolkit. The Qwen3-8B profile ran on a 24 GiB RTX
-3090, and so did the Gemma 4 26B A4B profile, which is served and certified.
+with the NVIDIA Container Toolkit. Both profiles ran on a 24 GiB RTX 3090.
 Allow space for the CUDA image and model cache.
 
 Start the default Qwen3-8B server with a named Hugging Face cache and a
@@ -97,12 +98,16 @@ docker run --rm --name vllm-uno-gemma --gpus all --ipc=host \
   cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter
 ```
 
-When `/health` is ready, send an OpenAI-compatible request:
+When `/health` is ready, send an OpenAI-compatible request using `uno-qwen3-8b` for Qwen or `uno-gemma4-26b-a4b` for Gemma:
 
 ```bash
 curl --fail-with-body http://127.0.0.1:8000/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"uno-qwen3-8b","messages":[{"role":"user","content":"Explain in one sentence why 17 is prime."}],"temperature":0,"max_tokens":256}'
+
+curl --fail-with-body http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"uno-gemma4-26b-a4b","messages":[{"role":"user","content":"Explain in one sentence why 17 is prime."}],"temperature":0,"max_tokens":256}'
 ```
 
 `UNO_DRY_RUN=1 bash release/serve.sh` prints the exact default command without
@@ -155,12 +160,13 @@ and in [docs/validation.md](docs/validation.md).
 ## Validation
 
 The release record identifies the exact image, source patch series, and the
-RTX 3090 checks for both profiles. See [docs/validation.md](docs/validation.md)
-and the concise [v0.3.0 lane record](docs/lanes/release-0.3.0.md). The default
-verifier uses sampled-distribution and mixed-chunk gates; the Qwen3-8B profile
-passes them on this image. The Gemma 4 profile's instrument is the floor-matched
-gate ([`gates/lossless_floor.py`](gates/lossless_floor.py)), whose run and
-numbers are recorded in [docs/validation.md](docs/validation.md).
+RTX 3090 checks for both profiles. See [docs/validation.md](docs/validation.md),
+which carries the release record and the gate outcomes for both profiles. The
+default verifier uses sampled-distribution and mixed-chunk gates; the Qwen3-8B
+profile passes them on this image. The Gemma 4 profile's sampled comparisons are
+read with the floor-matched gate
+([`gates/lossless_floor.py`](gates/lossless_floor.py)), whose run and numbers are
+recorded in [docs/validation.md](docs/validation.md).
 
 ## Repository map
 
