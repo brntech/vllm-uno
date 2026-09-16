@@ -98,7 +98,8 @@ docker run --rm --name vllm-uno-gemma --gpus all --ipc=host \
   cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter
 ```
 
-When `/health` is ready, send an OpenAI-compatible request using `uno-qwen3-8b` for Qwen or `uno-gemma4-26b-a4b` for Gemma:
+When `/health` is ready, send an OpenAI-compatible request using `uno-qwen3-8b`
+for Qwen or `uno-gemma4-26b-a4b` for Gemma:
 
 ```bash
 curl --fail-with-body http://127.0.0.1:8000/v1/chat/completions \
