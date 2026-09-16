@@ -4,8 +4,9 @@
   "status": "NOT_CERTIFIED",
   "status_reason": [
     "The Qwen3-8B profile re-passes its full v0.2.0 gate set on the released image.",
-    "The Gemma 4 26B A4B profile passes every functional, capacity and refusal gate but fails the sampled-distribution gate against a matched plain reference, so the release certifies the Qwen3-8B profile only.",
-    "The gate cannot separate a verification path that differs semantically from plain from a plain control that runs a different attention kernel than the Uno verify pass; both are release-blocking for a losslessness claim on the profile as served."
+    "The Gemma 4 26B A4B profile passes every functional, capacity and refusal gate but is not certified by the floor-matched distributional instrument that applies to it: the same-session same-arm floor pair passes and the candidate pair fails, so the release certifies the Qwen3-8B profile only.",
+    "The same-arm controls across sessions are red at the candidate's magnitude or worse (plain versus plain 22 of 36, Uno versus Uno 37 of 44, against the candidate's 32 of 44), so the deviation the gate measures is between launches of this profile rather than between its two arms: no losslessness claim is supported and no one-sided attribution is made.",
+    "The shipped permutation gate is not a valid instrument for this profile on this hardware: its first sampled token on the prose prefix is a near-tie whose per-row law moves by more than a nat between the rows of one pass and between launches."
   ],
   "source": {
     "implementation_head": "cf87916880b051e8782521dfe2afa12e0627e172",
@@ -52,15 +53,32 @@
     "memory_total_mib": 24576
   },
   "local_package_gates": {
-    "package_check": {"exit_code": 0, "assets": 33, "receipt": "release/.work/local-gates-final/package-check.log"},
-    "stack_audit": {"exit_code": 0, "receipt": "release/.work/local-gates-final/stack-audit.log"},
-    "test_release_green": {"exit_code": 0, "tests": 18, "receipt": "release/.work/local-gates-final/test-release-green.log"},
+    "package_check": {"exit_code": 0, "assets": 34, "receipt": "release/.work/local-gates-r3/package-check.log"},
+    "stack_audit": {"exit_code": 0, "receipt": "release/.work/local-gates-r3/stack-audit.log"},
+    "test_release_green": {"exit_code": 0, "tests": 20, "receipt": "release/.work/local-gates-r3/test-release-green.log"},
+    "test_mixed_gate_green": {"exit_code": 0, "tests": 5, "receipt": "release/.work/local-gates-r3/test-mixed-gate-green.log"},
     "test_release_inverted_base": {
       "exit_code": 1,
       "mutations": 1,
       "test": "tests.test_release.ReleaseTests.test_frozen_manifest",
       "expected_error": "Manifest base does not match the supported upstream commit",
-      "receipt": "release/.work/local-gates-final/test-release-inverted-manifest-base.log"
+      "receipt": "release/.work/local-gates-r3/test-release-inverted-manifest-base.log"
+    },
+    "test_release_inverted_chunk_mismatch": {
+      "exit_code": 1,
+      "mutations": 1,
+      "test": "tests.test_release.ReleaseTests.test_comparator_refuses_a_chunk_mismatch",
+      "mutation": "gates/lossless_spec_compare.py: the sampling-chunk refusal deleted",
+      "expected_error": "AssertionError: ValueError not raised (a chunk-1 and a chunk-32 pair compare silently)",
+      "receipt": "release/.work/local-gates-r3/test-release-inverted-chunk-mismatch.log"
+    },
+    "test_release_inverted_floor_chunk": {
+      "exit_code": 1,
+      "mutations": 1,
+      "test": "tests.test_release.ReleaseTests.test_comparator_refuses_a_floor_from_another_chunk",
+      "mutation": "gates/lossless_spec_compare.py: the floor-chunk refusal deleted",
+      "expected_error": "AssertionError: ValueError not raised (a chunk-32 floor applies to a chunk-1 pair)",
+      "receipt": "release/.work/local-gates-r3/test-release-inverted-floor-chunk.log"
     }
   },
   "profiles": {
@@ -110,21 +128,48 @@
       "arms_matched": true,
       "reference": {"status": "PASS", "n": 256, "receipt": "runs/gemma/reference-r2/reference.json"},
       "greedy_functional": {"status": "PASS", "prompts": 4, "tokens_per_prompt": 256, "receipt": "runs/gemma/candidate-r2/uno-greedy-functional.jsonl"},
-      "sampled_chunk1": {"status": "FAIL", "tests": 44, "fails_p": 35, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.918, "receipt": "runs/gemma/candidate-r2/sampled-compare.json"},
-      "mixed_chunk8": {"status": "FAIL", "tests": 36, "fails_p": 34, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.938, "receipt": "runs/gemma/candidate-r2/mixed-compare.json"},
-      "controls": {
-        "plain_vs_plain_same_flags": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.058694444444444445, "max_tv": 0.6914, "receipt": "runs/gemma/cmp-b-vs-c.perm-35999.json"},
+      "distributional_instrument": {
+        "tool": "gates/lossless_floor.py",
+        "sha256": "141ef833e12e146e90960050cf517afad07d3657fb1181ce47fd9deed0f32cf8",
+        "source": "the profile evaluation's own comparator, shipped unaltered",
+        "not_applicable": "the shipped permutation gate (gates/lossless_spec_compare.py) is not a valid instrument for this profile on this hardware: its first sampled token on the prose prefix is a near-tie whose per-row law moves by more than a nat between the rows of one pass and between launches"
+      },
+      "floor_matched": {
+        "status": "FAIL",
+        "order": ["p1-plain", "p2-uno", "p3-plain", "p4-plain", "p5-uno"],
+        "convention": "five passes across four fresh servers, arms alternating by process (plain, uno, plain twice, uno); n=256 samples x 16 generated tokens per prefix, chunk 1, three frozen prefix ids, position 1 smoke only",
+        "records": {
+          "p1-plain": "31b3ba04e6d025e518a9c3ea91f86b4f6c9d4b2877aa308640f69f8095d9bd15",
+          "p2-uno": "42ce13e1eca6e0e144b3ebef8cd403688f9bf613f54c483f8bf53aa1483dddb9",
+          "p3-plain": "29743dc6881442e5174a419c86ce85944040d040ee1fac8e0b5e849027d45c98",
+          "p4-plain": "ea7772a48bf073801eb8b456d6ad08dee62ba6ec50a00007dd5e535b2a23a6f0",
+          "p5-uno": "0e20cd3012f66d12979f0aaee1c7309090ccbdf3207d8a3f13813e10faa244d9"
+        },
+        "floor": {"pair": "p3-plain vs p4-plain, one session, same arm", "status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "alpha_bonferroni": 0.0002777777777777778, "minimum_p": 0.008527777777777778, "max_tv": 0.7734, "receipt": "runs/judge/floor.json"},
+        "candidate": {"pair": "p3-plain vs p2-uno, adjacent passes", "status": "FAIL", "tests": 44, "fails_p": 32, "permutations": 43999, "alpha_bonferroni": 0.00022727272727272727, "minimum_p": 2.2727272727272726e-05, "max_tv": 0.9297, "tv_exceedances": 12, "receipt": "runs/judge/candidate.json"},
+        "controls": {
+          "plain_cross_session": {"pair": "p1-plain vs p3-plain, same arm", "status": "FAIL", "tests": 36, "fails_p": 22, "permutations": 35999, "alpha_bonferroni": 0.0002777777777777778, "minimum_p": 2.777777777777778e-05, "max_tv": 0.8438, "receipt": "runs/judge/plain-cross-session.json"},
+          "uno_cross_session": {"pair": "p2-uno vs p5-uno, same arm", "status": "FAIL", "tests": 44, "fails_p": 37, "permutations": 43999, "alpha_bonferroni": 0.00022727272727272727, "minimum_p": 2.2727272727272726e-05, "max_tv": 0.9883, "receipt": "runs/judge/uno-cross-session.json"},
+          "boundary_other": {"pair": "p4-plain vs p5-uno", "status": "FAIL", "tests": 36, "fails_p": 36, "permutations": 35999, "max_tv": 0.9883, "receipt": "runs/judge/boundary-other.json"}
+        },
+        "chunk_contract": {
+          "pair_chunk_mismatch": {"status": "refused", "exit_code": 2, "error": "sampling chunk differs: 1 vs 32", "receipt": "logs/judge-kit-chunk-mismatch-v2.log"},
+          "floor_chunk_mismatch": {"status": "refused", "exit_code": 2, "error": "floor chunk differs: 32 vs 1", "receipt": "logs/judge-kit-floor-chunk-mismatch.log"},
+          "instrument_pair_chunk_mismatch": {"status": "refused", "exit_code": 2, "error": "sampling configs differ (declared chunk 1 vs 32)", "receipt": "logs/judge-chunk-mismatch-v9.log"}
+        },
+        "plain_arm_flags": {"status": "PASS", "profile_flags_present": 33, "speculative_config": false, "max_loras": 2, "receipt": "evidence/flags-check-plain.txt"},
+        "uno_engagement": {"status": "PASS", "launch_line": "Uno launch (profile=gemma4 ...)", "split_kv": "engaged widths 2,4,5; head sizes 256,512", "draft_acceptance": {"p2-uno": [0.6852, 0.3678, 0.3201], "p5-uno": [0.7026, 0.3351, 0.2699]}, "receipt": "logs/bl-rel2-gemma-uno.engagement.txt"},
+        "detection_power": "256 draws per position per arm with a pooled-label permutation null; Bonferroni cutoff 2.78e-04 (36 tests) or 2.27e-04 (44 tests); smallest attainable p 2.78e-05 / 2.27e-05, so a test rejects only when at most nine permutation draws reach the observed TV; PASS means no discrepancy was detected at this sample size, not proven equivalence"
+      },
+      "permutation_gate_round1_history": {
+        "note": "retained as history only; superseded for this profile by the floor-matched instrument",
+        "sampled_chunk1": {"status": "FAIL", "tests": 44, "fails_p": 35, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.918, "receipt": "runs/gemma/candidate-r2/sampled-compare.json"},
+        "mixed_chunk8": {"status": "FAIL", "tests": 36, "fails_p": 34, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.938, "receipt": "runs/gemma/candidate-r2/mixed-compare.json"},
+        "plain_vs_plain_same_session": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.058694444444444445, "max_tv": 0.6914, "receipt": "runs/gemma/cmp-b-vs-c.perm-35999.json"},
         "plain_vs_plain_across_lora_slots": {"status": "FAIL", "tests": 36, "fails_p": 32, "permutations": 35999, "max_tv": 0.9297, "receipt": "runs/gemma/cmp-a-vs-b.perm-35999.json"},
         "plain_vs_uno_chunk32": {"status": "FAIL", "tests": 36, "fails_p": 23, "permutations": 35999, "max_tv": 0.9023, "receipt": "runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json"},
         "uno_vs_uno_chunk32": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.0007777777777777777, "max_tv": 0.875, "receipt": "runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json"},
-        "uno_vs_uno_chunk1": {"status": "FAIL", "tests": 44, "fails_p": 10, "permutations": 35999, "max_tv": 0.8984, "receipt": "runs/gemma/candidate-r2/cmp-uno-a-vs-uno-b.perm-35999.json"},
-        "plain_chunk1_vs_chunk32": {"status": "FAIL", "tests": 36, "fails_p": 35, "permutations": 35999, "max_tv": 1.0, "receipt": "runs/gemma/candidate-r2/cmp-plain-chunk1-vs-chunk32.perm-35999.json"},
-        "first_token_census_prose_chunk1": {
-          "plain": {"236772": 134, "954": 81, "140": 37, "100": 4},
-          "uno": {"954": 256},
-          "command": "tools/first_token.py over the two sample files",
-          "receipt": "runs/gemma/cmp-matched-chunk1.perm-35999.json"
-        }
+        "plain_chunk1_vs_chunk32": {"status": "FAIL", "tests": 36, "fails_p": 35, "permutations": 35999, "max_tv": 1.0, "receipt": "runs/gemma/candidate-r2/cmp-plain-chunk1-vs-chunk32.perm-35999.json"}
       },
       "speculation_counters": {"chunk1": {"drafts": 2656, "draft_tokens": 10624, "accepted_tokens": 4289}, "total": {"drafts": 8173, "draft_tokens": 32692, "accepted_tokens": 14934}, "receipt": "runs/gemma/candidate/speculation-metrics.json"},
       "live_http": {"status": "PASS", "checks": ["health", "models", "greedy", "sampled", "streaming", "shared_prefix", "c8", "c32"], "c8": "8/8", "c32": "32/32", "prefix_cache_convention": "cold_validation_only", "receipt": "runs/gemma/live-uno.json"},
@@ -150,6 +195,27 @@
     "gemma_receipt": "runs/gemma/candidate-r2/verdict.json"
   },
   "receipts_sha256": {
+    "runs/passes/p1-plain.json": "31b3ba04e6d025e518a9c3ea91f86b4f6c9d4b2877aa308640f69f8095d9bd15",
+    "runs/passes/p2-uno.json": "42ce13e1eca6e0e144b3ebef8cd403688f9bf613f54c483f8bf53aa1483dddb9",
+    "runs/passes/p3-plain.json": "29743dc6881442e5174a419c86ce85944040d040ee1fac8e0b5e849027d45c98",
+    "runs/passes/p4-plain.json": "ea7772a48bf073801eb8b456d6ad08dee62ba6ec50a00007dd5e535b2a23a6f0",
+    "runs/passes/p5-uno.json": "0e20cd3012f66d12979f0aaee1c7309090ccbdf3207d8a3f13813e10faa244d9",
+    "runs/judge/floor.json": "0ad74802bdba02b6a9785575112e3a55b8844887346176081b624ddd396612a8",
+    "runs/judge/candidate.json": "61c965d6cb034281358211df14b1629b5c56a0c312f09650b84c21b3729f00db",
+    "runs/judge/plain-cross-session.json": "ec6c460e354cd1dbfe27789983313dc127d27dba2cb421467d96873c0e723c79",
+    "runs/judge/uno-cross-session.json": "b72382f45566f7c34a44e609f8a87a0f10d479870bf290afae2849700e48b74f",
+    "runs/judge/boundary-other.json": "35d1f47cd84e6277f5a25a207f75ec1a028a1ea95933436709534b1fe3970b45",
+    "evidence/pass-timeline.txt": "744b5a591ab8fc06c0f4304844a24a7368a3ae3bb0029eced1ac8009eebd3265",
+    "evidence/session-ledger.txt": "5502d290fac7930182f4291f6ae57a453c03a8a459e5708576eaf3cb758dfb6d",
+    "evidence/gate-tools.sha256": "49f4db75a67f2958eefb2b9fbdf2a23643c5c9fe8d4e1094c83b91485413ff9f",
+    "evidence/judge-summary.txt": "b1cf6345ae5d12beda5774c3255c874b441c379ef154dfbb6d4c7390fd669c37",
+    "evidence/provenance-1-plain.txt": "bdf7f97d1aab49e4c503b22bd51144de88f7b062f8f4faf12f03be78205f9f4c",
+    "evidence/provenance-2-uno.txt": "88863aa7c5c8b46e10b045f4f26af01603fffdfb0fcf39570769922b3e2df286",
+    "evidence/flags-check-plain.txt": "16cfbec15f1dfb76d2aa9c459dc333a1b2a8a261aff74729fb6bc535307841e6",
+    "evidence/prefixes-frozen-check.txt": "c003950ebdacedb14e3c9b4cb2d6853f99615ca2a0102652de0547d3c441e603",
+    "logs/judge-kit-chunk-mismatch-v2.log": "6cd59c3cb05c9f69aaa7a976cec15d0a5342e9eaeaca52f3d317a3b135aad14a",
+    "logs/judge-kit-floor-chunk-mismatch.log": "a443128901d27da298721d8f14692ec139140d3443fd9bfafe7e1dacbe79bfd3",
+    "logs/judge-chunk-mismatch-v9.log": "24821d8e0a425d2d29d6e39c648233387d35adf61733777fcacf2607b1e4dd1a",
     "runs/gemma/candidate-r2/verdict.json": "0da6309d1e3ecc7e04e23b126ef3282fe02f3154b29ec0b1a3664fa3754ffa4a",
     "runs/gemma/reference-r2/reference.json": "93b15fd765c60f549abdc955560ff5f2828f5a189a6627f0ad2f8550500ad336",
     "runs/gemma/candidate-r2/sampled-compare.json": "fd1afea13d5c100c0e3ccf6c8de03119357426bde4ed6dd762c34417537c6cda",
@@ -171,9 +237,9 @@
     "logs/uno030-gemma-vision.log": "ecbbb5825c16db340dd2ea9d9017d628b385f06245236ca55decaf15ab087cbe"
   },
   "comparison_conventions": {
-    "gate": "gates/lossless_spec.py samples; gates/lossless_spec_compare.py adjudicates per prefix and position with exchangeable-label permutation tests and a Bonferroni cutoff",
+    "gate": "Qwen3-8B: gates/lossless_spec.py samples and gates/lossless_spec_compare.py adjudicates per prefix and position with exchangeable-label permutation tests and a Bonferroni cutoff. Gemma 4: gates/lossless_spec.py samples and gates/lossless_floor.py adjudicates the same test shape against a plain-versus-plain floor taken from a same-session same-arm pass pair, with the passes interleaved across fresh servers",
     "sampling": "temperature 1.0, top_p 0.95, top_k 50, n=256 samples per prefix, 16 generated tokens, three pinned prefixes",
-    "chunk": "samples per HTTP request; compared only where both arms use the same chunk, since a chunk change alone is red 35 of 36 on the plain arm",
+    "chunk": "samples per HTTP request, recorded in every pass; a comparison, or a floor, whose declared chunks differ is refused by name (sampling chunk differs / floor chunk differs), since a chunk change alone is red 35 of 36 on the plain arm",
     "arms": "same image, model revision, precision, attention backend, LoRA rank and slots, prefix caching, async scheduling, admission limit and seed; the arms differ only by --speculative-config"
   },
   "reporting_scope": {

@@ -13,8 +13,10 @@ own `build-provenance.json` records. The tested image is
 
 Both profiles were exercised on one RTX 3090 (24 GiB) from the released image
 with `release/serve.sh` defaults. Qwen3-8B BF16 K=8 re-passes the full v0.2.0
-gate set. **Gemma 4 26B A4B AWQ does not pass the sampled-distribution gate**,
-so this release certifies the Qwen3-8B profile only.
+gate set. **Gemma 4 26B A4B AWQ is not certified**: the floor-matched
+instrument built for this profile passes its same-session same-arm floor pair
+and fails the candidate pair, while the same-arm controls across sessions fail
+at the same magnitude, so this release certifies the Qwen3-8B profile only.
 
 The machine-readable record is
 [`evidence/release-0.3.0/validation.json`](../evidence/release-0.3.0/validation.json);
@@ -40,67 +42,109 @@ advanced 2,751 drafts / 22,008 draft tokens / 8,131 accepted tokens.
 
 ### Gemma 4 26B A4B profile
 
+**Not certified.** This profile's distributional instrument is the floor-matched
+gate, `gates/lossless_floor.py`, SHA-256
+`141ef833e12e146e90960050cf517afad07d3657fb1181ce47fd9deed0f32cf8` — the
+evaluation instrument the profile's own research record cites, shipped
+unaltered. The permutation gate is not a valid instrument for this profile on
+Ampere: the *Gemma 4 Uno sampled-gate diagnosis* (2026-09-16) shows that the
+first sampled token of the prose prefix is a near-tie whose per-row law moves by
+more than a nat between the rows of one pass and between launches, so a 256-draw
+marginal test measures a mixture of row-dependent laws rather than the sampler.
+The permutation gate stays in the kit for the Qwen3-8B profile.
+
+The floor-matched run took five passes across four fresh servers on the released
+image, all at chunk 1, n=256 samples × 16 generated tokens over the three frozen
+prefixes, with the arms alternating by server — the profile serves one
+configuration per process, so plain and Uno cannot share a session, and the
+same-session same-arm floor pair is taken inside the second plain session. Every
+comparison is a per-prefix, per-position permutation test with a Bonferroni
+cutoff over the tests that ran and a derived permutation budget of ten grid
+steps at that cutoff; position 1 is smoke only.
+
 | Check | Result | Receipt |
 |---|---|---|
+| Floor pair, plain vs plain, one session (passes 3 and 4) | PASS, 36 tests, 0 red, min p `0.008528`, max TV `0.773` | `runs/judge/floor.json` |
+| **Candidate, plain vs Uno (passes 3 and 2) against that floor** | **FAIL**, 44 tests, 32 red, min p `2.2727e-05`, max TV `0.930`, 12 advisory TV exceedances | `runs/judge/candidate.json` |
+| Same-arm control across sessions, plain vs plain (passes 1 and 3) | FAIL, 36 tests, 22 red, min p `2.7778e-05`, max TV `0.844` | `runs/judge/plain-cross-session.json` |
+| Same-arm control across sessions, Uno vs Uno (passes 2 and 5) | FAIL, 44 tests, 37 red, min p `2.2727e-05`, max TV `0.988` | `runs/judge/uno-cross-session.json` |
+| Other interleaved boundary, plain vs Uno (passes 4 and 5) | FAIL, 36 tests, 36 red, max TV `0.988` | `runs/judge/boundary-other.json` |
+| Chunk contract, a chunk-1 pair against a chunk-32 copy of one pass | refused by name, exit 2 | `logs/judge-kit-chunk-mismatch-v2.log` |
+| Chunk contract, a floor recorded at chunk 32 | refused by name, exit 2 | `logs/judge-kit-floor-chunk-mismatch.log` |
+| Plain arm flags vs the released profile | 33 of 33 flags present, no `--speculative-config`, two LoRA slots | `evidence/flags-check-plain.txt` |
+| Uno engagement | `Uno launch (profile=gemma4 ...)`, `UNO_GEMMA_SPLITKV engaged width={2,4,5} head_size={256,512}` | `logs/bl-rel2-gemma-uno.engagement.txt` |
 | Profile boots and serves | PASS | `runs/gemma/candidate-r2/verdict.json` |
 | Plain reference, matched flags (two LoRA slots) | PASS, n=256 | `runs/gemma/reference-r2/reference.json` |
 | Candidate functional greedy | PASS, 4 prompts × 256 tokens | `runs/gemma/candidate-r2/uno-greedy-functional.jsonl` |
-| **Shipped sampled gate, chunk 1** | **FAIL**, 35 of 44 tests red, max TV `0.918` | `runs/gemma/candidate-r2/sampled-compare.json` |
-| **Shipped mixed gate, chunk 8** | **FAIL**, 34 of 36 tests red, max TV `0.938` | `runs/gemma/candidate-r2/mixed-compare.json` |
-| Plain-versus-plain control, same flags | PASS, 0 of 36 red, tightest p `0.058694`, max TV `0.691` | `runs/gemma/cmp-b-vs-c.perm-35999.json` |
-| Plain-versus-plain across the LoRA-slot flag | FAIL, 32 of 36 red, max TV `0.930` | `runs/gemma/cmp-a-vs-b.perm-35999.json` |
-| Plain-versus-Uno, chunk 32 convention | FAIL, 23 of 36 red, max TV `0.902` | `runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json` |
-| Uno-versus-Uno, chunk 32 convention | PASS, 0 of 36 red | `runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json` |
 | Live HTTP, streaming, prefix, C=8, C=32 | PASS | `runs/gemma/live-uno.json` |
 | Vision refusal | expected-red, exit 1, `Uno requires a language-only model` | `logs/uno030-gemma-vision.hits.txt` |
 | Draft MoE top-k variant | boots, serves, refuses the uncaptured shape by name | `runs/gemma/topk4-shapes.json` |
 | In-serving JIT | 2 warnings, identical in both arms | `logs/uno030-gemma-uno.serving-compilations.txt` |
 | Residency | 8 real updates, flat 19,674 MiB / 24,576 MiB | `runs/gemma/residency.csv` |
 
-#### The distributional failure, stated with its controls
+#### What the floor-matched run shows
 
-The Gemma plain and Uno arms ran identical serving flags — two LoRA slots,
-`TRITON_ATTN`, `--language-only`, `max_num_seqs=4`, `max_model_len=8192`,
-K=4, prefix caching, async scheduling — and differ only by
-`--speculative-config`. Under the shipped gate at its chunk-1 convention the
-Uno arm differs from the matched plain arm at every position and joint tested:
-36 of 36 red on the three-prefix set, 35 of 44 on the reference-r2 set, with
-the p-value at the minimum the permutation budget can express
-(`1/36000 = 2.78e-05`, against a Bonferroni cutoff of `2.78e-04`). The same
-result holds at the mixed chunk-8 convention (34 of 36) and at the chunk-32
-convention the port's own evaluation used (23 of 36).
+The floor pair is clean: two passes of one plain server in one session at the
+same chunk are not distinguishable at this sample size (0 of 36 red, tightest p
+`0.008528`, 31× the cutoff), and the instrument reports large TVs there without
+calling them significant (max TV `0.773` against per-test null quantiles of the
+same order). The instrument is not inventing failures within a session, and the
+pass machinery is intact: frozen prefix ids identical to the reference session's,
+identical sampling configs, chunk 1 on both arms, matched serving flags.
 
-Three controls in the same session bound the reading:
+The candidate fails it anyway, and the controls say why that failure cannot be
+read as an Uno effect. Both same-arm pairs taken **across** sessions are red at
+the candidate's magnitude or worse: plain against plain 22 of 36 (min p at the
+grid minimum), and the Uno arm against itself 37 of 44 against the candidate's
+32 of 44. The deviation the gate measures is therefore between *launches* of
+this profile, not between its two arms — exactly the movement the diagnosis
+attributes to a near-tie prefix whose per-row law the batching resolves
+differently on each launch. A red candidate below a red same-arm control is not
+interpretable, and no losslessness claim is supported. Nor do these receipts
+establish a defect in the Uno arm: what they establish is that this instrument
+cannot decide the profile on this hardware.
 
-- **Same-configuration plain-versus-plain is clean.** Two passes of one plain
-  server, same flags, give 0 of 36 red (tightest p `0.058694`, 211x the
-  cutoff). The instrument is not producing false positives at this sample size.
-- **The first sampled token is the sharpest signature.** On the prose prefix at
-  chunk 1, the Uno arm returns token `954` for all 256 draws while plain spreads
-  over four tokens (`236772` x134, `954` x81, `140` x37, `100` x4). A decoder
-  whose verification is exact cannot turn a four-token law into a point mass;
-  position 1 is the first draft-and-verify cycle, before any later cycle can
-  compound an error.
-- **The control is flag-sensitive, so a kernel-path difference cannot be
-  excluded.** Plain with one LoRA slot against plain with two — no semantic
-  difference at all — is itself red 32 of 36 (max TV `0.930`). Changing a single
-  kernel-selection flag moves the served distribution on this target as much as
-  the Uno treatment does.
+Detection power, stated rather than implied: each test is a 256-draw marginal at
+one position with a pooled-label permutation null and a Bonferroni cutoff of
+`2.78e-04` over 36 tests or `2.27e-04` over 44 tests. The smallest p the grid can
+express is `2.78e-05` and `2.27e-05` respectively, so a test rejects only when at
+most nine permutation draws reach the observed TV; the floor pair's tightest p,
+`0.008528`, is 31× its cutoff. PASS at this size means no discrepancy was
+detected, not proven equivalence. FAIL means the observed TV sits in the extreme
+tail of the pooled-label null — which, on a target whose same-arm pairs move
+between launches, does not identify the arm that moved.
 
-The sampler's `--chunk` is therefore a measured convention, not a detail: plain
-chunk 1 against plain chunk 32 is red 35 of 36 (max TV `1.000`). Every
-comparison reported here holds `--chunk` equal on both arms.
+#### The shipped permutation gate on this profile (round-1 record)
 
-What the gate cannot separate: a verification path in the port that differs
-semantically from plain, from a plain arm whose kernel selection is not the
-kernel selection the Uno verify pass uses. Both are release-blocking for a
-losslessness claim on the profile *as served*, and neither is settled by these
-receipts. The smallest follow-up that separates them is a forced all-reject arm
-(the draft-rejection switch the port already carries) compared against the same
-plain reference: if the recovery path is the site, an all-reject arm differs
-from plain as well; if it is not, the acceptance side is. Either way the gate
-and the plain arm must first be proven to run the same attention kernel, which
-a dispatch-key line in the server log settles.
+Retained as history, not as this profile's instrument. On the same released image
+with matched arms it reported 35 of 44 tests red at chunk 1 against a matched
+plain reference, 34 of 36 at chunk 8 and 23 of 36 at chunk 32, against a
+same-session plain-versus-plain control that was clean (0 of 36, tightest p
+`0.058694`). Round 2 shows why that reading did not survive: the same instrument,
+run against a second pass of one arm with no treatment at all, is red across
+sessions. Its receipts stay in place:
+
+| Round-1 row | Result | Receipt |
+|---|---|---|
+| Shipped sampled gate, chunk 1 | FAIL, 35 of 44 tests red, max TV `0.918` | `runs/gemma/candidate-r2/sampled-compare.json` |
+| Shipped mixed gate, chunk 8 | FAIL, 34 of 36 tests red, max TV `0.938` | `runs/gemma/candidate-r2/mixed-compare.json` |
+| Plain-versus-plain control, same session | PASS, 0 of 36 red, tightest p `0.058694`, max TV `0.691` | `runs/gemma/cmp-b-vs-c.perm-35999.json` |
+| Plain-versus-plain across the LoRA-slot flag | FAIL, 32 of 36 red, max TV `0.930` | `runs/gemma/cmp-a-vs-b.perm-35999.json` |
+| Plain-versus-Uno, chunk 32 convention | FAIL, 23 of 36 red, max TV `0.902` | `runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json` |
+| Uno-versus-Uno, chunk 32 convention | PASS, 0 of 36 red | `runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json` |
+| Plain chunk 1 versus plain chunk 32, one server | FAIL, 35 of 36 red, max TV `1.000` | `runs/gemma/candidate-r2/cmp-plain-chunk1-vs-chunk32.perm-35999.json` |
+
+
+The round-1 reading leaned on one signature: on the prose prefix at chunk 1 the
+Uno arm returned token `954` for all 256 draws where plain spread over four, and
+a point mass on the first draft-and-verify cycle was read as evidence against an
+exact verification path. The diagnosis's census finds the same one-token outcome
+in a plain arm (216 of 256 draws on one token) and a 125/124 argmax coin flip
+across the rows of a single prompt, so that signature belongs to the near-tie
+prefix rather than to the arm. In round 2 the same cell shows no point mass at
+all: the candidate's prose smoke test reports TV `0.246` over 10 tokens, and the
+Uno arm's own cross-session pair reports TV `0.797` at that position on its way
+to 37 of 44 red.
 
 #### Engagement, refusals and capacity
 
@@ -108,7 +152,13 @@ Candidate startup records the Uno launch line, `UNO_GEMMA_SPLITKV engaged
 width=2 head_size=512 q_heads=16 kv_heads=2 segments=16`, the 16-cell capture
 list, and speculation counters of 2,656 drafts / 10,624 draft tokens / 4,289
 accepted tokens on the chunk-1 pass rising to 8,173 / 32,692 / 14,934 across the
-whole candidate run, so the drafted path is engaged rather than inferred.
+whole candidate run, so the drafted path is engaged rather than inferred. The
+floor-matched run's two Uno sessions repeat that at chunk 1: `Uno launch
+(profile=gemma4 ...)` with the split-KV engagement across widths 2, 4 and 5 for
+both head-size families, and per-prefix draft acceptance of 0.6852 / 0.3678 /
+0.3201 and 0.7026 / 0.3351 / 0.2699. Every executed command, container identity
+and pass timestamp is in `evidence/pass-timeline.txt` and
+`evidence/session-ledger.txt`.
 
 The vision refusal is a config-time admission check: the same profile with
 `--language-model-only` removed exits 1 and logs `Uno requires a language-only
@@ -145,13 +195,17 @@ Source fixture evidence remains **CPU_OBSERVED/CUDA_UNVERIFIED** until a device
 receipt proves the device path; the device receipts for this release are the
 served profiles above. The Gemma profile's draft-row bound is `max_num_seqs=4`
 times `K=4` = 16 draft rows, which the sixteen capture cells cover, and the
-failure recorded here is a served-distribution result, not a fixture result.
+distributional result recorded here is a served result, not a fixture result.
 
 The manifest guard is inverted with one mutation: `release/series.json`'s
 `base_commit` reverted to zeroes makes
 `tests.test_release.ReleaseTests.test_frozen_manifest` exit 1 with `Manifest
 base does not match the supported upstream commit`, not with a missing symbol.
-The green run beside it is 18 tests, exit 0. The known-red arm for the Qwen
+The green run beside it is 20 tests, exit 0. The chunk contract is inverted the
+same way, one field per run: a pass re-declared at chunk 32 against a chunk-1
+pair, and a floor summary re-declared at chunk 32 against a chunk-1 pair, each
+exit 2 with the named refusal (`sampling chunk differs: 1 vs 32`, `floor chunk
+differs: 32 vs 1`) rather than a missing symbol. The known-red arm for the Qwen
 runner replaces only the pinned adapter revision with forty zeroes under
 `HF_HUB_OFFLINE=1` and exits 1.
 

@@ -7,10 +7,13 @@ digest-pinned per-commit CI image, overlays only verified Python source, and
 preserves the base image's compiled CUDA libraries.
 
 **Release status.** The Qwen3-8B profile passes its full gate set on this image.
-The Gemma 4 profile passes every functional, capacity and refusal gate but
-**does not pass the sampled-distribution gate** against a matched plain
-reference, so this release does not certify it as a validated serving profile.
-Read [docs/validation.md](docs/validation.md) before using the Gemma profile.
+The Gemma 4 profile passes every functional, capacity and refusal gate but is
+**not certified**: its own instrument, the floor-matched gate, passes a
+same-session same-arm floor pair and fails the candidate pair, and the same-arm
+controls across sessions fail at the same magnitude, so the discrepancy is not
+attributable to the Uno arm or to plain. This release certifies the Qwen3-8B
+profile only. Read [docs/validation.md](docs/validation.md) before using the
+Gemma profile.
 
 ## What changed
 
@@ -31,6 +34,10 @@ Read [docs/validation.md](docs/validation.md) before using the Gemma profile.
   name instead of falling back to eager routing.
 - A draft-graph coverage receipt and a dispatch-key diagnostic, so a
   captured-versus-dispatched disagreement is visible in the log.
+- A floor-matched distributional gate (`gates/lossless_floor.py`), the profile
+  evaluation's own instrument, shipped beside the permutation comparator, with a
+  chunk contract that records every pass's request chunking and refuses a
+  comparison, or a floor, recorded at a different chunk.
 - An ordered two-layer patch series and a corrected release tree: the
   reconstruction now records the squashed head's own tree,
   `0149f03eb8287bdfdcc916752b3851405695d350`.
@@ -52,16 +59,20 @@ plain-versus-Uno greedy decode over five 384-token requests on one card
 (sum over sum, 1.16x for the Uno arm); that is a throughput result from the
 port's evaluation record, not a losslessness result.
 
-The distributional gate does not pass for Gemma 4 with the arms on identical
-flags. The Uno arm differs from the matched plain arm at every position and
-joint tested at the shipped chunk-1 convention, and at the chunk-8 and chunk-32
-conventions as well, while a plain-versus-plain control on the same image and
-flags is clean. On the first sampled token of the prose prefix the Uno arm
-returns one token for all 256 draws where plain spreads over four. Two
-explanations survive the controls — a verification path that differs
-semantically from plain, or a plain control that does not run the attention
-kernel the Uno verify pass runs — and both must be excluded before the profile
-can be claimed lossless. The separating run is described in
+The distributional instrument for Gemma 4 is the floor-matched gate
+(`gates/lossless_floor.py`), not the kit's permutation test: on this hardware the
+permutation test is not a valid instrument for this profile, because its first
+sampled token on the prose prefix is a near-tie whose per-row law moves by more
+than a nat between the rows of one pass and between launches, so a 256-draw
+marginal test measures a mixture of row-dependent laws. Run with the passes
+interleaved across fresh servers and a same-session same-arm floor pair, the
+floor pair passes (0 of 36 red, tightest p `0.008528`) and the candidate pair
+fails (32 of 44 red, min p at the `2.27e-05` grid minimum). The same-arm controls
+across sessions fail too — plain against plain 22 of 36, and Uno against itself
+37 of 44, worse than the candidate — so the deviation the gate measures is
+between launches of this profile rather than between its two arms. The profile is
+therefore neither certified lossless nor shown faulty by these receipts; the
+numbers, the divisor and the detection power are stated in
 [docs/validation.md](docs/validation.md).
 
 G2 preparation/KV, G3 attention, and broader G4/G7 qualification remain
