@@ -69,7 +69,7 @@ The same-arm controls across sessions bound the reading, and they fail too:
 plain against plain is red 22 of 36, and the Uno arm against itself 37 of 44 —
 worse than the candidate's 32 of 44. The cross-session same-arm failures show
 that the candidate's permutation-test failure cannot by itself be attributed to
-Uno, which is how the certification reads the sampled comparisons alongside those
+Uno. That is how the certification reads the sampled comparisons alongside those
 controls.
 
 The permutation gate's earlier Gemma rows are retained as history only: 35 of 44

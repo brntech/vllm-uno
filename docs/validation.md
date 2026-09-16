@@ -135,15 +135,15 @@ same order). The instrument is not inventing failures within a session, and the
 pass machinery is intact: frozen prefix ids identical to the reference session's,
 identical sampling configs, chunk 1 on both arms, matched serving flags.
 
-The candidate pair is red, and the cross-session same-arm failures show that
-the candidate's permutation-test failure cannot by itself be attributed to Uno.
-Both same-arm pairs taken **across** sessions are red at the candidate's
-magnitude or worse: plain against plain 22 of 36 (min p at the grid minimum), and
-the Uno arm against itself 37 of 44 against the candidate's 32 of 44. The
-deviation the gate measures tracks *launches* of this profile, which is the
-movement the diagnosis attributes to a near-tie prefix whose per-row law the
-batching resolves differently on each launch, so the certification reads the
-sampled comparisons alongside these controls.
+The candidate pair is red. The cross-session same-arm failures show that the
+candidate's permutation-test failure cannot by itself be attributed to Uno. Both
+same-arm pairs taken **across** sessions are red at the candidate's magnitude or
+worse: plain against plain 22 of 36 (min p at the grid minimum), and the Uno arm
+against itself 37 of 44 against the candidate's 32 of 44. The deviation the gate
+measures tracks *launches* of this profile, which is the movement the diagnosis
+attributes to a near-tie prefix whose per-row law the batching resolves
+differently on each launch, so the certification reads the sampled comparisons
+alongside these controls.
 
 Detection power, stated rather than implied: each test is a 256-draw marginal at
 one position with a pooled-label permutation null and a Bonferroni cutoff of
