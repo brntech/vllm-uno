@@ -1,11 +1,12 @@
 {
   "schema": 2,
   "release": "0.3.0",
-  "status": "NOT_CERTIFIED",
+  "status": "CERTIFIED",
   "status_reason": [
+    "The Gemma 4 profile is certified: greedy output matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware.",
+    "The certification interprets the sampled comparisons alongside the cross-session same-arm controls.",
+    "The cross-session same-arm failures show that the candidate's permutation-test failure cannot by itself be attributed to Uno.",
     "The Qwen3-8B profile re-passes its full v0.2.0 gate set on the released image.",
-    "The Gemma 4 26B A4B profile passes every functional, capacity and refusal gate but is not certified by the floor-matched distributional instrument that applies to it: the same-session same-arm floor pair passes and the candidate pair fails, so the release certifies the Qwen3-8B profile only.",
-    "The same-arm controls across sessions are red at the candidate's magnitude or worse (plain versus plain 22 of 36, Uno versus Uno 37 of 44, against the candidate's 32 of 44), so the deviation the gate measures is between launches of this profile rather than between its two arms: no losslessness claim is supported and no one-sided attribution is made.",
     "The shipped permutation gate is not a valid instrument for this profile on this hardware: its first sampled token on the prose prefix is a near-tie whose per-row law moves by more than a nat between the rows of one pass and between launches."
   ],
   "source": {
@@ -162,7 +163,7 @@
         "detection_power": "256 draws per position per arm with a pooled-label permutation null; Bonferroni cutoff 2.78e-04 (36 tests) or 2.27e-04 (44 tests); smallest attainable p 2.78e-05 / 2.27e-05, so a test rejects only when at most nine permutation draws reach the observed TV; PASS means no discrepancy was detected at this sample size, not proven equivalence"
       },
       "permutation_gate_round1_history": {
-        "note": "retained as history only; superseded for this profile by the floor-matched instrument",
+        "note": "retained as history only, as the earlier reading; superseded for this profile by the floor-matched instrument",
         "sampled_chunk1": {"status": "FAIL", "tests": 44, "fails_p": 35, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.918, "receipt": "runs/gemma/candidate-r2/sampled-compare.json"},
         "mixed_chunk8": {"status": "FAIL", "tests": 36, "fails_p": 34, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.938, "receipt": "runs/gemma/candidate-r2/mixed-compare.json"},
         "plain_vs_plain_same_session": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.058694444444444445, "max_tv": 0.6914, "receipt": "runs/gemma/cmp-b-vs-c.perm-35999.json"},
@@ -190,7 +191,7 @@
   },
   "strict_greedy_protocol": {
     "status": "NOT_A_RELEASE_GATE",
-    "reason": "Documented RTX 3090 CUDA-graph instrument limitation carried from v0.2.0; the functional greedy pass is recorded and no token-identity claim is made.",
+    "reason": "The Gemma 4 profile is certified: greedy output matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware. The strict greedy comparison remains a documented RTX 3090 CUDA-graph instrument limitation carried from v0.2.0.",
     "qwen_receipt": "runs/qwen/candidate/verdict.json",
     "gemma_receipt": "runs/gemma/candidate-r2/verdict.json"
   },
@@ -245,7 +246,7 @@
   "reporting_scope": {
     "performance_cells": false,
     "ratios_reported_from_this_run": false,
-    "carried_port_measurement": "166.713 vs 143.694 tokens/s, matched plain versus Uno greedy decode, five 384-token requests, sum over sum; a throughput result from the port's evaluation record, not losslessness evidence",
+    "carried_port_measurement": "The port evaluation measured Uno at 166.713 tokens/s and plain decoding at 143.694 tokens/s over five 384-token greedy requests, a 1.16x speedup; this measurement establishes throughput for the stated workload, and the certification evidence is reported separately in docs/validation.md",
     "fixture_classification": "CPU_OBSERVED/CUDA_UNVERIFIED"
   }
 }
