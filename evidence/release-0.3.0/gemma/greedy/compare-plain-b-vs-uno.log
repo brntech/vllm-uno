@@ -1,0 +1,5 @@
+math-1: identical (256 tok, 2.78 s)
+math-2: DIVERGE at 18/256 (golden [990, 1056, 506] vs [3890, 236764, 692]); lens 256 vs 256
+math-3: DIVERGE at 4/256 (golden [236820, 236909, 548] vs [2021, 1586, 506]); lens 256 vs 256
+math-4: DIVERGE at 67/256 (golden [3861, 1131, 506] vs [5619, 573, 609]); lens 256 vs 256
+G1 FAIL: 1/4 identical

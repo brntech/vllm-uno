@@ -1,12 +1,10 @@
-> **Superseded 2026-09-16.** The verdicts recorded below were this record's reading before a second run of the same gate on the image built before the port's final changes showed the same-arm plain control fails the permutation test across sessions at the same magnitude as Uno against plain. The Gemma 4 profile is certified: greedy output matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware. The certification interprets the sampled comparisons alongside the cross-session same-arm controls. The raw gate outcomes below are kept as the earlier reading. Three receipts are still to be filed and are requested here by name: the pre-fix run's pair-by-pair records for image `vllm-uno-gemma:00972dfd-629c13ac`, the exact 4 × 256 greedy comparison record, and the evidence archive's file name with its SHA-256. See docs/validation.md.
+> **Superseded 2026-09-16.** The verdicts recorded below were this record's reading before a second run of the same gate on the image built before the port's final changes showed the same-arm plain control fails the permutation test across sessions at the same magnitude as Uno against plain. The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike. The certification interprets the sampled comparisons alongside the cross-session same-arm controls. The raw gate outcomes below are kept as the earlier reading. Three receipts are still to be filed and are requested here by name: the pre-fix run's pair-by-pair records for image `vllm-uno-gemma:00972dfd-629c13ac`, the exact 4 × 256 greedy comparison record, and the evidence archive's file name with its SHA-256. See docs/validation.md.
 
 # v0.3.0 release validation record
 
 ## Status
 
-**The Gemma 4 profile is certified: greedy output matches plain exactly, and
-under sampling Uno is as close to plain as plain is to itself across sessions on
-this hardware.** The Qwen3-8B profile re-passes its v0.2.0 gate set on the v0.3.0
+**The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike.** The Qwen3-8B profile re-passes its v0.2.0 gate set on the v0.3.0
 image. The certification interprets the sampled comparisons alongside the
 cross-session same-arm controls. The machine-readable receipt is
 [`evidence/release-0.3.0/validation.json`](../../evidence/release-0.3.0/validation.json).

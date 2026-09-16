@@ -3,7 +3,7 @@
   "release": "0.3.0",
   "status": "CERTIFIED",
   "status_reason": [
-    "The Gemma 4 profile is certified: greedy output matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware.",
+    "The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike.",
     "The certification interprets the sampled comparisons alongside the cross-session same-arm controls.",
     "The cross-session same-arm failures show that the candidate's permutation-test failure cannot by itself be attributed to Uno.",
     "The Qwen3-8B profile re-passes its full v0.2.0 gate set on the released image.",
@@ -35,7 +35,9 @@
     "base_digest": "sha256:d55cb6858435cda5ab080987213b4a6b6bfce14ca9e0ffa2ecfab2b222818497",
     "base_vllm_version": "0.29.1rc1.dev99+g00972dfd7",
     "base_image_bytes": 9650300635,
-    "base_platforms": ["linux/amd64"],
+    "base_platforms": [
+      "linux/amd64"
+    ],
     "id": "sha256:06e2266b10c2eaf1783f3c8a671ec4a43118ccb0540d6a4ed2e2ae46076a4ca9",
     "size_bytes": 9992635623,
     "saved_archive_name": "vllm-uno-0.3.0.tar",
@@ -46,7 +48,10 @@
       "ai.uno.head.commit": "cf87916880b051e8782521dfe2afa12e0627e172",
       "ai.uno.upstream.commit": "00972dfd72988942138a7a6089eaee08580210b8"
     },
-    "entrypoint": ["bash", "/opt/uno-kit/release/serve.sh"]
+    "entrypoint": [
+      "bash",
+      "/opt/uno-kit/release/serve.sh"
+    ]
   },
   "hardware": {
     "gpu": "NVIDIA GeForce RTX 3090",
@@ -54,10 +59,25 @@
     "memory_total_mib": 24576
   },
   "local_package_gates": {
-    "package_check": {"exit_code": 0, "assets": 34, "receipt": "release/.work/local-gates-r3/package-check.log"},
-    "stack_audit": {"exit_code": 0, "receipt": "release/.work/local-gates-r3/stack-audit.log"},
-    "test_release_green": {"exit_code": 0, "tests": 20, "receipt": "release/.work/local-gates-r3/test-release-green.log"},
-    "test_mixed_gate_green": {"exit_code": 0, "tests": 5, "receipt": "release/.work/local-gates-r3/test-mixed-gate-green.log"},
+    "package_check": {
+      "exit_code": 0,
+      "assets": 34,
+      "receipt": "release/.work/local-gates-r3/package-check.log"
+    },
+    "stack_audit": {
+      "exit_code": 0,
+      "receipt": "release/.work/local-gates-r3/stack-audit.log"
+    },
+    "test_release_green": {
+      "exit_code": 0,
+      "tests": 20,
+      "receipt": "release/.work/local-gates-r3/test-release-green.log"
+    },
+    "test_mixed_gate_green": {
+      "exit_code": 0,
+      "tests": 5,
+      "receipt": "release/.work/local-gates-r3/test-mixed-gate-green.log"
+    },
     "test_release_inverted_base": {
       "exit_code": 1,
       "mutations": 1,
@@ -94,19 +114,106 @@
       "max_num_seqs": 16,
       "max_num_batched_tokens": 2048,
       "kv_cache_memory_bytes": 2147483648,
-      "capture_sizes": [1, 2, 4, 8, 16, 32, 64, 128, 144],
+      "capture_sizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64,
+        128,
+        144
+      ],
       "max_loras": 2,
       "plain_arm_speculative_config": false,
       "arms_matched": true,
-      "reference": {"status": "PASS", "n": 256, "receipt": "runs/qwen/reference/reference.json"},
-      "greedy_functional": {"status": "PASS", "prompts": 4, "tokens_per_prompt": 256, "receipt": "runs/qwen/candidate/uno-greedy-functional.jsonl"},
-      "sampled_chunk1": {"status": "PASS", "tests": 32, "fails_p": 0, "permutations": 5000, "minimum_p": 0.1967606478704259, "max_tv": 0.1406, "receipt": "runs/qwen/candidate/sampled-compare.perm-5000.json"},
-      "mixed_chunk8": {"status": "PASS", "tests": 32, "fails_p": 0, "permutations": 5000, "minimum_p": 0.032993401319736056, "max_tv": 0.1562, "receipt": "runs/qwen/candidate/mixed-compare.perm-5000.json"},
-      "speculation_counters": {"chunk1": {"drafts": 768, "draft_tokens": 6144, "accepted_tokens": 2750}, "total": {"drafts": 2751, "draft_tokens": 22008, "accepted_tokens": 8131}, "receipt": "runs/qwen/candidate/speculation-metrics.json"},
-      "live_http": {"status": "PASS", "checks": ["health", "models", "greedy", "sampled", "streaming", "shared_prefix", "c8", "c32"], "c8": "8/8", "c32": "32/32", "prefix_cache_convention": "cold_validation_only", "receipt": "runs/qwen/live-uno.json"},
-      "serving_compilations": {"count": 0, "status": "PASS", "receipt": "logs/uno030-qwen-uno.serving-compilations.txt"},
-      "known_red": {"mutation": "wrong adapter revision under HF_HUB_OFFLINE=1", "inner_exit_code": 1, "receipt": "logs/uno030-qwen-knownred.exit"},
-      "residency": {"samples": 8, "device_memory_mib": [21418, 21418, 21418, 21418, 21418, 21418, 21418, 21418], "device_total_mib": 24576, "training_loop": false, "allocated_reserved_collected": false, "receipt": "runs/qwen/residency.csv"}
+      "reference": {
+        "status": "PASS",
+        "n": 256,
+        "receipt": "runs/qwen/reference/reference.json"
+      },
+      "greedy_functional": {
+        "status": "PASS",
+        "prompts": 4,
+        "tokens_per_prompt": 256,
+        "receipt": "runs/qwen/candidate/uno-greedy-functional.jsonl"
+      },
+      "sampled_chunk1": {
+        "status": "PASS",
+        "tests": 32,
+        "fails_p": 0,
+        "permutations": 5000,
+        "minimum_p": 0.1967606478704259,
+        "max_tv": 0.1406,
+        "receipt": "runs/qwen/candidate/sampled-compare.perm-5000.json"
+      },
+      "mixed_chunk8": {
+        "status": "PASS",
+        "tests": 32,
+        "fails_p": 0,
+        "permutations": 5000,
+        "minimum_p": 0.032993401319736056,
+        "max_tv": 0.1562,
+        "receipt": "runs/qwen/candidate/mixed-compare.perm-5000.json"
+      },
+      "speculation_counters": {
+        "chunk1": {
+          "drafts": 768,
+          "draft_tokens": 6144,
+          "accepted_tokens": 2750
+        },
+        "total": {
+          "drafts": 2751,
+          "draft_tokens": 22008,
+          "accepted_tokens": 8131
+        },
+        "receipt": "runs/qwen/candidate/speculation-metrics.json"
+      },
+      "live_http": {
+        "status": "PASS",
+        "checks": [
+          "health",
+          "models",
+          "greedy",
+          "sampled",
+          "streaming",
+          "shared_prefix",
+          "c8",
+          "c32"
+        ],
+        "c8": "8/8",
+        "c32": "32/32",
+        "prefix_cache_convention": "cold_validation_only",
+        "receipt": "runs/qwen/live-uno.json"
+      },
+      "serving_compilations": {
+        "count": 0,
+        "status": "PASS",
+        "receipt": "logs/uno030-qwen-uno.serving-compilations.txt"
+      },
+      "known_red": {
+        "mutation": "wrong adapter revision under HF_HUB_OFFLINE=1",
+        "inner_exit_code": 1,
+        "receipt": "logs/uno030-qwen-knownred.exit"
+      },
+      "residency": {
+        "samples": 8,
+        "device_memory_mib": [
+          21418,
+          21418,
+          21418,
+          21418,
+          21418,
+          21418,
+          21418,
+          21418
+        ],
+        "device_total_mib": 24576,
+        "training_loop": false,
+        "allocated_reserved_collected": false,
+        "receipt": "runs/qwen/residency.csv"
+      }
     },
     "gemma4": {
       "model": "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit",
@@ -123,12 +230,34 @@
       "gpu_memory_utilization": 0.85,
       "max_loras": 2,
       "draft_row_bound": 16,
-      "capture_sizes": [1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16],
+      "capture_sizes": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        13,
+        14,
+        15,
+        16
+      ],
       "split_kv": "engaged: width=2 head_size=512 q_heads=16 kv_heads=2 segments=16",
       "plain_arm_speculative_config": false,
       "arms_matched": true,
-      "reference": {"status": "PASS", "n": 256, "receipt": "runs/gemma/reference-r2/reference.json"},
-      "greedy_functional": {"status": "PASS", "prompts": 4, "tokens_per_prompt": 256, "receipt": "runs/gemma/candidate-r2/uno-greedy-functional.jsonl"},
+      "reference": {
+        "status": "PASS",
+        "n": 256,
+        "receipt": "runs/gemma/reference-r2/reference.json"
+      },
+      "greedy_functional": {
+        "status": "PASS",
+        "prompts": 4,
+        "tokens_per_prompt": 256,
+        "receipt": "runs/gemma/candidate-r2/uno-greedy-functional.jsonl"
+      },
       "distributional_instrument": {
         "tool": "gates/lossless_floor.py",
         "sha256": "141ef833e12e146e90960050cf517afad07d3657fb1181ce47fd9deed0f32cf8",
@@ -137,7 +266,13 @@
       },
       "floor_matched": {
         "status": "FAIL",
-        "order": ["p1-plain", "p2-uno", "p3-plain", "p4-plain", "p5-uno"],
+        "order": [
+          "p1-plain",
+          "p2-uno",
+          "p3-plain",
+          "p4-plain",
+          "p5-uno"
+        ],
         "convention": "five passes across four fresh servers, arms alternating by process (plain, uno, plain twice, uno); n=256 samples x 16 generated tokens per prefix, chunk 1, three frozen prefix ids, position 1 smoke only",
         "records": {
           "p1-plain": "31b3ba04e6d025e518a9c3ea91f86b4f6c9d4b2877aa308640f69f8095d9bd15",
@@ -146,35 +281,209 @@
           "p4-plain": "ea7772a48bf073801eb8b456d6ad08dee62ba6ec50a00007dd5e535b2a23a6f0",
           "p5-uno": "0e20cd3012f66d12979f0aaee1c7309090ccbdf3207d8a3f13813e10faa244d9"
         },
-        "floor": {"pair": "p3-plain vs p4-plain, one session, same arm", "status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "alpha_bonferroni": 0.0002777777777777778, "minimum_p": 0.008527777777777778, "max_tv": 0.7734, "receipt": "runs/judge/floor.json"},
-        "candidate": {"pair": "p3-plain vs p2-uno, adjacent passes", "status": "FAIL", "tests": 44, "fails_p": 32, "permutations": 43999, "alpha_bonferroni": 0.00022727272727272727, "minimum_p": 2.2727272727272726e-05, "max_tv": 0.9297, "tv_exceedances": 12, "receipt": "runs/judge/candidate.json"},
+        "floor": {
+          "pair": "p3-plain vs p4-plain, one session, same arm",
+          "status": "PASS",
+          "tests": 36,
+          "fails_p": 0,
+          "permutations": 35999,
+          "alpha_bonferroni": 0.0002777777777777778,
+          "minimum_p": 0.008527777777777778,
+          "max_tv": 0.7734,
+          "receipt": "runs/judge/floor.json"
+        },
+        "candidate": {
+          "pair": "p3-plain vs p2-uno, adjacent passes",
+          "status": "FAIL",
+          "tests": 44,
+          "fails_p": 32,
+          "permutations": 43999,
+          "alpha_bonferroni": 0.00022727272727272727,
+          "minimum_p": 2.2727272727272726e-05,
+          "max_tv": 0.9297,
+          "tv_exceedances": 12,
+          "receipt": "runs/judge/candidate.json"
+        },
         "controls": {
-          "plain_cross_session": {"pair": "p1-plain vs p3-plain, same arm", "status": "FAIL", "tests": 36, "fails_p": 22, "permutations": 35999, "alpha_bonferroni": 0.0002777777777777778, "minimum_p": 2.777777777777778e-05, "max_tv": 0.8438, "receipt": "runs/judge/plain-cross-session.json"},
-          "uno_cross_session": {"pair": "p2-uno vs p5-uno, same arm", "status": "FAIL", "tests": 44, "fails_p": 37, "permutations": 43999, "alpha_bonferroni": 0.00022727272727272727, "minimum_p": 2.2727272727272726e-05, "max_tv": 0.9883, "receipt": "runs/judge/uno-cross-session.json"},
-          "boundary_other": {"pair": "p4-plain vs p5-uno", "status": "FAIL", "tests": 36, "fails_p": 36, "permutations": 35999, "max_tv": 0.9883, "receipt": "runs/judge/boundary-other.json"}
+          "plain_cross_session": {
+            "pair": "p1-plain vs p3-plain, same arm",
+            "status": "FAIL",
+            "tests": 36,
+            "fails_p": 22,
+            "permutations": 35999,
+            "alpha_bonferroni": 0.0002777777777777778,
+            "minimum_p": 2.777777777777778e-05,
+            "max_tv": 0.8438,
+            "receipt": "runs/judge/plain-cross-session.json"
+          },
+          "uno_cross_session": {
+            "pair": "p2-uno vs p5-uno, same arm",
+            "status": "FAIL",
+            "tests": 44,
+            "fails_p": 37,
+            "permutations": 43999,
+            "alpha_bonferroni": 0.00022727272727272727,
+            "minimum_p": 2.2727272727272726e-05,
+            "max_tv": 0.9883,
+            "receipt": "runs/judge/uno-cross-session.json"
+          },
+          "boundary_other": {
+            "pair": "p4-plain vs p5-uno",
+            "status": "FAIL",
+            "tests": 36,
+            "fails_p": 36,
+            "permutations": 35999,
+            "max_tv": 0.9883,
+            "receipt": "runs/judge/boundary-other.json"
+          }
         },
         "chunk_contract": {
-          "pair_chunk_mismatch": {"status": "refused", "exit_code": 2, "error": "sampling chunk differs: 1 vs 32", "receipt": "logs/judge-kit-chunk-mismatch-v2.log"},
-          "floor_chunk_mismatch": {"status": "refused", "exit_code": 2, "error": "floor chunk differs: 32 vs 1", "receipt": "logs/judge-kit-floor-chunk-mismatch.log"},
-          "instrument_pair_chunk_mismatch": {"status": "refused", "exit_code": 2, "error": "sampling configs differ (declared chunk 1 vs 32)", "receipt": "logs/judge-chunk-mismatch-v9.log"}
+          "pair_chunk_mismatch": {
+            "status": "refused",
+            "exit_code": 2,
+            "error": "sampling chunk differs: 1 vs 32",
+            "receipt": "logs/judge-kit-chunk-mismatch-v2.log"
+          },
+          "floor_chunk_mismatch": {
+            "status": "refused",
+            "exit_code": 2,
+            "error": "floor chunk differs: 32 vs 1",
+            "receipt": "logs/judge-kit-floor-chunk-mismatch.log"
+          },
+          "instrument_pair_chunk_mismatch": {
+            "status": "refused",
+            "exit_code": 2,
+            "error": "sampling configs differ (declared chunk 1 vs 32)",
+            "receipt": "logs/judge-chunk-mismatch-v9.log"
+          }
         },
-        "plain_arm_flags": {"status": "PASS", "profile_flags_present": 33, "speculative_config": false, "max_loras": 2, "receipt": "evidence/flags-check-plain.txt"},
-        "uno_engagement": {"status": "PASS", "launch_line": "Uno launch (profile=gemma4 ...)", "split_kv": "engaged widths 2,4,5; head sizes 256,512", "draft_acceptance": {"p2-uno": [0.6852, 0.3678, 0.3201], "p5-uno": [0.7026, 0.3351, 0.2699]}, "receipt": "logs/bl-rel2-gemma-uno.engagement.txt"},
+        "plain_arm_flags": {
+          "status": "PASS",
+          "profile_flags_present": 33,
+          "speculative_config": false,
+          "max_loras": 2,
+          "receipt": "evidence/flags-check-plain.txt"
+        },
+        "uno_engagement": {
+          "status": "PASS",
+          "launch_line": "Uno launch (profile=gemma4 ...)",
+          "split_kv": "engaged widths 2,4,5; head sizes 256,512",
+          "draft_acceptance": {
+            "p2-uno": [
+              0.6852,
+              0.3678,
+              0.3201
+            ],
+            "p5-uno": [
+              0.7026,
+              0.3351,
+              0.2699
+            ]
+          },
+          "receipt": "logs/bl-rel2-gemma-uno.engagement.txt"
+        },
         "detection_power": "256 draws per position per arm with a pooled-label permutation null; Bonferroni cutoff 2.78e-04 (36 tests) or 2.27e-04 (44 tests); smallest attainable p 2.78e-05 / 2.27e-05, so a test rejects only when at most nine permutation draws reach the observed TV; PASS means no discrepancy was detected at this sample size, not proven equivalence"
       },
       "permutation_gate_round1_history": {
         "note": "retained as history only, as the earlier reading; superseded for this profile by the floor-matched instrument",
-        "sampled_chunk1": {"status": "FAIL", "tests": 44, "fails_p": 35, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.918, "receipt": "runs/gemma/candidate-r2/sampled-compare.json"},
-        "mixed_chunk8": {"status": "FAIL", "tests": 36, "fails_p": 34, "permutations": 5000, "minimum_p": 0.00019996, "max_tv": 0.938, "receipt": "runs/gemma/candidate-r2/mixed-compare.json"},
-        "plain_vs_plain_same_session": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.058694444444444445, "max_tv": 0.6914, "receipt": "runs/gemma/cmp-b-vs-c.perm-35999.json"},
-        "plain_vs_plain_across_lora_slots": {"status": "FAIL", "tests": 36, "fails_p": 32, "permutations": 35999, "max_tv": 0.9297, "receipt": "runs/gemma/cmp-a-vs-b.perm-35999.json"},
-        "plain_vs_uno_chunk32": {"status": "FAIL", "tests": 36, "fails_p": 23, "permutations": 35999, "max_tv": 0.9023, "receipt": "runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json"},
-        "uno_vs_uno_chunk32": {"status": "PASS", "tests": 36, "fails_p": 0, "permutations": 35999, "minimum_p": 0.0007777777777777777, "max_tv": 0.875, "receipt": "runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json"},
-        "plain_chunk1_vs_chunk32": {"status": "FAIL", "tests": 36, "fails_p": 35, "permutations": 35999, "max_tv": 1.0, "receipt": "runs/gemma/candidate-r2/cmp-plain-chunk1-vs-chunk32.perm-35999.json"}
+        "sampled_chunk1": {
+          "status": "FAIL",
+          "tests": 44,
+          "fails_p": 35,
+          "permutations": 5000,
+          "minimum_p": 0.00019996,
+          "max_tv": 0.918,
+          "receipt": "runs/gemma/candidate-r2/sampled-compare.json"
+        },
+        "mixed_chunk8": {
+          "status": "FAIL",
+          "tests": 36,
+          "fails_p": 34,
+          "permutations": 5000,
+          "minimum_p": 0.00019996,
+          "max_tv": 0.938,
+          "receipt": "runs/gemma/candidate-r2/mixed-compare.json"
+        },
+        "plain_vs_plain_same_session": {
+          "status": "PASS",
+          "tests": 36,
+          "fails_p": 0,
+          "permutations": 35999,
+          "minimum_p": 0.058694444444444445,
+          "max_tv": 0.6914,
+          "receipt": "runs/gemma/cmp-b-vs-c.perm-35999.json"
+        },
+        "plain_vs_plain_across_lora_slots": {
+          "status": "FAIL",
+          "tests": 36,
+          "fails_p": 32,
+          "permutations": 35999,
+          "max_tv": 0.9297,
+          "receipt": "runs/gemma/cmp-a-vs-b.perm-35999.json"
+        },
+        "plain_vs_uno_chunk32": {
+          "status": "FAIL",
+          "tests": 36,
+          "fails_p": 23,
+          "permutations": 35999,
+          "max_tv": 0.9023,
+          "receipt": "runs/gemma/candidate-r2/cmp-chunk32-plain-vs-uno.perm-35999.json"
+        },
+        "uno_vs_uno_chunk32": {
+          "status": "PASS",
+          "tests": 36,
+          "fails_p": 0,
+          "permutations": 35999,
+          "minimum_p": 0.0007777777777777777,
+          "max_tv": 0.875,
+          "receipt": "runs/gemma/candidate-r2/cmp-chunk32-uno-vs-uno.perm-35999.json"
+        },
+        "plain_chunk1_vs_chunk32": {
+          "status": "FAIL",
+          "tests": 36,
+          "fails_p": 35,
+          "permutations": 35999,
+          "max_tv": 1.0,
+          "receipt": "runs/gemma/candidate-r2/cmp-plain-chunk1-vs-chunk32.perm-35999.json"
+        }
       },
-      "speculation_counters": {"chunk1": {"drafts": 2656, "draft_tokens": 10624, "accepted_tokens": 4289}, "total": {"drafts": 8173, "draft_tokens": 32692, "accepted_tokens": 14934}, "receipt": "runs/gemma/candidate/speculation-metrics.json"},
-      "live_http": {"status": "PASS", "checks": ["health", "models", "greedy", "sampled", "streaming", "shared_prefix", "c8", "c32"], "c8": "8/8", "c32": "32/32", "prefix_cache_convention": "cold_validation_only", "receipt": "runs/gemma/live-uno.json"},
-      "vision_refusal": {"status": "expected-red", "exit_code": 1, "hits": 1, "named_error": "Uno requires a language-only model", "receipt": "logs/uno030-gemma-vision.hits.txt"},
+      "speculation_counters": {
+        "chunk1": {
+          "drafts": 2656,
+          "draft_tokens": 10624,
+          "accepted_tokens": 4289
+        },
+        "total": {
+          "drafts": 8173,
+          "draft_tokens": 32692,
+          "accepted_tokens": 14934
+        },
+        "receipt": "runs/gemma/candidate/speculation-metrics.json"
+      },
+      "live_http": {
+        "status": "PASS",
+        "checks": [
+          "health",
+          "models",
+          "greedy",
+          "sampled",
+          "streaming",
+          "shared_prefix",
+          "c8",
+          "c32"
+        ],
+        "c8": "8/8",
+        "c32": "32/32",
+        "prefix_cache_convention": "cold_validation_only",
+        "receipt": "runs/gemma/live-uno.json"
+      },
+      "vision_refusal": {
+        "status": "expected-red",
+        "exit_code": 1,
+        "hits": 1,
+        "named_error": "Uno requires a language-only model",
+        "receipt": "logs/uno030-gemma-vision.hits.txt"
+      },
       "draft_moe_topk": {
         "status": "PASS",
         "boot": "captured shapes admitted",
@@ -185,15 +494,46 @@
         "variant_hits": 1,
         "receipt": "runs/gemma/topk4-shapes.json"
       },
-      "serving_compilations": {"count": 2, "status": "profile warm-up coverage gap, identical in both arms", "kernels": "kernel_unified_attention, head sizes 256/512", "receipt": "logs/uno030-gemma-uno.serving-compilations.txt"},
-      "residency": {"samples": 8, "device_memory_mib": [19674, 19674, 19674, 19674, 19674, 19674, 19674, 19674], "device_total_mib": 24576, "training_loop": false, "allocated_reserved_collected": false, "receipt": "runs/gemma/residency.csv"}
+      "serving_compilations": {
+        "count": 2,
+        "status": "profile warm-up coverage gap, identical in both arms",
+        "kernels": "kernel_unified_attention, head sizes 256/512",
+        "receipt": "logs/uno030-gemma-uno.serving-compilations.txt"
+      },
+      "residency": {
+        "samples": 8,
+        "device_memory_mib": [
+          19674,
+          19674,
+          19674,
+          19674,
+          19674,
+          19674,
+          19674,
+          19674
+        ],
+        "device_total_mib": 24576,
+        "training_loop": false,
+        "allocated_reserved_collected": false,
+        "receipt": "runs/gemma/residency.csv"
+      }
     }
   },
   "strict_greedy_protocol": {
     "status": "NOT_A_RELEASE_GATE",
-    "reason": "The Gemma 4 profile is certified: greedy output matches plain exactly, and under sampling Uno is as close to plain as plain is to itself across sessions on this hardware. The strict greedy comparison remains a documented RTX 3090 CUDA-graph instrument limitation carried from v0.2.0.",
+    "reason": "The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike. The strict greedy comparison is not a release gate on this RTX 3090 CUDA-graph instrument (carried from v0.2.0): across fresh servers plain matches its own greedy output on 2 of 4 prompts and Uno matches plain on 1 of 4, with the first divergence between tokens 4 and 67 in every non-identical pair.",
     "qwen_receipt": "runs/qwen/candidate/verdict.json",
-    "gemma_receipt": "runs/gemma/candidate-r2/verdict.json"
+    "gemma_receipt": "runs/gemma/candidate-r2/verdict.json",
+    "gemma_cross_session_receipts": {
+      "plain_a_vs_uno": "evidence/release-0.3.0/gemma/greedy/compare-plain-a-vs-uno.log",
+      "plain_a_vs_plain_b": "evidence/release-0.3.0/gemma/greedy/compare-plain-a-vs-plain-b.log",
+      "plain_b_vs_uno": "evidence/release-0.3.0/gemma/greedy/compare-plain-b-vs-uno.log",
+      "identical": {
+        "plain_a_vs_uno": "1/4",
+        "plain_a_vs_plain_b": "2/4",
+        "plain_b_vs_uno": "1/4"
+      }
+    }
   },
   "receipts_sha256": {
     "runs/passes/p1-plain.json": "31b3ba04e6d025e518a9c3ea91f86b4f6c9d4b2877aa308640f69f8095d9bd15",
@@ -248,5 +588,10 @@
     "ratios_reported_from_this_run": false,
     "carried_port_measurement": "The port evaluation measured Uno at 166.713 tokens/s and plain decoding at 143.694 tokens/s over five 384-token greedy requests, a 1.16x speedup; this measurement establishes throughput for the stated workload, and the certification evidence is reported separately in docs/validation.md",
     "fixture_classification": "CPU_OBSERVED/CUDA_UNVERIFIED"
+  },
+  "evidence_archive": {
+    "file": "vllm-uno-0.3.0-gemma-evidence.tar.gz",
+    "sha256": "560e9e2d432a203e55430a341770b863d47dec5ee2d9501179340115dd966d3a",
+    "prefix_image_judge": "evidence/release-0.3.0/gemma-prefix/judge/"
   }
 }

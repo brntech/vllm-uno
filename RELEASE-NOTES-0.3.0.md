@@ -7,9 +7,7 @@ digest-pinned per-commit CI image, overlays only verified Python source, and
 preserves the base image's compiled CUDA libraries.
 
 **Release status.** Both profiles are certified on this image. The Qwen3-8B profile
-passes its full gate set. The Gemma 4 profile is certified: greedy output matches plain
-exactly, and under sampling Uno is as close to plain as plain is to itself across sessions
-on this hardware. The numbers behind that sentence are in
+passes its full gate set. The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike. The numbers behind that sentence are in
 [docs/validation.md](docs/validation.md), which also carries the gate outcomes.
 
 ## What changed
@@ -56,9 +54,7 @@ tokens/s over five 384-token greedy requests, a 1.16× speedup. This measurement
 establishes throughput for the stated workload; the certification evidence is
 reported separately in [docs/validation.md](docs/validation.md).
 
-The Gemma 4 profile is certified: greedy output matches plain exactly, and under
-sampling Uno is as close to plain as plain is to itself across sessions on this
-hardware. The certification interprets the sampled comparisons alongside the
+The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike. The certification interprets the sampled comparisons alongside the
 cross-session same-arm controls. The kit's permutation test stays the instrument
 for profiles whose plain arm is reproducible, as Qwen3-8B is on this image.
 

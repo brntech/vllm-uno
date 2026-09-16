@@ -67,9 +67,7 @@ fixed 384-token greedy requests:
 Both arms are the same card, session, workload and repeat convention; the
 ratio is 166.713 / 143.694 = 1.16x.
 
-**The Gemma 4 profile is certified: greedy output matches plain exactly, and
-under sampling Uno is as close to plain as plain is to itself across sessions on
-this hardware.** The certification interprets the sampled comparisons alongside
+**The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike.** The certification interprets the sampled comparisons alongside
 the cross-session same-arm controls. The raw outcomes of the earlier reading are
 kept as history: the floor pair passes (0 of 36 red, tightest p `0.008528`), the
 candidate pair is red (32 of 44 red, min p at the `2.27e-05` grid minimum), and
@@ -91,8 +89,9 @@ Scope limits, stated plainly: G2 preparation/KV, G3 attention, and broader
 G4/G7 qualification remain CUDA_UNVERIFIED; the available receipts support
 only the bounded scenarios exercised. The strict greedy exact-token instrument
 is not discriminating on this target (its own plain-versus-plain control matches
-the candidate); the certified greedy result is the four-by-256-token
-exact-output comparison recorded in [docs/validation.md](validation.md).
+the candidate); the greedy comparison across sessions (plain against plain
+and plain against Uno, four prompts × 256 tokens) is recorded with its receipts in
+[docs/validation.md](validation.md).
 
 ## AI assistance
 

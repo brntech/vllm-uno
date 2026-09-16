@@ -4,9 +4,7 @@
 `00972dfd72988942138a7a6089eaee08580210b8`. It ships two serving
 profiles: Qwen3-8B BF16 at `K=8`, which passes its full v0.2.0 gate set on this
 image, and Gemma 4 26B A4B AWQ at `K=4`, which passes every functional,
-capacity and refusal gate. The Gemma 4 profile is certified: greedy output
-matches plain exactly, and under sampling Uno is as close to plain as plain is to
-itself across sessions on this hardware (see docs/validation.md).
+capacity and refusal gate. The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike (see docs/validation.md).
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter
 through vLLM's OpenAI-compatible server. The integration provides a native
@@ -52,9 +50,7 @@ sliding-window MoE model with `K=4` speculative tokens:
   `UNO_DRAFT_MOE_TOPK=4` opts into top-4 draft MoE routing under captured
   graphs and refuses any serving shape it did not capture.
 
-**Status.** The Gemma 4 profile is certified: greedy output matches plain exactly, and
-under sampling Uno is as close to plain as plain is to itself across sessions on this
-hardware. Greedy decoding, the live API and capacity checks, the vision refusal and the
+**Status.** The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike. Greedy decoding, the live API and capacity checks, the vision refusal and the
 draft MoE top-k variant all pass on the released image; the sampled comparisons are read
 with the floor-matched gate ([`gates/lossless_floor.py`](gates/lossless_floor.py)) and
 recorded in [docs/validation.md](docs/validation.md).

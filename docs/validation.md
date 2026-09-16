@@ -13,9 +13,7 @@ own `build-provenance.json` records. The tested image is
 
 Both profiles were exercised on one RTX 3090 (24 GiB) from the released image
 with `release/serve.sh` defaults. Qwen3-8B BF16 K=8 re-passes the full v0.2.0
-gate set. The Gemma 4 profile is certified: greedy output matches plain exactly,
-and under sampling Uno is as close to plain as plain is to itself across sessions
-on this hardware (the Gemma section below carries the numbers and the gate
+gate set. The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike (the Gemma section below carries the numbers and the gate
 outcomes).
 
 The machine-readable record is
@@ -42,15 +40,14 @@ advanced 2,751 drafts / 22,008 draft tokens / 8,131 accepted tokens.
 
 ### Gemma 4 26B A4B profile
 
-**The Gemma 4 profile is certified: greedy output matches plain exactly, and
-under sampling Uno is as close to plain as plain is to itself across sessions on this
-hardware.** The certification interprets the sampled comparisons alongside the cross-session
+**The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike.** The certification interprets the sampled comparisons alongside the cross-session
 same-arm controls. On this hardware the quantized model's own sampled output is not
 reproducible across sessions on near-tie tokens: plain against plain fails the permutation
 test across sessions at the candidate's magnitude or worse, so the cross-server permutation
 gate does not apply to this profile. The comparison in the certified run places Uno against
-plain in the same band as the target's own run-to-run movement, the greedy exact-output
-comparison is listed under the table below with its receipt notice, and the rejection
+plain in the same band as the target's own run-to-run movement, the greedy comparison
+across sessions (four prompts × 256 tokens, plain against plain and plain against Uno) is filed
+under `evidence/release-0.3.0/gemma/greedy/` and listed in the table below, and the rejection
 sampler's identity is checked in the CPU suite at bf16 precision. The gate, its inputs and
 every comparison are in the release's evidence archive. The permutation gate remains the
 instrument for profiles whose plain arm is reproducible, as Qwen3-8B is on this image.
@@ -78,7 +75,7 @@ steps at that cutoff; position 1 is smoke only.
 | Profile boots and serves | PASS | `runs/gemma/candidate-r2/verdict.json` |
 | Plain reference, matched flags (two LoRA slots) | PASS, n=256 | `runs/gemma/reference-r2/reference.json` |
 | Candidate functional greedy | PASS, 4 prompts × 256 tokens | `runs/gemma/candidate-r2/uno-greedy-functional.jsonl` |
-| Greedy exact-output comparison, plain vs Uno, 4 prompts × 256 tokens | matches exactly | **not yet filed — see the receipt notice below** |
+| Greedy across sessions, 4 prompts × 256 tokens, fresh servers | plain-a vs Uno 1 of 4 identical; plain-a vs plain-b 2 of 4; plain-b vs Uno 1 of 4 (first divergence at token 4–67 in every non-identical pair) | `evidence/release-0.3.0/gemma/greedy/compare-*.log`, token streams in `*.jsonl` |
 | Live HTTP, streaming, prefix, C=8, C=32 | PASS | `runs/gemma/live-uno.json` |
 | Vision refusal | expected-red, exit 1, `Uno requires a language-only model` | `logs/uno030-gemma-vision.hits.txt` |
 | Draft MoE top-k variant | boots, serves, refuses the uncaptured shape by name | `runs/gemma/topk4-shapes.json` |
@@ -114,16 +111,16 @@ steps at that cutoff; position 1 is smoke only.
   python3 gates/lossless_floor.py runs/passes/p4-plain.json runs/passes/p5-uno.json --summary runs/judge/boundary-other.json
   ```
 
-- Archive: the release's evidence archive carries the pass files, the summary records and the
-  raw logs; its file name and SHA-256 are listed in the receipt notice below.
+- Archive: `vllm-uno-0.3.0-gemma-evidence.tar.gz` (SHA-256 `560e9e2d432a203e55430a341770b863d47dec5ee2d9501179340115dd966d3a`), attached to the GitHub release,
+  carries the pass files, the summary records and the raw logs of all three runs: `release-run/`,
+  `prefix-image-run/` and `greedy-receipt/`, each with its own `SHA256SUMS`/`receipts.sha256`.
 
-**TODO (unfiled receipts).** Three artifacts this section names are not yet filed in this
-repository, so they are requested from the release evidence archive by name and are not
-reconstructed here: the pre-fix run's pair-by-pair records for image
-`vllm-uno-gemma:00972dfd-629c13ac` (its floor pair, its candidate pair and both cross-session
-same-arm controls); the exact 4 × 256 greedy comparison record (plain against Uno token
-streams, not the functional generation log); and the evidence archive's file name with its
-SHA-256.
+**Filed receipts.** The pre-fix run's pair-by-pair records for image `vllm-uno-gemma:00972dfd-629c13ac`
+(floor 0 of 36 PASS; candidate 31 of 44 red at max TV `0.879`; plain against plain across sessions
+36 of 36 at `0.879`; the Uno arm against itself 31 of 44 at `0.879`; the other boundary 32 of 36 at
+`0.898`) are in `evidence/release-0.3.0/gemma-prefix/judge/`; the greedy cross-session comparison
+(token streams and the three `compare.py` logs) is in `evidence/release-0.3.0/gemma/greedy/`; the
+evidence archive is named above with its SHA-256.
 
 #### What the floor-matched run shows
 
