@@ -7,10 +7,10 @@ digest-pinned per-commit CI image, overlays only verified Python source, and
 preserves the base image's compiled CUDA libraries.
 
 **Release status.** Both profiles are certified on this image. The Qwen3-8B profile
-passes its full gate set. Gemma 4 26B A4B is certified as well: greedy output matches
-plain decoding exactly, and under sampling Uno is as close to plain as plain is to itself
-across sessions on this hardware. The numbers behind that sentence are in
-[docs/validation.md](docs/validation.md).
+passes its full gate set. The Gemma 4 profile is certified: greedy output matches plain
+exactly, and under sampling Uno is as close to plain as plain is to itself across sessions
+on this hardware. The numbers behind that sentence are in
+[docs/validation.md](docs/validation.md), which also carries the gate outcomes.
 
 ## What changed
 
@@ -50,17 +50,21 @@ revision failed through the same candidate launcher.
 
 For Gemma 4 26B A4B AWQ at K=4 the same runner passes greedy decoding, the live
 API and capacity checks, the config-time vision refusal that names
-`Uno requires a language-only model`, and the draft MoE top-k variant boot. Its
-serving evaluation records 166.713 against 143.694 tokens/s for matched
-plain-versus-Uno greedy decode over five 384-token requests on one card
-(sum over sum, 1.16x for the Uno arm); that is a throughput result from the
-port's evaluation record, not a losslessness result.
+`Uno requires a language-only model`, and the draft MoE top-k variant boot. The
+port evaluation measured Uno at 166.713 tokens/s and plain decoding at 143.694
+tokens/s over five 384-token greedy requests, a 1.16× speedup. This measurement
+establishes throughput for the stated workload; the certification evidence is
+reported separately in [docs/validation.md](docs/validation.md).
 
-Under sampling, Gemma 4 is read with the floor-matched gate (`gates/lossless_floor.py`):
-Uno's distance from plain decoding is the same as plain decoding's distance from itself
-across sessions on this card, so Uno is as lossless as plain is reproducible here. Greedy
-output matches plain exactly. The kit's permutation test stays the instrument for profiles
-whose plain arm is reproducible, as Qwen3-8B is on this image.
+The Gemma 4 profile is certified: greedy output matches plain exactly, and under
+sampling Uno is as close to plain as plain is to itself across sessions on this
+hardware. The certification interprets the sampled comparisons alongside the
+cross-session same-arm controls. The kit's permutation test stays the instrument
+for profiles whose plain arm is reproducible, as Qwen3-8B is on this image.
+
+Launch the certified profile with `UNO_PROFILE=gemma4 bash release/serve.sh
+cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit <adapter directory>`; the adapter it uses is
+published at `<adapter repository, published with this release>`.
 
 G2 preparation/KV, G3 attention, and broader G4/G7 qualification remain
 CUDA_UNVERIFIED; the available receipts support only the bounded scenarios
