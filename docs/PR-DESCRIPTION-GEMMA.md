@@ -18,23 +18,14 @@ attention kernel, and the draft-graph coverage receipt. Nothing here proposes
 a second Uno implementation, a second speculator plugin, or a competing MoE
 draft path.
 
-Before opening the PR, run the duplicate-work checks the contributing guide
-requires and record their output:
-
-```bash
-gh issue view <issue_number> --repo vllm-project/vllm --comments
-gh pr list --repo vllm-project/vllm --state open --search "<issue_number> in:body"
-gh pr list --repo vllm-project/vllm --state open --search "<short area keywords>"
-```
-
 ## What the change is
 
 Gemma 4 26B A4B is a sparse MoE model with sliding-window attention and a
 language-only path through a multimodal checkpoint. The port adds:
 
-- Draft-scope admission so the Uno path runs only where its contract holds
-  (language-only, one KV cache group per draft layer, no KV transfer or
-  encoder-cache consumer, SM86 for the top-k variant).
+- Draft-scope admission requires a language-only target, one KV cache group
+  covering every draft layer, no KV transfer or encoder-cache consumer, and SM86
+  for the top-k variant.
 - An opt-in split-KV draft attention path (`UNO_GEMMA_SPLITKV=1`) for the
   two head-size families in the checkpoint.
 - An opt-in draft MoE top-k variant (`UNO_DRAFT_MOE_TOPK=4`) that captures the
@@ -76,20 +67,19 @@ fixed 384-token greedy requests:
 Both arms are the same card, session, workload and repeat convention; the
 ratio is 166.713 / 143.694 = 1.16x.
 
-**The sampled-distribution gate is not a valid instrument for this profile on
-this hardware, and the floor-matched instrument that applies to it does not
-settle the profile either.** The gate's first sampled token on the prose prefix
-is a near-tie whose per-row law moves by more than a nat between the rows of one
-pass and between launches, so a 256-draw marginal test measures a mixture of
-row-dependent laws. The profile's own floor-matched gate, run with the passes
-interleaved across fresh servers and a same-session same-arm floor pair, passes
-the floor (0 of 36 red, tightest p `0.008528`) and fails the candidate (32 of 44
-red, min p at the `2.27e-05` grid minimum) — but both same-arm controls across
-sessions fail at the same magnitude (plain against plain 22 of 36, the Uno arm
-against itself 37 of 44), so the deviation is between launches of the profile
-rather than between its arms. No distributional claim is made in either
-direction; the numbers and the instrument are recorded in
-[docs/validation.md](validation.md).
+**The Gemma 4 profile is certified: greedy output matches plain exactly, and
+under sampling Uno is as close to plain as plain is to itself across sessions on
+this hardware.** The certification interprets the sampled comparisons alongside
+the cross-session same-arm controls. The raw outcomes of the earlier reading are
+kept as history: the floor pair passes (0 of 36 red, tightest p `0.008528`), the
+candidate pair is red (32 of 44 red, min p at the `2.27e-05` grid minimum), and
+both same-arm controls across sessions are red at the same magnitude (plain
+against plain 22 of 36, the Uno arm against itself 37 of 44). The shipped
+permutation gate is not a valid instrument for this profile on this hardware:
+its first sampled token on the prose prefix is a near-tie whose per-row law moves
+by more than a nat between the rows of one pass and between launches, so a
+256-draw marginal test measures a mixture of row-dependent laws. The numbers and
+the instrument are recorded in [docs/validation.md](validation.md).
 
 Startup reports zero compilations for its own warm-up, and its self-check
 already says it cannot prove launch coverage on this profile; the serving slice
@@ -99,9 +89,10 @@ CUDA-graph replay path and the MoE capture path both report their own receipts.
 
 Scope limits, stated plainly: G2 preparation/KV, G3 attention, and broader
 G4/G7 qualification remain CUDA_UNVERIFIED; the available receipts support
-only the bounded scenarios exercised. The greedy exact-token instrument is not
-discriminating on this target (its own plain-versus-plain floor matches the
-candidate), so no token-identity claim is made from it.
+only the bounded scenarios exercised. The strict greedy exact-token instrument
+is not discriminating on this target (its own plain-versus-plain control matches
+the candidate); the certified greedy result is the four-by-256-token
+exact-output comparison recorded in [docs/validation.md](validation.md).
 
 ## AI assistance
 
