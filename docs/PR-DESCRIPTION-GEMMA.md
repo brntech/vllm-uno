@@ -76,19 +76,19 @@ fixed 384-token greedy requests:
 Both arms are the same card, session, workload and repeat convention; the
 ratio is 166.713 / 143.694 = 1.16x.
 
-**The sampled-distribution gate does not pass on the released image.** With both
-arms on identical flags, the Uno arm differs from the matched plain arm at every
-position and joint the gate tests: 35 of 44 tests red at the shipped chunk-1
-convention, 34 of 36 at chunk 8, and 23 of 36 at chunk 32, with the p-value at
-the minimum the permutation budget can express. A plain-versus-plain control on
-the same image and flags is clean (0 of 36, tightest p `0.0587`). The sharpest
-signature is the first sampled token of the prose prefix, where the Uno arm
-returns one token for all 256 draws and plain spreads over four; position one is
-the first draft-and-verify cycle, before any later cycle can compound an error.
-The controls do not separate a verification path that differs semantically from
-plain from a plain control that runs a different attention kernel than the Uno
-verify pass — a pure LoRA-slot change on the plain arm alone is red 32 of 36 —
-so the distributional claim is withdrawn and the separating run is named in
+**The sampled-distribution gate is not a valid instrument for this profile on
+this hardware, and the floor-matched instrument that applies to it does not
+settle the profile either.** The gate's first sampled token on the prose prefix
+is a near-tie whose per-row law moves by more than a nat between the rows of one
+pass and between launches, so a 256-draw marginal test measures a mixture of
+row-dependent laws. The profile's own floor-matched gate, run with the passes
+interleaved across fresh servers and a same-session same-arm floor pair, passes
+the floor (0 of 36 red, tightest p `0.008528`) and fails the candidate (32 of 44
+red, min p at the `2.27e-05` grid minimum) — but both same-arm controls across
+sessions fail at the same magnitude (plain against plain 22 of 36, the Uno arm
+against itself 37 of 44), so the deviation is between launches of the profile
+rather than between its arms. No distributional claim is made in either
+direction; the numbers and the instrument are recorded in
 [docs/validation.md](validation.md).
 
 Startup reports zero compilations for its own warm-up, and its self-check
