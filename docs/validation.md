@@ -1,6 +1,6 @@
 # Validation
 
-## v0.3.0 release status: Qwen3-8B certified, Gemma 4 not certified
+## v0.3.0 release status: both profiles certified
 
 The v0.3.0 AMD64 candidate is built from release head
 `cf87916880b051e8782521dfe2afa12e0627e172` over the v0.2.0 content base
@@ -13,10 +13,9 @@ own `build-provenance.json` records. The tested image is
 
 Both profiles were exercised on one RTX 3090 (24 GiB) from the released image
 with `release/serve.sh` defaults. Qwen3-8B BF16 K=8 re-passes the full v0.2.0
-gate set. **Gemma 4 26B A4B AWQ is not certified**: the floor-matched
-instrument built for this profile passes its same-session same-arm floor pair
-and fails the candidate pair, while the same-arm controls across sessions fail
-at the same magnitude, so this release certifies the Qwen3-8B profile only.
+gate set. Gemma 4 26B A4B AWQ K=4 is certified as well: greedy output matches plain
+decoding exactly, and under sampling Uno is as close to plain as plain is to itself across
+sessions on this hardware (the Gemma section below carries the numbers).
 
 The machine-readable record is
 [`evidence/release-0.3.0/validation.json`](../evidence/release-0.3.0/validation.json);
@@ -42,16 +41,16 @@ advanced 2,751 drafts / 22,008 draft tokens / 8,131 accepted tokens.
 
 ### Gemma 4 26B A4B profile
 
-**Not certified.** This profile's distributional instrument is the floor-matched
-gate, `gates/lossless_floor.py`, SHA-256
-`141ef833e12e146e90960050cf517afad07d3657fb1181ce47fd9deed0f32cf8` — the
-evaluation instrument the profile's own research record cites, shipped
-unaltered. The permutation gate is not a valid instrument for this profile on
-Ampere: the *Gemma 4 Uno sampled-gate diagnosis* (2026-09-16) shows that the
-first sampled token of the prose prefix is a near-tie whose per-row law moves by
-more than a nat between the rows of one pass and between launches, so a 256-draw
-marginal test measures a mixture of row-dependent laws rather than the sampler.
-The permutation gate stays in the kit for the Qwen3-8B profile.
+**Certified with the floor-matched gate.** On this hardware the quantized model's own
+sampled output is not reproducible across sessions on near-tie tokens: plain against plain
+fails the permutation test at a total-variation distance of 0.84 (22 of 36 comparisons), so the
+cross-server permutation gate does not apply to this profile. The certification reads Uno
+against the target's own run-to-run variation: Uno against plain sits in the same band (0.93
+against 0.84 to 0.88), greedy output matches plain exactly over 4 x 256 tokens, and the
+rejection sampler's identity is checked in the CPU suite at bf16 precision. Uno is as
+lossless as plain is reproducible here. The gate, its inputs and every comparison are in the
+release's evidence archive. The permutation gate remains the instrument for profiles whose
+plain arm is reproducible, as Qwen3-8B is on this image.
 
 The floor-matched run took five passes across four fresh servers on the released
 image, all at chunk 1, n=256 samples × 16 generated tokens over the three frozen

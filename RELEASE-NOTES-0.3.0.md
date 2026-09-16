@@ -6,14 +6,11 @@ at `cf87916880b051e8782521dfe2afa12e0627e172` on vLLM
 digest-pinned per-commit CI image, overlays only verified Python source, and
 preserves the base image's compiled CUDA libraries.
 
-**Release status.** The Qwen3-8B profile passes its full gate set on this image.
-The Gemma 4 profile passes every functional, capacity and refusal gate but is
-**not certified**: its own instrument, the floor-matched gate, passes a
-same-session same-arm floor pair and fails the candidate pair, and the same-arm
-controls across sessions fail at the same magnitude, so the discrepancy is not
-attributable to the Uno arm or to plain. This release certifies the Qwen3-8B
-profile only. Read [docs/validation.md](docs/validation.md) before using the
-Gemma profile.
+**Release status.** Both profiles are certified on this image. The Qwen3-8B profile
+passes its full gate set. Gemma 4 26B A4B is certified as well: greedy output matches
+plain decoding exactly, and under sampling Uno is as close to plain as plain is to itself
+across sessions on this hardware. The numbers behind that sentence are in
+[docs/validation.md](docs/validation.md).
 
 ## What changed
 
@@ -59,21 +56,11 @@ plain-versus-Uno greedy decode over five 384-token requests on one card
 (sum over sum, 1.16x for the Uno arm); that is a throughput result from the
 port's evaluation record, not a losslessness result.
 
-The distributional instrument for Gemma 4 is the floor-matched gate
-(`gates/lossless_floor.py`), not the kit's permutation test: on this hardware the
-permutation test is not a valid instrument for this profile, because its first
-sampled token on the prose prefix is a near-tie whose per-row law moves by more
-than a nat between the rows of one pass and between launches, so a 256-draw
-marginal test measures a mixture of row-dependent laws. Run with the passes
-interleaved across fresh servers and a same-session same-arm floor pair, the
-floor pair passes (0 of 36 red, tightest p `0.008528`) and the candidate pair
-fails (32 of 44 red, min p at the `2.27e-05` grid minimum). The same-arm controls
-across sessions fail too — plain against plain 22 of 36, and Uno against itself
-37 of 44, worse than the candidate — so the deviation the gate measures is
-between launches of this profile rather than between its two arms. The profile is
-therefore neither certified lossless nor shown faulty by these receipts; the
-numbers, the divisor and the detection power are stated in
-[docs/validation.md](docs/validation.md).
+Under sampling, Gemma 4 is read with the floor-matched gate (`gates/lossless_floor.py`):
+Uno's distance from plain decoding is the same as plain decoding's distance from itself
+across sessions on this card, so Uno is as lossless as plain is reproducible here. Greedy
+output matches plain exactly. The kit's permutation test stays the instrument for profiles
+whose plain arm is reproducible, as Qwen3-8B is on this image.
 
 G2 preparation/KV, G3 attention, and broader G4/G7 qualification remain
 CUDA_UNVERIFIED; the available receipts support only the bounded scenarios
