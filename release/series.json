@@ -2,7 +2,7 @@
   "base_commit": "00972dfd72988942138a7a6089eaee08580210b8",
   "code_base": "3ad49350281a6b73de58449aadb293a8b398fb5d",
   "head_commit": "cf87916880b051e8782521dfe2afa12e0627e172",
-  "final_tree": "4da8b19f944050655e21e89ceb37562a324755d0",
+  "final_tree": "99227666da0498bbaba12534b9834176d2bfd9f2",
   "patches": [
     {
       "file": "0001-uno-mrv2-base.patch",
@@ -70,11 +70,13 @@
     },
     {
       "file": "0003-uno-hybrid-kv-draft-vocab.patch",
-      "sha256_lf": "297a9b2e23d8cad031b238e4c8a344e45a47f863e994eb59187864e99b3aaf7f",
+      "sha256_lf": "60f5ac8f9894c2192630ff0845579e18390eecc53764798a3cb33557147f1ee8",
       "files": [
+        "tests/v1/core/test_scheduler.py",
         "tests/v1/spec_decode/test_uno_draft_rows_kv.py",
         "tests/v1/spec_decode/test_uno_draft_vocab.py",
         "vllm/lora/layers/base_linear.py",
+        "vllm/v1/core/sched/scheduler.py",
         "vllm/v1/worker/gpu/spec_decode/uno.py"
       ]
     }

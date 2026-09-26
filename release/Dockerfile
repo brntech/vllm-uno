@@ -12,7 +12,7 @@ LABEL org.opencontainers.image.title="Uno for vLLM" \
       ai.uno.upstream.commit="00972dfd72988942138a7a6089eaee08580210b8" \
       ai.uno.head.commit="cf87916880b051e8782521dfe2afa12e0627e172" \
       ai.uno.gemma4.layer.commit="cf87916880b051e8782521dfe2afa12e0627e172" \
-      ai.uno.release.tree="4da8b19f944050655e21e89ceb37562a324755d0"
+      ai.uno.release.tree="99227666da0498bbaba12534b9834176d2bfd9f2"
 # build.sh supplies only files named in release/assets.json.
 COPY . .
 # The CI image embeds the exact source repository at its build commit. Clone

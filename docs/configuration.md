@@ -12,7 +12,7 @@ model and KV cache, while the adapter is active only on noisy draft rows.
 | Upstream vLLM base commit | `00972dfd72988942138a7a6089eaee08580210b8` |
 | Code base (v0.2.0 content) | `3ad49350281a6b73de58449aadb293a8b398fb5d` |
 | Release head (Gemma 4 layer) | `cf87916880b051e8782521dfe2afa12e0627e172` |
-| Reconstructed release tree | `4da8b19f944050655e21e89ceb37562a324755d0` (v0.3.0's was `0149f03eb8287bdfdcc916752b3851405695d350`) |
+| Reconstructed release tree | `99227666da0498bbaba12534b9834176d2bfd9f2` (v0.3.0's was `0149f03eb8287bdfdcc916752b3851405695d350`) |
 | Base image | `public.ecr.aws/q9t5s3a7/vllm-ci-postmerge-repo:00972dfd72988942138a7a6089eaee08580210b8@sha256:d55cb6858435cda5ab080987213b4a6b6bfce14ca9e0ffa2ecfab2b222818497` |
 | Base vLLM version | `0.29.1rc1.dev99+g00972dfd7` |
 | Patch series | `0001-uno-mrv2-base.patch`, `0002-uno-gemma4.patch`, then `0003-uno-hybrid-kv-draft-vocab.patch` |

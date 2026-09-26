@@ -1,5 +1,34 @@
+diff --git a/tests/v1/core/test_scheduler.py b/tests/v1/core/test_scheduler.py
+index cf5e5b1cd7..5f0c3f862e 100644
+--- a/tests/v1/core/test_scheduler.py
++++ b/tests/v1/core/test_scheduler.py
+@@ -1556,6 +1556,24 @@ def test_uno_reserves_suffix_before_first_draft(
+     assert manager.block_pool.get_num_free_blocks() == num_available_blocks
+ 
+ 
++def test_uno_never_pads_a_cached_one_token_prefill(uno_scheduler_factory):
++    """A prefix-cache hit that leaves one prompt token is a one-token prefill, not a resumed decode: padding it to
++    1 + K rows would verify placeholder drafts Uno never proposed, and probabilistic verification accepts them."""
++    scheduler = uno_scheduler_factory(enable_prefix_caching=True, num_blocks=32)
++    first, second = create_requests(
++        num_requests=2, num_tokens=9, same_prompt=True, block_size=4
++    )
++    scheduler.add_request(first)
++    assert scheduler.schedule().num_scheduled_tokens == {first.request_id: 9}
++    scheduler.finish_requests(first.request_id, RequestStatus.FINISHED_ABORTED)
++
++    scheduler.add_request(second)
++    output = scheduler.schedule()
++    # Eight of the nine prompt tokens are prefix-cache hits; only the last one is computed.
++    assert output.num_scheduled_tokens == {second.request_id: 1}
++    assert not output.scheduled_spec_decode_tokens
++
++
+ def test_uno_terminal_length_bound_skips_only_all_terminal_batches(
+     uno_scheduler_factory,
+ ):
 diff --git a/tests/v1/spec_decode/test_uno_draft_rows_kv.py b/tests/v1/spec_decode/test_uno_draft_rows_kv.py
-index ced0bb3dd4..286d256a56 100644
+index ced0bb3dd4..a73edc09a4 100644
 --- a/tests/v1/spec_decode/test_uno_draft_rows_kv.py
 +++ b/tests/v1/spec_decode/test_uno_draft_rows_kv.py
 @@ -2,12 +2,13 @@
@@ -22,7 +51,20 @@ index ced0bb3dd4..286d256a56 100644
  """
  
  from types import SimpleNamespace
-@@ -91,32 +92,47 @@ def test_promoted_sliding_window_group_is_admitted(proposer):
+@@ -81,42 +82,58 @@ def test_full_attention_group_is_admitted(proposer):
+ 
+ 
+ def test_promoted_sliding_window_group_is_admitted(proposer):
+-    """Full allocation promotes local layers to full-attention KV specs."""
++    """Full allocation (hybrid KV manager off) promotes local layers to full-attention KV specs that keep their
++    window; each layer's kernel bounds the window over the full allocation."""
+     spec = _uniform(
+         {
+-            "layer.0.self_attn.attn": _full_attention(),
++            "layer.0.self_attn.attn": _full_attention(window=KB),
+             "layer.1.self_attn.attn": _full_attention(),
+         }
+     )
      _set_attn(proposer, [_group(spec)])
  
  
@@ -200,8 +242,25 @@ index df7cfe7122..c8ac24ec05 100644
          num_tokens = x.size(0) if x.ndim == 2 else x.size(1)
          output_size = sum(self.output_slices)
  
+diff --git a/vllm/v1/core/sched/scheduler.py b/vllm/v1/core/sched/scheduler.py
+index 86b20e01da..031c4c78b1 100644
+--- a/vllm/v1/core/sched/scheduler.py
++++ b/vllm/v1/core/sched/scheduler.py
+@@ -1056,8 +1056,12 @@ class Scheduler(SchedulerInterface):
+                     # Pad new decode requests to uniform spec decoding size to
+                     # preserve full cudagraph for this step.
+                     # Not for diffusion where draft tokens can't be padded.
++                    # Never for Uno: a new request whose prefix-cache hit leaves one token (or a resumed one)
++                    # would be verified against placeholder drafts it never proposed, and Uno's probabilistic
++                    # verification accepts them (token 0 with draft probability 0).
+                     if (
+                         (self.num_spec_tokens > 0 and self.dynamic_sd_lookup is None)
++                        and not self.use_uno
+                         and self.num_sampled_tokens_per_step > 0
+                         and num_new_tokens == 1
+                         and not prefill_scheduled
 diff --git a/vllm/v1/worker/gpu/spec_decode/uno.py b/vllm/v1/worker/gpu/spec_decode/uno.py
-index 385f017b2b..16e22a2a4f 100644
+index 385f017b2b..5a5ec02c10 100644
 --- a/vllm/v1/worker/gpu/spec_decode/uno.py
 +++ b/vllm/v1/worker/gpu/spec_decode/uno.py
 @@ -50,6 +50,43 @@ if TYPE_CHECKING:
@@ -372,9 +431,9 @@ index 385f017b2b..16e22a2a4f 100644
 +                return False
 +            if type(layer_spec) is _SWS:
 +                return True
-+            return is_full_attention_spec(layer_spec) and getattr(
-+                layer_spec, "sliding_window", None
-+            ) is None
++            # Full attention, including a sliding-window layer promoted to a full allocation (hybrid KV manager off:
++            # FullAttentionSpec with sliding_window set; its kernel bounds the window over a full KV allocation).
++            return is_full_attention_spec(layer_spec)
 +
 +        for group in groups:
 +            if not all(_admissible(ls) for ls in iter_layer_specs(group.kv_cache_spec)):

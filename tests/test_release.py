@@ -183,9 +183,10 @@ class ReleaseTests(unittest.TestCase):
                          ["0001-uno-mrv2-base.patch", "0002-uno-gemma4.patch",
                           "0003-uno-hybrid-kv-draft-vocab.patch"])
         self.assertEqual(data["patches"][2]["files"],
-                         ["tests/v1/spec_decode/test_uno_draft_rows_kv.py", "tests/v1/spec_decode/test_uno_draft_vocab.py",
-                          "vllm/lora/layers/base_linear.py", "vllm/v1/worker/gpu/spec_decode/uno.py"])
-        self.assertEqual(data["final_tree"], "4da8b19f944050655e21e89ceb37562a324755d0")
+                         ["tests/v1/core/test_scheduler.py", "tests/v1/spec_decode/test_uno_draft_rows_kv.py",
+                          "tests/v1/spec_decode/test_uno_draft_vocab.py", "vllm/lora/layers/base_linear.py",
+                          "vllm/v1/core/sched/scheduler.py", "vllm/v1/worker/gpu/spec_decode/uno.py"])
+        self.assertEqual(data["final_tree"], "99227666da0498bbaba12534b9834176d2bfd9f2")
         gemma = data["patches"][1]["files"]
         for module in ("vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py",
                        "vllm/v1/attention/ops/triton_unified_attention.py",
