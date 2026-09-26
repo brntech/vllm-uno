@@ -1,5 +1,70 @@
 # Validation
 
+## v0.4.0 release status: Gemma 4 long-context profile validated
+
+One NVIDIA RTX 3090 (24 GB), Linux AMD64, `cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit` revision
+`0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba`, the P10K Uno adapter (rank 16; `adapter_model.safetensors` sha256
+`2f9e7c8f3db6f0259bbf7699ab0fc2f36e19185956f3364d97cef56e11544629`), `K=4`. Two stages, 2026-09-26:
+
+1. **Release candidate, controlled comparison.** v0.3.0 plus the two v0.4.0 files and the draft vocabulary, served with
+   fixed lab flags (one request at a time for production traffic, prefix caching off, split-KV draft attention on),
+   against the development build the long-context results were first measured on and against plain decoding on the
+   same image. Plain, candidate and development arms alternate (ABBA), two fresh servers each.
+2. **Release image through its own launcher.** `ghcr.io/brntech/vllm-uno:0.4.0` built by `release/build.sh` (its two
+   changed Python files are byte-identical to stage 1's), launched by `release/serve.sh` with `UNO_PROFILE=gemma4` and
+   no overrides except the served-model name and the Gemma 4 tool and reasoning parsers the production payloads use.
+
+### Speed
+
+Production traffic: 72 real requests, replayed one at a time, milliseconds per output token on the HTTP clock.
+
+| arm | ms per token | x plain | tokens per cycle |
+| --- | --- | --- | --- |
+| plain | 7.542 / 7.551 | 1.00 | - |
+| release candidate (stage 1) | 4.975 / 4.952 | 1.52 | 3.67 / 3.69 |
+| release image, shipped profile (stage 2) | 4.926 / 4.910 | 1.53 | 3.69 / 3.71 |
+
+Long prompts: open documents at six lengths, 16 requests per length in stage 1 (8 in stage 2), summarizing and story
+tasks, median decode milliseconds per output token at 32k context. Plain and the DFlash drafter
+(`z-lab/gemma-4-26B-A4B-it-DFlash`, K=8, its own recommended configuration) were measured on the same card and model.
+
+| prompt tokens | plain | DFlash | stage 1 | stage 2 | stage 2 x plain | DFlash x plain |
+| --- | --- | --- | --- | --- | --- | --- |
+| ~2,000 | 7.56 | 6.09 | 5.21 | 5.24 | 1.44 | 1.24 |
+| ~6,100 | 8.08 | 8.44 | 5.94 | 5.76 | 1.40 | 0.96 |
+| ~10,000 | 8.52 | 8.91 | 6.28 | 6.21 | 1.37 | 0.96 |
+| ~13,900 | 8.74 | 11.60 | 6.49 | 6.36 | 1.37 | 0.75 |
+| ~20,000 | 9.42 | 13.49 | 7.34 | 7.18 | 1.31 | 0.70 |
+| ~27,700 | 9.80 | 14.90 | 7.71 | 7.49 | 1.31 | 0.66 |
+
+At 32k the shipped profile holds 79,022 tokens of KV; DFlash held 45,885 to 69,025 on the same card and settings.
+
+### Lossless
+
+Same instruments as v0.3.0's development runs, stage 1, the candidate against fresh plain servers:
+
+| check | candidate vs plain | plain vs plain |
+| --- | --- | --- |
+| greedy replay of the 72 production requests, responses that diverge | 56, 57 | 58 |
+| sampled distributions, 24 production prompts x 96 samples x first 8 tokens, mean total variation | 0.047 / 0.034 / 0.044 | 0.045 / 0.044 / 0.038 |
+| sampled distributions, six 3k-14k-token documents x 64 samples x first 8 tokens, mean total variation | 0.212 / 0.224 / 0.197 | 0.227 / 0.213 / 0.203 |
+
+Every long document exceeds the 1,024-token sliding window, so the hybrid-KV path (sliding groups freeing old blocks
+while draft rows write per-group slots) is exercised. Greedy decoding is not bit-exact across servers on this card for
+plain decoding either; the comparison is against that plain-versus-plain range.
+
+### What stage 2 caught
+
+The first stage-2 image left split-KV draft attention opt-in, as v0.3.0 did, and ran 28k-token prompts at 13.6 ms per
+token. Every stage-1 run had it on. The gemma4 profile now turns it on by default; the numbers above are the rebuilt
+image.
+
+### Scope
+
+One GPU type. Production traffic is measured one request at a time; with several users sending long prompts at once,
+prompt processing dominates and plain decoding keeps pace with speculative methods. The Qwen3-8B profile is unchanged
+from v0.3.0 and keeps its v0.3.0 gate record below.
+
 ## v0.3.0 release status: both profiles certified
 
 The v0.3.0 AMD64 candidate is built from release head

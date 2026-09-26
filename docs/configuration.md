@@ -1,6 +1,6 @@
 # Configuration
 
-Uno for vLLM v0.3.0 supports two reproducible single-GPU serving profiles on
+Uno for vLLM v0.4.0 supports two reproducible single-GPU serving profiles on
 Linux AMD64: Qwen3-8B BF16 at `K=8` and Gemma 4 26B A4B AWQ at `K=4`. Both
 package the Model Runner V2 implementation: the Uno draft shares the target
 model and KV cache, while the adapter is active only on noisy draft rows.
@@ -12,10 +12,10 @@ model and KV cache, while the adapter is active only on noisy draft rows.
 | Upstream vLLM base commit | `00972dfd72988942138a7a6089eaee08580210b8` |
 | Code base (v0.2.0 content) | `3ad49350281a6b73de58449aadb293a8b398fb5d` |
 | Release head (Gemma 4 layer) | `cf87916880b051e8782521dfe2afa12e0627e172` |
-| Reconstructed release tree | `0149f03eb8287bdfdcc916752b3851405695d350` |
+| Reconstructed release tree | `e5c6278877bab3a6fdba5a26babdf321c3ce2bdb` (v0.3.0's was `0149f03eb8287bdfdcc916752b3851405695d350`) |
 | Base image | `public.ecr.aws/q9t5s3a7/vllm-ci-postmerge-repo:00972dfd72988942138a7a6089eaee08580210b8@sha256:d55cb6858435cda5ab080987213b4a6b6bfce14ca9e0ffa2ecfab2b222818497` |
 | Base vLLM version | `0.29.1rc1.dev99+g00972dfd7` |
-| Patch series | `0001-uno-mrv2-base.patch`, then `0002-uno-gemma4.patch` |
+| Patch series | `0001-uno-mrv2-base.patch`, `0002-uno-gemma4.patch`, then `0003-uno-hybrid-kv-draft-vocab.patch` |
 | Distribution platform | `linux/amd64` only |
 
 The per-commit CI image is AMD64-only. An ARM64 image follows when vLLM tags a
@@ -26,7 +26,9 @@ it to a clean exact-base checkout; a second invocation verifies the
 already-applied tree without creating a source commit. The first patch
 reconstructs the v0.2.0 release tree (`6ceef9dfa043d9a2d3f930522ecc7480105aa5a7`)
 on the newer upstream commit; the second carries the Gemma 4 port, and every
-file in it is Python or Markdown.
+file in it is Python or Markdown. The third (v0.4.0) changes two Python files:
+`vllm/v1/worker/gpu/spec_decode/uno.py` (hybrid-KV drafting and the draft
+vocabulary) and `vllm/lora/layers/base_linear.py` (the inactive-adapter bypass).
 
 ## Profiles
 
@@ -81,46 +83,46 @@ It is not a 32-active-sequence profile or a performance cell.
 | Model precision | BF16 activations over AWQ 4-bit weights |
 | Attention backend | `TRITON_ATTN` (Gemma 4's head sizes force it for the Uno path) |
 | Multimodal scope | `--language-model-only`; a vision request is refused by name |
-| KV cache manager | `--disable-hybrid-kv-cache-manager` (one KV group per draft layer) |
+| KV cache manager | vLLM's hybrid manager (five sliding-window groups and one full-attention group); the drafter writes its rows' slots into every group |
 | Scheduling | asynchronous; prefix caching and vLLM V1 chunked prefill |
 | Server seed | 29 |
-| Maximum model length | 8,192 tokens |
-| Maximum active sequences | 4 |
+| Maximum model length | 32,768 tokens (`UNO_MAX_MODEL_LEN` overrides) |
+| Maximum active sequences | 8 |
 | Maximum batched tokens | 2,048 |
-| GPU memory utilization | `0.85` |
-| CUDA graph capture sizes | `[1,2,3,4,5,6,7,8,13,14,15,16]` |
+| GPU memory utilization | `0.90` (79,022 tokens of KV at 32k on a 24 GB RTX 3090) |
+| CUDA graph capture sizes | `[1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40]` |
 | LoRA capacity | rank 16, 2 slots (the Uno path reserves one for its shared adapter), target modules `qkv_proj o_proj gate_up_proj down_proj` |
-| Split-KV draft attention | off by default; `UNO_GEMMA_SPLITKV=1` opts in, and that is the configuration the release measurements used |
+| Split-KV draft attention | on by default since v0.4.0 (`UNO_GEMMA_SPLITKV=0` turns it off); every release measurement used it, and without it draft attention over a long cache dominates (28k-token prompts: 13.6 vs 7.5 ms per token) |
+| Draft vocabulary | on by default since v0.4.0: `UNO_DRAFT_VOCAB=/opt/uno-kit/release/gemma4-draft-vocab-65536.json` (65,536 Gemma 4 token ids ranked on open data); an empty value restores the full-vocabulary draft head; verification always scores the full vocabulary |
 | Draft MoE top-k | off by default; `UNO_DRAFT_MOE_TOPK=4` opts in (SM86 only) |
 | Generation defaults | `--generation-config vllm` |
 
-The Gemma capacity bound is `max_num_seqs=4` times `K=4`, so the largest served
-draft row shape is 16 rows, covered by the 16 capture cell. The intermediate
-cells keep the 4-, 8- and 12-row shapes on captured graphs: a 12-row dispatch
-pads up to the captured 13-row descriptor, which is why the capture list names
-13 through 16 individually. Eight and 32 concurrent client requests are
-functional capacity checks that queue behind the four-sequence admission limit.
+The Gemma capacity bound is `max_num_seqs=8` times `K=4`, so the largest served
+draft row shape is 32 rows; every multiple of four up to 32 is a capture cell,
+and 40 covers the largest verify batch (eight requests times `K+1`).
 
-Two engine-side switches are read from the process environment and are not
+Three engine-side switches are read from the process environment and are not
 CLI flags:
 
 | Variable | Effect |
 |---|---|
-| `UNO_GEMMA_SPLITKV=1` | Segments the draft attention over the KV axis and logs the engaged `width`, `head_size`, `q_heads`, `kv_heads` and `segments` per head family |
+| `UNO_GEMMA_SPLITKV` | `1` (gemma4 default) segments the draft attention over the KV axis and logs the engaged `width`, `head_size`, `q_heads`, `kv_heads` and `segments` per head family; `0` turns it off |
+| `UNO_DRAFT_VOCAB` | Path to a JSON file `{"token_ids": [...]}`: the draft head scores only those ids (gemma4 default: the shipped 64k list); empty or unset is the full-vocabulary draft head |
 | `UNO_DRAFT_MOE_TOPK=4` | Captures the draft MoE routers at top-4 while the verifier keeps the configured top-8; an uncaptured serving shape is refused by dispatch key, environment variable and variant name |
 
 `UNO_DRAFT_MOE_TOPK=4` requires an SM86 device, tensor parallelism 1, and a
 capture list whose captured draft-row counts cover every serving shape the
 operator intends to run. It is validated on the capture list
 `[1,2,3,4,5,6,7,8]`, which serves one- and two-sequence requests and refuses a
-four-sequence (16 draft row) request.
+four-sequence (16 draft row) request. It was validated on v0.3.0's profile and is not part of the v0.4.0 measurements;
+re-gate it before combining it with the v0.4.0 hybrid-KV profile.
 
 ## Build settings
 
 Build AMD64 only:
 
 ```bash
-PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.3.0
+PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.4.0
 ```
 
 `BASE_IMAGE` must retain the shown immutable digest and commit-matched

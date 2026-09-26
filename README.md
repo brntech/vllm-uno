@@ -1,10 +1,12 @@
 # Uno for vLLM
 
-**v0.3.0** is the Model Runner V2 release kit for Uno on vLLM
-`00972dfd72988942138a7a6089eaee08580210b8`. It ships two serving
-profiles: Qwen3-8B BF16 at `K=8`, which passes its full v0.2.0 gate set on this
-image, and Gemma 4 26B A4B AWQ at `K=4`, which passes every functional,
-capacity and refusal gate. The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike (see docs/validation.md).
+**v0.4.0** makes Uno a long-context speculator on Gemma 4 26B A4B. On one RTX 3090 the Gemma 4 profile decodes
+**1.53x faster than plain** on production traffic and **1.31x to 1.44x faster on prompts from 2k to 28k tokens**, with
+the output distribution of the model on its own; it starts at 32k context with 79k tokens of KV. The drafter now runs
+on Gemma 4's hybrid (sliding-window + full-attention) KV layout, scores a 64k-token draft vocabulary while verification
+keeps the full one, and the verify pass skips the adapter branch. The kit is v0.3.0 plus one patch on vLLM
+`00972dfd72988942138a7a6089eaee08580210b8`; the Qwen3-8B BF16 profile at `K=8` is unchanged (see
+[RELEASE-NOTES-0.4.0.md](RELEASE-NOTES-0.4.0.md) and [docs/validation.md](docs/validation.md)).
 
 Uno for vLLM runs [IFM's Uno](https://github.com/ifm-ai/uno) diffusion adapter
 through vLLM's OpenAI-compatible server. The integration provides a native
@@ -42,18 +44,21 @@ sliding-window MoE model with `K=4` speculative tokens:
 - `cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit` (AWQ 4-bit) with a trained Uno
   adapter, `--language-model-only`, `TRITON_ATTN`, and the base image's
   Marlin MoE kernels.
-- `--max-num-seqs 4`, `--max-num-batched-tokens 2048`,
-  `--max-model-len 8192`, `--gpu-memory-utilization 0.85`, and capture sizes
-  `[1,2,3,4,5,6,7,8,13,14,15,16]` covering the 16-draft-row bound
-  (`4 sequences * K=4`).
-- `UNO_GEMMA_SPLITKV=1` opts into split-KV draft attention;
-  `UNO_DRAFT_MOE_TOPK=4` opts into top-4 draft MoE routing under captured
-  graphs and refuses any serving shape it did not capture.
+- vLLM's hybrid KV cache manager on (the drafter writes its rows into every
+  sliding-window and full-attention group), `--max-model-len 32768`
+  (`UNO_MAX_MODEL_LEN` overrides), `--max-num-seqs 8`,
+  `--max-num-batched-tokens 2048`, `--gpu-memory-utilization 0.90`, and capture
+  sizes covering every draft shape up to 32 rows (`8 sequences * K=4`) and the
+  40-row verify batch.
+- On by default: split-KV draft attention (`UNO_GEMMA_SPLITKV=0` turns it off)
+  and the shipped 64k Gemma 4 draft vocabulary (an empty `UNO_DRAFT_VOCAB=`
+  turns it off). `UNO_DRAFT_MOE_TOPK=4` still opts into top-4 draft MoE routing
+  under captured graphs and refuses any serving shape it did not capture.
 
-**Status.** The Gemma 4 profile is certified: Uno is as close to plain as plain is to itself across sessions on this hardware, under greedy and sampled decoding alike. Greedy decoding, the live API and capacity checks, the vision refusal and the
-draft MoE top-k variant all pass on the released image; the sampled comparisons are read
-with the floor-matched gate ([`gates/lossless_floor.py`](gates/lossless_floor.py)) and
-recorded in [docs/validation.md](docs/validation.md).
+**Status.** The v0.4.0 Gemma 4 profile keeps Uno's lossless property on this hardware: greedy replays and sampled
+distributions against plain servers sit inside the plain-versus-plain range, on short production prompts and on
+3k-14k-token documents ([docs/validation.md](docs/validation.md)). The v0.3.0 certification and its floor-matched gate
+([`gates/lossless_floor.py`](gates/lossless_floor.py)) remain recorded there.
 
 The digest-pinned per-commit base image is AMD64-only. An ARM64 image follows
 when vLLM publishes a release image containing this base.
@@ -63,7 +68,7 @@ when vLLM publishes a release image containing this base.
 After the maintainer publishes the release, pull the AMD64 image:
 
 ```bash
-docker pull ghcr.io/brntech/vllm-uno:0.3.0
+docker pull ghcr.io/brntech/vllm-uno:0.4.0
 ```
 
 Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured
@@ -77,7 +82,7 @@ loopback-only API:
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.3.0 \
+  ghcr.io/brntech/vllm-uno:0.4.0 \
   Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B
 ```
 
@@ -88,9 +93,9 @@ gemma4 profile:
 docker run --rm --name vllm-uno-gemma --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v /path/to/hf-cache:/root/.cache/huggingface \
-  -v /path/to/export-step1900:/adapter:ro \
-  -e UNO_PROFILE=gemma4 -e UNO_GEMMA_SPLITKV=1 \
-  ghcr.io/brntech/vllm-uno:0.3.0 \
+  -v /path/to/uno-adapter:/adapter:ro \
+  -e UNO_PROFILE=gemma4 \
+  ghcr.io/brntech/vllm-uno:0.4.0 \
   cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter
 ```
 
@@ -117,12 +122,12 @@ From the checked-out release tag, audit and build the supported AMD64 image:
 
 ```bash
 python3 release/stack.py audit
-PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.3.0
+PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.4.0
 ```
 
 The build starts from the digest-pinned CI image containing the exact base
 repository, checks out the pinned commit locally inside that image, applies the
-ordered two-layer patch series, and overlays only the verified Python source. It
+ordered three-layer patch series, and overlays only the verified Python source. It
 preserves the base image's compiled CUDA libraries and does not clone vLLM from
 GitHub during the image build.
 
