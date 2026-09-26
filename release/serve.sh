@@ -9,14 +9,18 @@ Profiles, chosen by UNO_PROFILE:
   qwen3 (default) Qwen/Qwen3-8B BF16, K=8, s-sahoo/uno-qwen3-8B (adapter/ subdirectory),
         FlashAttention 2, max_num_seqs=16, explicit 2 GiB KV cache,
         capture sizes [1,2,4,8,16,32,64,128,144].
-  gemma4 Gemma 4 26B A4B AWQ, K=4, language-only, TRITON_ATTN, max_num_seqs=4,
-        max_model_len=8192, gpu_memory_utilization 0.85, capture sizes
-        [1,2,3,4,5,6,7,8,13,14,15,16]. Pass the model and the local adapter directory.
+  gemma4 Gemma 4 26B A4B AWQ, K=4, language-only, TRITON_ATTN, hybrid KV cache
+        manager on, max_model_len=32768 (UNO_MAX_MODEL_LEN), max_num_seqs=8,
+        gpu_memory_utilization 0.90, capture sizes up to 40 draft rows, split-KV
+        draft attention and the 64k Gemma 4 draft vocabulary on by default.
+        Pass the model and the local adapter directory.
 Environment: UNO_PROFILE, UNO_K, UNO_MASK_TOKEN_ID, UNO_NOISE_SEED, UNO_NOISE_LOW,
   MODEL_REVISION / UNO_ADAPTER_REVISION (recorded Qwen pins by default),
   SERVED_MODEL_NAME=uno-qwen3-8b, HOST=0.0.0.0, PORT=8000, PYTHON=python3.
-  Engine-side switches read by the runner: UNO_GEMMA_SPLITKV=1 (split-KV
-  opt-in) and UNO_DRAFT_MOE_TOPK=4 (draft MoE top-k opt-in; gemma4 only).
+  Engine-side switches read by the runner: UNO_GEMMA_SPLITKV (split-KV draft
+  attention; gemma4 default 1, 0 turns it off), UNO_DRAFT_VOCAB (draft
+  vocabulary JSON; gemma4 default the shipped 64k list, empty turns it off) and
+  UNO_DRAFT_MOE_TOPK=4 (draft MoE top-k opt-in; gemma4 only).
 UNO_DRY_RUN=1 prints the command without importing vLLM/downloading weights.
 Extra flags after -- override defaults; re-gate any changed configuration.
 HELP
@@ -50,6 +54,9 @@ case $profile in
     # and the profile starts at 32k context; the draft head scores the shipped 64k Gemma 4 draft vocabulary
     # (UNO_DRAFT_VOCAB= empty restores the full-vocabulary draft head). Verification always scores the full vocabulary.
     export UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}
+    # Split-KV draft attention is on by default for Gemma 4 since v0.4.0: at 32k context the draft rows' attention over a
+    # long cache dominates, and every v0.4.0 measurement (speed and lossless) ran with it. UNO_GEMMA_SPLITKV=0 turns it off.
+    export UNO_GEMMA_SPLITKV=${UNO_GEMMA_SPLITKV:-1}
     flags=(--dtype bfloat16 --attention-backend TRITON_ATTN --language-model-only
       --enable-prefix-caching --seed 29
       --max-model-len ${UNO_MAX_MODEL_LEN:-32768} --max-num-seqs 8 --max-num-batched-tokens 2048

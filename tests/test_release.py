@@ -126,6 +126,7 @@ class ReleaseTests(unittest.TestCase):
         # v0.4.0: Uno drafts on the hybrid (sliding-window + full) KV layout, so the manager stays on.
         self.assertNotIn("--disable-hybrid-kv-cache-manager", flags)
         self.assertIn("export UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}", block)
+        self.assertIn("export UNO_GEMMA_SPLITKV=${UNO_GEMMA_SPLITKV:-1}", block)
         self.assertIn("--max-lora-rank 16", flags)
         self.assertIn("--max-loras 2", flags)
         self.assertIn("${UNO_K:-4}", block)
