@@ -10,7 +10,7 @@ the DFlash drafter measured on the same card falls to 0.66x of plain. The output
 
 The package is v0.3.0 plus one patch (`0003-uno-hybrid-kv-draft-vocab.patch`, two files) on the same digest-pinned
 vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed release tree is
-`e5c6278877bab3a6fdba5a26babdf321c3ce2bdb`.
+`4da8b19f944050655e21e89ceb37562a324755d0`.
 
 ## What changed
 

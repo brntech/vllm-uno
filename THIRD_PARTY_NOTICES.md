@@ -3,12 +3,12 @@
 ## vLLM
 
 This project distributes modifications for
-[vLLM](https://github.com/vllm-project/vllm/tree/b87339888d29329c42c42573e34cc2beebdcc48b),
-based on commit `b87339888d29329c42c42573e34cc2beebdcc48b`.
+[vLLM](https://github.com/vllm-project/vllm/tree/00972dfd72988942138a7a6089eaee08580210b8),
+based on commit `00972dfd72988942138a7a6089eaee08580210b8`.
 vLLM is licensed under the Apache License, Version 2.0. Copyright and
 attribution notices in the modified upstream source are retained. See the
 repository `LICENSE` file and the
-[license at the pinned revision](https://github.com/vllm-project/vllm/blob/b87339888d29329c42c42573e34cc2beebdcc48b/LICENSE).
+[license at the pinned revision](https://github.com/vllm-project/vllm/blob/00972dfd72988942138a7a6089eaee08580210b8/LICENSE).
 
 ## Uno and IFM
 

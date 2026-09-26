@@ -125,8 +125,10 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("--language-model-only", flags)
         # v0.4.0: Uno drafts on the hybrid (sliding-window + full) KV layout, so the manager stays on.
         self.assertNotIn("--disable-hybrid-kv-cache-manager", flags)
-        self.assertIn("export UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}", block)
-        self.assertIn("export UNO_GEMMA_SPLITKV=${UNO_GEMMA_SPLITKV:-1}", block)
+        self.assertIn("gemma4-draft-vocab-65536.json}", block)
+        self.assertIn("export UNO_GEMMA_SPLITKV=${UNO_GEMMA_SPLITKV-1}", block)
+        launcher = (ROOT / "release/serve.sh").read_text(encoding="utf-8")
+        self.assertIn("model_rev=0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba", launcher)
         self.assertIn("--max-lora-rank 16", flags)
         self.assertIn("--max-loras 2", flags)
         self.assertIn("${UNO_K:-4}", block)
@@ -137,6 +139,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertIsNotNone(match)
         config = json.loads(match.group(1))
         self.assertGreaterEqual(max(config["cudagraph_capture_sizes"]), 8 * (4 + 1))
+        for rows in range(4, 8 * 4 + 1, 4):
+            self.assertIn(rows, config["cudagraph_capture_sizes"])
         self.assertIn(4, config["cudagraph_capture_sizes"])
         self.assertIn(8, config["cudagraph_capture_sizes"])
 
@@ -179,8 +183,9 @@ class ReleaseTests(unittest.TestCase):
                          ["0001-uno-mrv2-base.patch", "0002-uno-gemma4.patch",
                           "0003-uno-hybrid-kv-draft-vocab.patch"])
         self.assertEqual(data["patches"][2]["files"],
-                         ["vllm/lora/layers/base_linear.py", "vllm/v1/worker/gpu/spec_decode/uno.py"])
-        self.assertEqual(data["final_tree"], "e5c6278877bab3a6fdba5a26babdf321c3ce2bdb")
+                         ["tests/v1/spec_decode/test_uno_draft_rows_kv.py", "tests/v1/spec_decode/test_uno_draft_vocab.py",
+                          "vllm/lora/layers/base_linear.py", "vllm/v1/worker/gpu/spec_decode/uno.py"])
+        self.assertEqual(data["final_tree"], "4da8b19f944050655e21e89ceb37562a324755d0")
         gemma = data["patches"][1]["files"]
         for module in ("vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py",
                        "vllm/v1/attention/ops/triton_unified_attention.py",

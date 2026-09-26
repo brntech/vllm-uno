@@ -1,3 +1,6 @@
+> **Historical (v0.3.0).** This is the upstream PR description for the Gemma 4 layer as of v0.3.0; the v0.4.0 Gemma 4
+> profile (32k, hybrid KV, draft vocabulary) is described in README.md, docs/configuration.md and docs/validation.md.
+
 # Draft PR description: Gemma 4 on the Model Runner V2 Uno path
 
 This is the description draft for proposing the Gemma 4 26B A4B port upstream.
