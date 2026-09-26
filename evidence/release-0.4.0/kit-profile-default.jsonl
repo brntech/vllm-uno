@@ -1,0 +1,4 @@
+{"arm": "v4k-prod", "requests": 72, "completion_tokens": 29903, "http_seconds": 165.65, "ms_per_token_http": 5.54, "drafts": 8070.0, "accepted": 21852.0, "tau": 3.7078, "p_prefix_ge": [0.9876, 0.7535, 0.5631, 0.4036]}
+{"arm": "v4k-prod-rep", "requests": 72, "completion_tokens": 29409, "http_seconds": 161.34, "ms_per_token_http": 5.486, "drafts": 7931.0, "accepted": 21486.0, "tau": 3.7091, "p_prefix_ge": [0.9854, 0.7543, 0.5631, 0.4064]}
+{"group": "v4k-ctx", "level": 2000, "task": "all", "n": 8, "prompt_tokens": 2030.0, "completion_tokens": 384.0, "decode_ms": 6.316, "e2e_ms": 7.381, "ttft_s": 0.329, "tau": 3.342}
+{"group": "v4k-ctx", "level": 28000, "task": "all", "n": 8, "prompt_tokens": 27675.5, "completion_tokens": 384.0, "decode_ms": 13.573, "e2e_ms": 32.135, "ttft_s": 7.02, "tau": 3.104}

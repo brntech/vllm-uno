@@ -1,0 +1,22 @@
+{"arm": "v4k3-prod", "requests": 72, "completion_tokens": 29485, "http_seconds": 145.26, "ms_per_token_http": 4.926, "drafts": 7982.0, "accepted": 21508.0, "tau": 3.6946, "p_prefix_ge": [0.9858, 0.7523, 0.5549, 0.4015]}
+{"arm": "v4k3-prod-rep", "requests": 72, "completion_tokens": 29630, "http_seconds": 145.49, "ms_per_token_http": 4.91, "drafts": 7986.0, "accepted": 21654.0, "tau": 3.7115, "p_prefix_ge": [0.9855, 0.759, 0.5642, 0.4028]}
+{"group": "v4k3-ctx", "level": 2000, "task": "all", "n": 8, "prompt_tokens": 2030.0, "completion_tokens": 384.0, "decode_ms": 5.244, "e2e_ms": 5.99, "ttft_s": 0.323, "tau": 3.335}
+{"group": "v4k3-ctx", "level": 2000, "task": "story", "n": 4, "prompt_tokens": 2033.5, "completion_tokens": 384.0, "decode_ms": 5.943, "e2e_ms": 6.062, "ttft_s": 0.188, "tau": 3.183}
+{"group": "v4k3-ctx", "level": 2000, "task": "summarize", "n": 4, "prompt_tokens": 2026.5, "completion_tokens": 352.5, "decode_ms": 5.031, "e2e_ms": 5.99, "ttft_s": 0.324, "tau": 3.515}
+{"group": "v4k3-ctx", "level": 6000, "task": "all", "n": 8, "prompt_tokens": 6107.0, "completion_tokens": 384.0, "decode_ms": 5.756, "e2e_ms": 7.893, "ttft_s": 0.762, "tau": 3.211}
+{"group": "v4k3-ctx", "level": 6000, "task": "story", "n": 4, "prompt_tokens": 6110.5, "completion_tokens": 384.0, "decode_ms": 6.79, "e2e_ms": 7.873, "ttft_s": 0.754, "tau": 3.077}
+{"group": "v4k3-ctx", "level": 6000, "task": "summarize", "n": 4, "prompt_tokens": 6103.5, "completion_tokens": 370.5, "decode_ms": 5.681, "e2e_ms": 7.893, "ttft_s": 0.813, "tau": 3.364}
+{"group": "v4k3-ctx", "level": 10000, "task": "all", "n": 8, "prompt_tokens": 9967.5, "completion_tokens": 384.0, "decode_ms": 6.212, "e2e_ms": 8.367, "ttft_s": 0.872, "tau": 3.102}
+{"group": "v4k3-ctx", "level": 10000, "task": "story", "n": 4, "prompt_tokens": 9971.0, "completion_tokens": 384.0, "decode_ms": 7.017, "e2e_ms": 7.259, "ttft_s": 0.088, "tau": 2.928}
+{"group": "v4k3-ctx", "level": 10000, "task": "summarize", "n": 4, "prompt_tokens": 9964.0, "completion_tokens": 383.0, "decode_ms": 6.072, "e2e_ms": 8.533, "ttft_s": 0.888, "tau": 3.294}
+{"group": "v4k3-ctx", "level": 14000, "task": "all", "n": 8, "prompt_tokens": 13868.0, "completion_tokens": 384.0, "decode_ms": 6.363, "e2e_ms": 9.414, "ttft_s": 1.036, "tau": 3.202}
+{"group": "v4k3-ctx", "level": 14000, "task": "story", "n": 4, "prompt_tokens": 13871.5, "completion_tokens": 384.0, "decode_ms": 6.985, "e2e_ms": 8.919, "ttft_s": 1.03, "tau": 3.078}
+{"group": "v4k3-ctx", "level": 14000, "task": "summarize", "n": 4, "prompt_tokens": 13864.5, "completion_tokens": 384.0, "decode_ms": 6.228, "e2e_ms": 10.258, "ttft_s": 1.471, "tau": 3.343}
+{"group": "v4k3-ctx", "level": 20000, "task": "all", "n": 8, "prompt_tokens": 19990.5, "completion_tokens": 384.0, "decode_ms": 7.175, "e2e_ms": 14.271, "ttft_s": 2.579, "tau": 3.088}
+{"group": "v4k3-ctx", "level": 20000, "task": "story", "n": 4, "prompt_tokens": 19994.0, "completion_tokens": 384.0, "decode_ms": 7.595, "e2e_ms": 11.989, "ttft_s": 1.744, "tau": 2.93}
+{"group": "v4k3-ctx", "level": 20000, "task": "summarize", "n": 4, "prompt_tokens": 19987.0, "completion_tokens": 384.0, "decode_ms": 6.753, "e2e_ms": 18.839, "ttft_s": 4.554, "tau": 3.266}
+{"group": "v4k3-ctx", "level": 28000, "task": "all", "n": 8, "prompt_tokens": 27675.5, "completion_tokens": 384.0, "decode_ms": 7.487, "e2e_ms": 26.348, "ttft_s": 7.178, "tau": 3.088}
+{"group": "v4k3-ctx", "level": 28000, "task": "story", "n": 4, "prompt_tokens": 27679.0, "completion_tokens": 384.0, "decode_ms": 7.908, "e2e_ms": 26.466, "ttft_s": 7.131, "tau": 2.949}
+{"group": "v4k3-ctx", "level": 28000, "task": "summarize", "n": 4, "prompt_tokens": 27672.0, "completion_tokens": 377.5, "decode_ms": 7.1, "e2e_ms": 26.046, "ttft_s": 7.178, "tau": 3.244}
+(EngineCore pid=159) INFO 09-26 13:59:35 [gpu_worker.py:657] CUDA graph memory profiling is enabled (default since v0.21.0). The current --gpu-memory-utilizatio
+(EngineCore pid=159) INFO 09-26 13:59:35 [kv_cache_utils.py:2395] GPU KV cache size: 79,022 tokens, Maximum concurrency for 32,768 tokens per request: 2.41x

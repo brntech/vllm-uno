@@ -94,7 +94,7 @@ It is not a 32-active-sequence profile or a performance cell.
 | GPU memory utilization | `0.90` (79,022 tokens of KV at 32k on a 24 GB RTX 3090) |
 | CUDA graph capture sizes | `[1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40]` |
 | LoRA capacity | rank 16, 2 slots (the Uno path reserves one for its shared adapter), target modules `qkv_proj o_proj gate_up_proj down_proj` |
-| Split-KV draft attention | on by default since v0.4.0 (`UNO_GEMMA_SPLITKV=0` turns it off); every release measurement used it, and without it draft attention over a long cache dominates (28k-token prompts, first release image, one server each: 13.6 vs 7.5 ms per token) |
+| Split-KV draft attention | on by default since v0.4.0 (`UNO_GEMMA_SPLITKV=0` turns it off); every release measurement used it, and without it draft attention over a long cache dominates (28k-token prompts on early v0.4.0 kit images, one server each: 13.6 vs 7.5 ms per token; `evidence/release-0.4.0/kit-*.jsonl`) |
 | Draft vocabulary | on by default since v0.4.0: `UNO_DRAFT_VOCAB=/opt/uno-kit/release/gemma4-draft-vocab-65536.json` (65,536 Gemma 4 token ids ranked on open data); an empty value restores the full-vocabulary draft head; verification always scores the full vocabulary |
 | Draft MoE top-k | off by default; `UNO_DRAFT_MOE_TOPK=4` opts in (SM86 only) |
 | Generation defaults | `--generation-config vllm` |

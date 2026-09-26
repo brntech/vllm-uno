@@ -5,3 +5,6 @@ unit+scheduler suite (image vllm-uno:0.4.0-diag3 == release files): 541 passed, 
 e2e test_uno.py: 8 passed, 17 warnings in 3231.10s (0:53:51)
 release image id sha256:49696266008b58df562fff509da9ee16c727c30f149616722918bfea3fbc0234 tree 99227666da0498bbaba12534b9834176d2bfd9f2
 first image id sha256:4d0eae680a0040fb24b71e3ab4c084202f33d9cbe9ca4eee5b25518e3eb8f91b tree 4da8b19f944050655e21e89ceb37562a324755d0
+Vocabulary sweep server startup lines: Fv-48k-1 "Uno draft vocabulary: 49152 of 262144 head rows (/run/vocab-ap-49152.json)"; Fv-64k-1 "65536 of 262144 head rows (/opt/uno-kit/release/gemma4-draft-vocab-65536.json)"; Fv-seen-1 "80843 of 262144 head rows (/run/vocab-ap-seen.json)"; Fv-full-1: no draft-vocabulary line (full head).
+Unit suite note: the 8 errors in the 541-pass run are the 8 end-to-end test_uno.py cases failing to download vLLM's public gsm8k prompt file inside a network-less container (httpx ConnectError, name resolution); rerun separately with network: 8 passed. No unit or scheduler test failed.
+Split-KV default: kit-profile-default.jsonl (group v4k-ctx, split-KV opt-in off, 28k decode 13.573 ms, n=8) vs kit-final.jsonl (group v4k3-ctx, split-KV on, 28k decode 7.487 ms, n=8), both early v0.4.0 kit images, one server each.
