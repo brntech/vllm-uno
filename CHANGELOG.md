@@ -14,9 +14,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Draft-vocabulary head (`UNO_DRAFT_VOCAB=<json of token ids>`): the draft pass scores only the listed token ids (the matching rows of the target's tied LM head, copied once at load), writes them into a full-vocabulary buffer filled with minus infinity and samples with the unchanged Gumbel sampler, which also stores it as the proposal distribution. Verification scores the full vocabulary, so the emitted distribution is unchanged. The release ships a 65,536-id Gemma 4 list ranked on open data (`release/gemma4-draft-vocab-65536.json`, installed at `/opt/uno-kit/release/`), enabled by default in the Gemma 4 profile; `UNO_DRAFT_VOCAB=` (empty) restores the full-vocabulary draft head.
 - Inactive-adapter bypass in the LoRA linear layer: when no token in the batch carries an adapter (the verify pass), the dual-stream path skips the whole auxiliary LoRA branch and runs the base layer alone.
 
+### Fixed
+
+- Prefix caching could make Uno emit `<pad>` tokens. When a new request's cached prefix left exactly one prompt token to compute (an exact repeat of a prompt whose length is one more than a multiple of the KV block size, e.g. a retry or `n > 1`), vLLM's scheduler padded it like a resumed decode, with placeholder draft tokens; Uno's probabilistic verification accepted them. The scheduler no longer pads Uno requests (`vllm/v1/core/sched/scheduler.py`, regression test `test_uno_never_pads_a_cached_one_token_prefill`). **Affects v0.3.0**, which enables prefix caching in both profiles; upgrade, or serve v0.3.0 with `--no-enable-prefix-caching`.
+- A sliding-window layer promoted to a full KV allocation (hybrid KV cache manager off) is admitted again; v0.4.0's hybrid-KV admission had refused it.
+
 ### Changed
 
-- The patch manifest is an ordered three-layer series: `0003-uno-hybrid-kv-draft-vocab.patch` (`vllm/v1/worker/gpu/spec_decode/uno.py`, `vllm/lora/layers/base_linear.py`, and the updated KV-admission and new draft-vocabulary tests) on top of v0.3.0's two layers. The reconstructed release tree is `99227666da0498bbaba12534b9834176d2bfd9f2`.
+- The patch manifest is an ordered three-layer series: `0003-uno-hybrid-kv-draft-vocab.patch` (`vllm/v1/worker/gpu/spec_decode/uno.py`, `vllm/lora/layers/base_linear.py`, `vllm/v1/core/sched/scheduler.py`, and the KV-admission, draft-vocabulary and scheduler tests) on top of v0.3.0's two layers. The reconstructed release tree is `99227666da0498bbaba12534b9834176d2bfd9f2`.
 - Gemma 4 profile: `max_model_len=32768` (`UNO_MAX_MODEL_LEN` overrides), `max_num_seqs=8`, `gpu_memory_utilization=0.90`, hybrid KV cache manager on, capture sizes covering every draft shape up to 32 rows (8 requests x K=4) and the 40-row verify batch.
 
 ## [0.3.0] - 2026-09-15

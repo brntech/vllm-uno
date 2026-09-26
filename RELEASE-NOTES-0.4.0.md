@@ -8,7 +8,7 @@ adapter branch entirely. On one RTX 3090 with the new
 **1.53x faster than plain** on production traffic and **1.31x to 1.44x faster on prompts from 2k to 28k tokens**, where
 the DFlash drafter measured on the same card falls to 0.66x of plain. The output distribution is the model's own.
 
-The package is v0.3.0 plus one patch (`0003-uno-hybrid-kv-draft-vocab.patch`, two files) on the same digest-pinned
+The package is v0.3.0 plus one patch (`0003-uno-hybrid-kv-draft-vocab.patch`: three vLLM files and their tests) on the same digest-pinned
 vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed release tree is
 `99227666da0498bbaba12534b9834176d2bfd9f2`.
 
@@ -29,6 +29,15 @@ vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed rele
   (`UNO_MAX_MODEL_LEN` overrides), hybrid KV cache manager on, `max_num_seqs=8`,
   `gpu_memory_utilization=0.90`, CUDA graphs covering 32 draft rows and 40-row verify batches. At 32k the Gemma 4 profile holds 79k tokens of KV,
   more than the 46k to 69k the DFlash drafter gets on the same card.
+
+## Fixed, and a known issue in v0.3.0
+
+With prefix caching on (the default in both profiles since v0.3.0), a new request whose cached prefix left exactly one
+prompt token to compute could come back as `<pad>` tokens: an exact repeat of a prompt whose length is one more than a
+multiple of the KV block size (a retry, `n > 1`, a benchmark loop). vLLM's scheduler padded that one-token prefill like
+a resumed decode, with placeholder draft tokens, and Uno's probabilistic verification accepted them. Ordinary chat
+traffic rarely meets the condition. v0.4.0 fixes it in the scheduler, with a regression test; on v0.3.0, upgrade or add
+`--no-enable-prefix-caching`.
 
 ## What this release validates
 
