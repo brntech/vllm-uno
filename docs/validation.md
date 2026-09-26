@@ -46,7 +46,7 @@ Same instruments as v0.3.0's development runs, stage 1, the candidate against fr
 | check | candidate vs plain | plain vs plain |
 | --- | --- | --- |
 | greedy replay of the 72 production requests, responses that diverge | 56, 57 | 58 |
-| sampled distributions, 24 production prompts x 96 samples x first 8 tokens, mean total variation | 0.047 / 0.034 / 0.044 | 0.045 / 0.044 / 0.038 |
+| sampled distributions, 24 production prompts x 96 samples x first 8 tokens, mean total variation | 0.047 / 0.034 / 0.044 | 0.045 / 0.044 / 0.038 (two halves of one plain server: 0.046 to 0.059) |
 | sampled distributions, six 3k-14k-token documents x 64 samples x first 8 tokens, mean total variation | 0.212 / 0.224 / 0.197 | 0.227 / 0.213 / 0.203 |
 
 Every long document exceeds the 1,024-token sliding window, so the hybrid-KV path (sliding groups freeing old blocks

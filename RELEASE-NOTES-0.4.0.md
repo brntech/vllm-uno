@@ -25,8 +25,9 @@ vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed rele
   The release ships a 65,536-id Gemma 4 list ranked on open data and turns it on in the Gemma 4 profile.
 - **Inactive-adapter bypass.** When no token in a batch carries an adapter (every verify pass), the dual-stream LoRA
   path runs the base layer alone instead of launching and zero-filling the auxiliary branch.
-- **Gemma 4 profile:** split-KV draft attention on by default (`UNO_GEMMA_SPLITKV=0` turns it off), 32k context (`UNO_MAX_MODEL_LEN` overrides), hybrid KV cache manager on, `max_num_seqs=8`,
-  `gpu_memory_utilization=0.90`, CUDA graphs up to 40 draft rows. At 32k the Gemma 4 profile holds 79k tokens of KV,
+- **Gemma 4 profile:** split-KV draft attention on by default (`UNO_GEMMA_SPLITKV=0` turns it off), 32k context
+  (`UNO_MAX_MODEL_LEN` overrides), hybrid KV cache manager on, `max_num_seqs=8`,
+  `gpu_memory_utilization=0.90`, CUDA graphs covering 32 draft rows and 40-row verify batches. At 32k the Gemma 4 profile holds 79k tokens of KV,
   more than the 46k to 69k the DFlash drafter gets on the same card.
 
 ## What this release validates
@@ -37,9 +38,9 @@ vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed rele
 | --- | --- |
 | Production traffic (72 real requests, one at a time), release image | 4.926 / 4.910 ms per token vs plain 7.542 / 7.551: **1.53x** |
 | Long prompts, 2k / 6k / 10k / 14k / 20k / 28k tokens, release image | **1.44x / 1.40x / 1.37x / 1.37x / 1.31x / 1.31x** plain (DFlash 1.24x to 0.66x) |
-| Greedy replays vs plain servers (72 requests) | 56 and 57 diverge, inside plain-vs-plain (58) |
-| Sampled distributions, short prompts (mean TV) | 0.034 to 0.047, inside plain-vs-plain 0.038 to 0.045 |
-| Sampled distributions, 3k-14k documents (mean TV) | 0.197 to 0.224, inside plain-vs-plain 0.203 to 0.227 |
+| Greedy replays vs plain servers (72 requests) | 56 and 57 diverge; plain vs plain 58 |
+| Sampled distributions, short prompts (mean TV) | 0.034 to 0.047; plain vs plain 0.038 to 0.045, two halves of one plain server 0.046 to 0.059 |
+| Sampled distributions, 3k-14k documents (mean TV) | 0.197 to 0.224; plain vs plain 0.203 to 0.227 |
 
 ## Scope
 

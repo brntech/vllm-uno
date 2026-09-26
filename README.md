@@ -56,7 +56,7 @@ sliding-window MoE model with `K=4` speculative tokens:
   under captured graphs and refuses any serving shape it did not capture.
 
 **Status.** The v0.4.0 Gemma 4 profile keeps Uno's lossless property on this hardware: greedy replays and sampled
-distributions against plain servers sit inside the plain-versus-plain range, on short production prompts and on
+distributions against plain servers match the plain-versus-plain spread, on short production prompts and on
 3k-14k-token documents ([docs/validation.md](docs/validation.md)). The v0.3.0 certification and its floor-matched gate
 ([`gates/lossless_floor.py`](gates/lossless_floor.py)) remain recorded there.
 
