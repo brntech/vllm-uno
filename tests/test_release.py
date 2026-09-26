@@ -117,13 +117,15 @@ class ReleaseTests(unittest.TestCase):
 
     def test_gemma4_profile_covers_its_served_draft_rows(self):
         block, flags = self.profile_flags("gemma4")
-        self.assertIn("--max-num-seqs 4", flags)
-        self.assertIn("--max-model-len 8192", flags)
+        self.assertIn("--max-num-seqs 8", flags)
+        self.assertIn("--max-model-len ${UNO_MAX_MODEL_LEN:-32768}", flags)
         self.assertIn("--max-num-batched-tokens 2048", flags)
-        self.assertIn("--gpu-memory-utilization 0.85", flags)
+        self.assertIn("--gpu-memory-utilization 0.90", flags)
         self.assertIn("--attention-backend TRITON_ATTN", flags)
         self.assertIn("--language-model-only", flags)
-        self.assertIn("--disable-hybrid-kv-cache-manager", flags)
+        # v0.4.0: Uno drafts on the hybrid (sliding-window + full) KV layout, so the manager stays on.
+        self.assertNotIn("--disable-hybrid-kv-cache-manager", flags)
+        self.assertIn("VLLM_UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}", block)
         self.assertIn("--max-lora-rank 16", flags)
         self.assertIn("--max-loras 2", flags)
         self.assertIn("${UNO_K:-4}", block)
@@ -133,7 +135,7 @@ class ReleaseTests(unittest.TestCase):
         )
         self.assertIsNotNone(match)
         config = json.loads(match.group(1))
-        self.assertGreaterEqual(max(config["cudagraph_capture_sizes"]), 4 * 4)
+        self.assertGreaterEqual(max(config["cudagraph_capture_sizes"]), 8 * (4 + 1))
         self.assertIn(4, config["cudagraph_capture_sizes"])
         self.assertIn(8, config["cudagraph_capture_sizes"])
 
@@ -158,7 +160,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_release_identity_is_consistent(self):
         version = (ROOT / "release/VERSION").read_text(encoding="utf-8").strip()
-        self.assertEqual(version, "0.3.0")
+        self.assertEqual(version, "0.4.0")
         dockerfile = (ROOT / "release/Dockerfile").read_text(encoding="utf-8")
         self.assertIn(f'org.opencontainers.image.version="{version}"', dockerfile)
         self.assertIn("ai.uno.upstream.commit=\"00972dfd72988942138a7a6089eaee08580210b8\"", dockerfile)
@@ -169,11 +171,15 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn(f"## [{version}]", changelog)
         self.assertIn(f"[{version}]: https://github.com/brntech/vllm-uno/releases/tag/v{version}", changelog)
 
-    def test_patch_series_is_the_two_ordered_layers(self):
+    def test_patch_series_is_the_three_ordered_layers(self):
         data = json.loads((ROOT / "release/series.json").read_text())
         self.assertEqual(data["code_base"], "3ad49350281a6b73de58449aadb293a8b398fb5d")
         self.assertEqual([entry["file"] for entry in data["patches"]],
-                         ["0001-uno-mrv2-base.patch", "0002-uno-gemma4.patch"])
+                         ["0001-uno-mrv2-base.patch", "0002-uno-gemma4.patch",
+                          "0003-uno-hybrid-kv-draft-vocab.patch"])
+        self.assertEqual(data["patches"][2]["files"],
+                         ["vllm/lora/layers/base_linear.py", "vllm/v1/worker/gpu/spec_decode/uno.py"])
+        self.assertEqual(data["final_tree"], "4e99c57abbfa38534559081f49c8cc87d8c38ef9")
         gemma = data["patches"][1]["files"]
         for module in ("vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py",
                        "vllm/v1/attention/ops/triton_unified_attention.py",

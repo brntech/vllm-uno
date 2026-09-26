@@ -7,7 +7,7 @@ USER root
 WORKDIR /opt/uno-kit
 LABEL org.opencontainers.image.title="Uno for vLLM" \
       org.opencontainers.image.source="https://github.com/brntech/vllm-uno" \
-      org.opencontainers.image.version="0.3.0" \
+      org.opencontainers.image.version="0.4.0" \
       org.opencontainers.image.licenses="Apache-2.0" \
       ai.uno.upstream.commit="00972dfd72988942138a7a6089eaee08580210b8" \
       ai.uno.head.commit="cf87916880b051e8782521dfe2afa12e0627e172"
@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.title="Uno for vLLM" \
 COPY . .
 # The CI image embeds the exact source repository at its build commit. Clone
 # locally from it so an image build never contacts GitHub or guesses a source.
-# The patch series is ordered: the Model Runner V2 base layer, then Gemma 4.
+# The patch series is ordered: the Model Runner V2 base layer, Gemma 4, then hybrid-KV drafting + draft vocabulary.
 RUN git clone --shared --no-checkout /vllm-workspace /opt/uno-vllm-source \
     && git -C /opt/uno-vllm-source -c core.autocrlf=false checkout --detach 00972dfd72988942138a7a6089eaee08580210b8 \
     && python3 release/stack.py apply /opt/uno-vllm-source \

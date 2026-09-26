@@ -1,0 +1,252 @@
+diff --git a/vllm/lora/layers/base_linear.py b/vllm/lora/layers/base_linear.py
+index df7cfe7122..c8ac24ec05 100644
+--- a/vllm/lora/layers/base_linear.py
++++ b/vllm/lora/layers/base_linear.py
+@@ -251,6 +251,19 @@ class BaseLinearLayerWithLoRA(BaseLayerWithLoRA):
+         """
+         assert envs.VLLM_LORA_ENABLE_DUAL_STREAM
+         assert x.ndim in (2, 3)
++        # Reuse the native CPU flag already consulted by shrink/expand.
++        # The generic Punica.no_lora flag is not maintained by the GPU backend.
++        # Bypass the WHOLE auxiliary branch, not its required zero initialization.
++        meta = getattr(self.punica_wrapper, "token_mapping_meta", None)
++        no_lora_flag = getattr(meta, "no_lora_flag_cpu", None)
++        if (
++            isinstance(no_lora_flag, torch.Tensor)
++            and no_lora_flag.device.type == "cpu"
++            and no_lora_flag.dtype == torch.bool
++            and no_lora_flag.numel() == 1
++            and no_lora_flag.item()
++        ):
++            return self._get_quant_method().apply(self.base_layer, x, bias)
+         num_tokens = x.size(0) if x.ndim == 2 else x.size(1)
+         output_size = sum(self.output_slices)
+ 
+diff --git a/vllm/v1/worker/gpu/spec_decode/uno.py b/vllm/v1/worker/gpu/spec_decode/uno.py
+index 385f017b2b..9b67d9e975 100644
+--- a/vllm/v1/worker/gpu/spec_decode/uno.py
++++ b/vllm/v1/worker/gpu/spec_decode/uno.py
+@@ -50,6 +50,43 @@ if TYPE_CHECKING:
+ logger = init_logger(__name__)
+ UNO_LORA_ID = 1_000_003
+ 
++from vllm.triton_utils import tl as _tl, triton as _triton  # noqa: E402
++
++
++@_triton.jit
++def _uno_group_slots_kernel(
++    positions_ptr,  # [>= max_tokens] int64, draft-row positions (clamped)
++    slot0_ptr,  # [max_tokens] int64, group-0 slot mapping from the fused preparation
++    table_ptrs,  # [G] uint64, batch-local input block tables
++    table_strides,  # [G] int64
++    table_widths,  # [G] int64
++    block_sizes,  # [G] int32, kernel block sizes
++    slots_ptr,  # [G, max_tokens] int64
++    slots_stride,
++    count,
++    k,
++    max_tokens,
++    PAD_ID: _tl.constexpr,
++    BLOCK: _tl.constexpr,
++):
++    g = _tl.program_id(0) + 1
++    offs = _tl.program_id(1) * BLOCK + _tl.arange(0, BLOCK)
++    in_buf = offs < max_tokens
++    is_row = offs < count
++    table = _tl.cast(_tl.load(table_ptrs + g), _tl.pointer_type(_tl.int32))
++    stride = _tl.load(table_strides + g)
++    width = _tl.load(table_widths + g)
++    bs = _tl.load(block_sizes + g).to(_tl.int64)
++    pos = _tl.load(positions_ptr + offs, mask=is_row, other=0).to(_tl.int64)
++    slot0 = _tl.load(slot0_ptr + offs, mask=is_row, other=PAD_ID)
++    req = (offs // k).to(_tl.int64)
++    bn = pos // bs
++    ok = is_row & (slot0 != PAD_ID) & (bn < width)
++    bid = _tl.load(table + req * stride + bn, mask=ok, other=0).to(_tl.int64)
++    ok = ok & (bid > 0)
++    slot = _tl.where(ok, bid * bs + pos % bs, PAD_ID)
++    _tl.store(slots_ptr + g * slots_stride + offs, slot, mask=in_buf)
++
+ 
+ def prepare_uno_inputs_reference(
+     buffers: InputBuffers,
+@@ -621,6 +658,70 @@ class UnoSpeculator(DraftModelSpeculator):
+         # a later fallback in serving could never announce itself.
+         self.num_warmup_proposals = 0
+ 
++    # Draft-vocabulary overlay (VLLM_UNO_DRAFT_VOCAB); None is the original full-vocabulary draft head.
++    _draft_vocab_ids: torch.Tensor | None = None
++    _draft_vocab_weight: torch.Tensor | None = None
++    _draft_vocab_full: torch.Tensor | None = None
++    _draft_vocab_cap: float | None = None
++    _draft_vocab_scale: float = 1.0
++
++    def _arm_draft_vocab(self) -> None:
++        import json as _json
++        import os as _os
++        path = _os.environ.get("VLLM_UNO_DRAFT_VOCAB", "").strip()
++        if not path:
++            return
++        if self.use_local_argmax_reduction:
++            raise ValueError("VLLM_UNO_DRAFT_VOCAB is not compatible with local argmax reduction")
++        ids = sorted(set(int(t) for t in _json.load(open(path))["token_ids"]))
++        holder = next((m for m in self.model.modules()
++                       if isinstance(getattr(m, "lm_head", None), torch.nn.Module)
++                       and getattr(m, "logits_processor", None) is not None), None)
++        if holder is None:
++            raise ValueError("VLLM_UNO_DRAFT_VOCAB: no module with lm_head and logits_processor")
++        weight = holder.lm_head.weight
++        if not ids or ids[0] < 0 or ids[-1] >= weight.shape[0]:
++            raise ValueError("VLLM_UNO_DRAFT_VOCAB ids out of range")
++        idx = torch.tensor(ids, dtype=torch.int64, device=weight.device)
++        self._draft_vocab_ids = idx
++        self._draft_vocab_weight = weight.index_select(0, idx).contiguous()
++        lp = holder.logits_processor
++        self._draft_vocab_cap = lp.soft_cap
++        self._draft_vocab_scale = lp.scale
++        rows = self.max_num_reqs * self.k
++        self._draft_vocab_full = torch.full((rows, lp.org_vocab_size), float("-inf"),
++                                            dtype=weight.dtype, device=weight.device)
++        logger.info("Uno draft vocabulary overlay: %d of %d head rows (%s)", len(ids), weight.shape[0], path)
++
++    def _draft_vocab_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:
++        logits = torch.mm(hidden_states, self._draft_vocab_weight.t())
++        if self._draft_vocab_cap is not None:
++            logits = torch.tanh(logits / self._draft_vocab_cap) * self._draft_vocab_cap
++        if self._draft_vocab_scale != 1.0:
++            logits = logits * self._draft_vocab_scale
++        return logits
++
++    def _greedy_sample_draft(self, hidden_states: torch.Tensor) -> torch.Tensor:
++        if self._draft_vocab_weight is None:
++            return super()._greedy_sample_draft(hidden_states)
++        return self._draft_vocab_ids[self._draft_vocab_logits(hidden_states).argmax(dim=-1)]
++
++    def sample_draft(self, hidden_states, sample_src_positions, idx_mapping, temperature, seeds,
++                     draft_step, draft_logits):
++        if self._draft_vocab_weight is None or draft_logits is None:
++            return super().sample_draft(hidden_states, sample_src_positions, idx_mapping, temperature,
++                                        seeds, draft_step, draft_logits)
++        from vllm.v1.worker.gpu.sample.gumbel import gumbel_sample
++        logits = self._draft_vocab_full[: hidden_states.shape[0]]
++        logits.fill_(float("-inf"))
++        logits.index_copy_(1, self._draft_vocab_ids, self._draft_vocab_logits(hidden_states).to(logits.dtype))
++        sampled = gumbel_sample(logits, idx_mapping, temperature, seeds, sample_src_positions,
++                                apply_temperature=True, is_drafting=True, logits_cache=draft_logits,
++                                logits_cache_col=draft_step, use_fp64=self.use_fp64_gumbel)
++        if self.draft_watermarker is not None:
++            sampled = self.draft_watermarker.sample(logits, sampled, idx_mapping, temperature)
++        return sampled
++
+     def set_lora_hook(self, hook: Callable[[tuple[int, int] | None], None]) -> None:
+         self._lora_hook = hook
+ 
+@@ -642,6 +743,7 @@ class UnoSpeculator(DraftModelSpeculator):
+     def load_model(self, target_model: nn.Module) -> None:
+         self.model = target_model
+         self._validate_local_argmax_reduction()
++        self._arm_draft_vocab()
+         layers = get_layers_from_vllm_config(
+             self.vllm_config,
+             AttentionLayerBase,  # type: ignore[type-abstract]
+@@ -677,25 +779,38 @@ class UnoSpeculator(DraftModelSpeculator):
+         target_input_buffers: InputBuffers,
+         target_attn_groups: list[list[AttentionGroup]],
+     ) -> None:
++        from vllm.v1.kv_cache_interface import SlidingWindowSpec as _SWS
++
+         groups = kv_cache_config.kv_cache_groups
+-        if len(groups) != 1:
+-            raise ValueError(
+-                "Uno requires one KV cache group covering every draft layer"
+-            )
+-        spec = groups[0].kv_cache_spec
+-        layer_specs = tuple(iter_layer_specs(spec))
+-        if (
+-            not is_full_attention_spec(spec)
+-            or getattr(spec, "sliding_window", None) is not None
+-            or any(
+-                getattr(layer_spec, "attention_chunk_size", None) is not None
+-                or getattr(layer_spec, "non_causal", False)
+-                for layer_spec in layer_specs
+-            )
+-        ):
+-            raise ValueError(
+-                "Uno requires a causal full KV allocation shared by the draft "
+-                "rows; a rolling-window or chunked allocation is not supported"
++        if not groups:
++            raise ValueError("Uno requires a KV cache covering every draft layer")
++
++        def _admissible(layer_spec) -> bool:
++            if getattr(layer_spec, "tokens_per_state", 1) != 1:
++                return False
++            if getattr(layer_spec, "attention_chunk_size", None) is not None:
++                return False
++            if getattr(layer_spec, "non_causal", False):
++                return False
++            if type(layer_spec) is _SWS:
++                return True
++            return is_full_attention_spec(layer_spec) and getattr(
++                layer_spec, "sliding_window", None
++            ) is None
++
++        for group in groups:
++            if not all(_admissible(ls) for ls in iter_layer_specs(group.kv_cache_spec)):
++                raise ValueError(
++                    "Uno requires causal full-attention or plain sliding-window KV "
++                    "groups; a chunked, circular or compressed allocation is not "
++                    f"supported (group spec {type(group.kv_cache_spec).__name__})"
++                )
++        self._uno_num_kv_groups = len(groups)
++        if len(groups) > 1:
++            logger.info(
++                "Uno hybrid KV: %d groups (%s); draft slots computed per group",
++                len(groups),
++                ", ".join(type(g.kv_cache_spec).__name__ for g in groups),
+             )
+         super().set_attn(
+             model_state,
+@@ -924,6 +1039,34 @@ class UnoSpeculator(DraftModelSpeculator):
+         )
+         self.draft_tokens[:num_reqs].copy_(tokens.view(num_reqs, self.k))
+ 
++    def _uno_group_slots(self, count: int) -> None:
++        bt = self.block_tables
++        if not hasattr(self, "_uno_table_widths"):
++            self._uno_table_widths = torch.tensor(
++                [t.shape[1] for t in bt.input_block_tables], dtype=torch.int64, device=bt.slot_mappings.device
++            )
++            self._uno_table_strides = torch.tensor(
++                [t.stride(0) for t in bt.input_block_tables], dtype=torch.int64, device=bt.slot_mappings.device
++            )
++        slots = bt.slot_mappings
++        max_tokens = slots.shape[1]
++        block = 1024
++        _uno_group_slots_kernel[(bt.num_kv_cache_groups - 1, _triton.cdiv(max_tokens, block))](
++            self.input_buffers.positions,
++            slots[0],
++            bt.input_block_table_ptrs,
++            self._uno_table_strides,
++            self._uno_table_widths,
++            bt.kernel_block_sizes_tensor,
++            slots,
++            slots.stride(0),
++            count,
++            self.k,
++            max_tokens,
++            PAD_ID=PAD_SLOT_ID,
++            BLOCK=block,
++        )
++
+     @torch.inference_mode()
+     def propose(
+         self,
+@@ -978,6 +1121,8 @@ class UnoSpeculator(DraftModelSpeculator):
+             self.speculative_config.uno_mask_token_id,
+             self._step,
+         )
++        if getattr(self, "_uno_num_kv_groups", 1) > 1 and not dummy_run:
++            self._uno_group_slots(count)
+         if dummy_run:
+             self.block_tables.slot_mappings.fill_(PAD_SLOT_ID)
+             self.sample_idx_mapping.fill_(-1)

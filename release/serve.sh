@@ -46,13 +46,17 @@ case $profile in
     mask=${UNO_MASK_TOKEN_ID:-262144}
     seed=${UNO_NOISE_SEED:-29}
     noise_low=${UNO_NOISE_LOW:-0}
+    # v0.4.0: Uno drafts on Gemma 4's hybrid (sliding-window + full) KV layout, so the hybrid KV cache manager stays on
+    # and the profile starts at 32k context; the draft head scores the shipped 64k Gemma 4 draft vocabulary
+    # (UNO_DRAFT_VOCAB= empty restores the full-vocabulary draft head). Verification always scores the full vocabulary.
+    export VLLM_UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}
     flags=(--dtype bfloat16 --attention-backend TRITON_ATTN --language-model-only
-      --disable-hybrid-kv-cache-manager --enable-prefix-caching --seed 29
-      --max-model-len 8192 --max-num-seqs 4 --max-num-batched-tokens 2048
-      --gpu-memory-utilization 0.85
+      --enable-prefix-caching --seed 29
+      --max-model-len ${UNO_MAX_MODEL_LEN:-32768} --max-num-seqs 8 --max-num-batched-tokens 2048
+      --gpu-memory-utilization 0.90
       --enable-lora --lora-dtype bfloat16 --max-lora-rank 16 --max-loras 2 --max-cpu-loras 2
       --lora-target-modules qkv_proj o_proj gate_up_proj down_proj
-      --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[1,2,3,4,5,6,7,8,13,14,15,16]}')
+      --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40]}')
     ;;
   *)
     echo 'UNO_PROFILE must be qwen3 or gemma4.' >&2
