@@ -44,6 +44,12 @@ output token at 32k context; Uno 16 requests per length (two servers), plain and
 | ~20,000 | 9.26 | 12.52 | 7.26 | 1.28 | 0.74 | 1.72 |
 | ~27,700 | 9.63 | 14.00 | 7.62 | 1.26 | 0.69 | 1.84 |
 
+Prompt processing (final image, prefix caching off so every request prefills its whole document, 16 requests per
+arm): time to first token 4.56 s against plain 4.46 s at ~20k tokens and 7.15 s against 7.00 s at ~28k; with 384-token
+answers Uno is 1.08x and 1.06x faster than plain end to end, approaching the decode ratio as answers grow.
+With prefix caching on and documents reused, plain's larger KV keeps more of them cached, so its time to first token can
+be lower than a speculative method's (`evidence/release-0.4.0/ttft-cold.jsonl`).
+
 At 32k the shipped profile holds 79,022 tokens of KV; with the same serving flags plain holds 101,370 and DFlash 68,463
 (DFlash in its own recommended configuration held 45,323 in an earlier session). Receipts: server startup lines,
 `evidence/release-0.4.0/rel-receipts.txt`.

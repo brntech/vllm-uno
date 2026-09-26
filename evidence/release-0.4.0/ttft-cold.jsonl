@@ -1,0 +1,5 @@
+{"check": "cold long-prompt TTFT, prefix caching off, final image, 2 servers x 8 requests per arm per level, 384-token completions", "source": "late-poc/ttft_cold.sh, run/ctx3-Ft-*.json"}
+{"arm": "uno", "level": 20000, "n": 16, "ttft_s_median": 4.558, "decode_ms_median": 7.173, "e2e_ms_per_token_median": 19.441}
+{"arm": "plain", "level": 20000, "n": 16, "ttft_s_median": 4.456, "decode_ms_median": 9.238, "e2e_ms_per_token_median": 20.998}
+{"arm": "uno", "level": 28000, "n": 16, "ttft_s_median": 7.148, "decode_ms_median": 7.613, "e2e_ms_per_token_median": 26.188}
+{"arm": "plain", "level": 28000, "n": 16, "ttft_s_median": 6.997, "decode_ms_median": 9.636, "e2e_ms_per_token_median": 27.834}
