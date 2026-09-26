@@ -2,7 +2,8 @@
 
 **v0.4.0** makes Uno a long-context speculator on Gemma 4 26B A4B. On one RTX 3090 the Gemma 4 profile decodes
 **1.50x faster than plain** on production traffic and **1.26x to 1.47x faster on prompts from 2k to 28k tokens**
-(1.3x to 1.8x faster than the DFlash drafter there), with the output distribution of the model on its own; it starts at 32k context with 79k tokens of KV. The drafter now runs
+(1.3x to 1.8x faster than the DFlash drafter there; on production traffic DFlash is about 5 % faster), with the
+output distribution of the model on its own; it starts at 32k context with 79k tokens of KV. The drafter now runs
 on Gemma 4's hybrid (sliding-window + full-attention) KV layout, scores a 64k-token draft vocabulary while verification
 keeps the full one, and the verify pass skips the adapter branch. The kit is v0.3.0 plus one patch on vLLM
 `00972dfd72988942138a7a6089eaee08580210b8`; the Qwen3-8B BF16 profile at `K=8` is unchanged (see
@@ -55,10 +56,13 @@ sliding-window MoE model with `K=4` speculative tokens:
   turns it off). `UNO_DRAFT_MOE_TOPK=4` still opts into top-4 draft MoE routing
   under captured graphs and refuses any serving shape it did not capture.
 
-**Status.** The v0.4.0 Gemma 4 profile keeps Uno's lossless property on this hardware: greedy replays and sampled
-distributions against plain servers match the plain-versus-plain spread, on short production prompts and on
-3k-14k-token documents ([docs/validation.md](docs/validation.md)). The v0.3.0 certification and its floor-matched gate
-([`gates/lossless_floor.py`](gates/lossless_floor.py)) remain recorded there.
+**Status.** Uno's verification is exact by construction: rejection sampling against the full-vocabulary target makes
+the output distribution the model's own, whatever the draft proposes. The v0.4.0 checks on this hardware are
+observations, not an equivalence gate: Uno-versus-plain distances are of the same size as plain-versus-plain ones
+(short production prompts, mean total variation 0.056 to 0.067 against 0.048 to 0.062; 3k-14k-token documents 0.222 to
+0.246 against 0.233 to 0.245; greedy replays diverge in 61 and 57 of 72 responses against 60), with the exact values
+and their limits in [docs/validation.md](docs/validation.md). The v0.3.0 certification and its floor-matched gate
+([`gates/lossless_floor.py`](gates/lossless_floor.py)) are historical records for v0.3.0's image.
 
 The digest-pinned per-commit base image is AMD64-only. An ARM64 image follows
 when vLLM publishes a release image containing this base.
@@ -161,14 +165,15 @@ and in [docs/validation.md](docs/validation.md).
 
 ## Validation
 
-The release record identifies the exact image, source patch series, and the
-RTX 3090 checks for both profiles. See [docs/validation.md](docs/validation.md),
-which carries the release record and the gate outcomes for both profiles. The
-default verifier uses sampled-distribution and mixed-chunk gates; the Qwen3-8B
-profile passes them on this image. The Gemma 4 profile's sampled comparisons are
-read with the floor-matched gate
-([`gates/lossless_floor.py`](gates/lossless_floor.py)), whose run and numbers are
-recorded in [docs/validation.md](docs/validation.md).
+[docs/validation.md](docs/validation.md) carries the v0.4.0 checks on the final
+image and, below them, the v0.3.0 release record. The Qwen3-8B profile's
+launcher settings are unchanged since v0.3.0, but patch 0003 changes shared
+code (the LoRA linear layer and the scheduler); on the v0.4.0 image it has passed
+the patched tree's Uno unit tests and the eight greedy end-to-end `test_uno.py`
+cases, not a rerun of v0.3.0's sampled and mixed-chunk gates. Those gates, and
+the Gemma 4 floor-matched gate ([`gates/lossless_floor.py`](gates/lossless_floor.py)),
+are v0.3.0 records; v0.3.0's certification did not exercise the prefix-cache
+path fixed in v0.4.0.
 
 ## Repository map
 

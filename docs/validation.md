@@ -11,10 +11,12 @@ image with the same serving flags minus Uno's. Fresh servers per arm; each speed
 The short-prompt distributions compare the final image's Uno server with the plain servers of the first image's session
 (the plain path does not touch the changed code).
 
-Two images, 2026-09-26: the first release image (tree `4da8b19f`), and the final one (tree `99227666`), which adds the
+Two images, 2026-09-26: the first release image (tree `4da8b19f`, image id `sha256:4d0eae680a00...`), and the final one
+(tree `99227666`, image id `sha256:49696266008b...`), which adds the
 scheduler fix below and the full-KV admission fix and is otherwise identical. Production speed, the short-prompt
 distributions and the fix's reproduction were rerun on the final image; long prompts, greedy replays and the
-long-document distributions are from the first image.
+long-document distributions are from the first image. The published tree (`4aa65548`) is the final image's plus one
+scheduler regression test; no runtime file differs.
 
 ### Speed
 
@@ -42,7 +44,9 @@ output token at 32k context; Uno 16 requests per length (two servers), plain and
 | ~20,000 | 9.26 | 12.52 | 7.26 | 1.28 | 0.74 | 1.72 |
 | ~27,700 | 9.63 | 14.00 | 7.62 | 1.26 | 0.69 | 1.84 |
 
-At 32k the shipped profile holds 79,022 tokens of KV; DFlash holds 45,323 on the same card and settings.
+At 32k the shipped profile holds 79,022 tokens of KV; with the same serving flags plain holds 101,370 and DFlash 68,463
+(DFlash in its own recommended configuration held 45,323 in an earlier session). Receipts: server startup lines,
+`evidence/release-0.4.0/rel-receipts.txt`.
 
 ### Lossless
 
@@ -70,7 +74,7 @@ plain decoding either; the comparison is against that plain-versus-plain range.
   at 13.6 ms per token; the gemma4 profile now turns it on by default.
 
 The final image passes the patched tree's Uno tests on the card: 541 unit and scheduler tests and the 8 end-to-end
-`test_uno.py` cases.
+`test_uno.py` cases (receipts in `evidence/release-0.4.0/rel-receipts.txt`).
 
 ### Scope
 

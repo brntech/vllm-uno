@@ -1,0 +1,12 @@
+{"pair": "Fd-plainA vs Fr-dist", "mean_tv": 0.056, "cells": 192}
+{"pair": "Fd-plainA vs Fd-plainB", "mean_tv": 0.0484, "cells": 192}
+{"pair": "Fd-plainA vs Fd-plainC", "mean_tv": 0.0617, "cells": 192}
+{"pair": "Fr-dist vs Fd-plainB", "mean_tv": 0.0608, "cells": 192}
+{"pair": "Fr-dist vs Fd-plainC", "mean_tv": 0.0669, "cells": 192}
+{"pair": "Fd-plainB vs Fd-plainC", "mean_tv": 0.0574, "cells": 192}
+{"arm": "Fr-dist", "tv_vs_plains": [0.056, 0.0608, 0.0669], "plain_pairs": [0.0484, 0.0617, 0.0574], "max_plain_pair": 0.0617, "min_vs_plain": 0.056}
+{"pair": "Fd-plainA split-half", "mean_tv": 0.0604, "cells": 192}
+{"pair": "Fr-dist split-half", "mean_tv": 0.0663, "cells": 192}
+{"pair": "Fd-plainB split-half", "mean_tv": 0.0728, "cells": 192}
+{"pair": "Fd-plainC split-half", "mean_tv": 0.061, "cells": 192}
+{"arm": "Fr-forge", "alone_cold": [225, 0, 1], "alone_hits": [0, 0, 0, 0, 0], "alone_n8": [225, 0, 8], "alone_n96": [225, 0, 96], "forge-arch-01": [148, 0], "forge-build-01": [242, 0], "forge-review-01": [808, 0], "after_hits": [0, 0, 0, 0, 0], "after_n96": [225, 0, 96]}

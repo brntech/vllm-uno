@@ -1,0 +1,3 @@
+{"arm": "Ff-uno", "alone_cold": [225, 0, 1], "alone_hits": [1, 1, 1, 1, 0], "alone_n8": [225, 4, 8], "alone_n96": [225, 90, 96], "forge-arch-01": [148, 0], "forge-build-01": [242, 0], "forge-review-01": [808, 0], "after_hits": [1, 1, 1, 1, 1], "after_n96": [225, 92, 96]}
+{"arm": "Ff-uno-fix", "alone_cold": [225, 0, 1], "alone_hits": [0, 0, 0, 0, 0], "alone_n8": [225, 0, 8], "alone_n96": [225, 0, 96], "forge-arch-01": [148, 0], "forge-build-01": [242, 0], "forge-review-01": [808, 0], "after_hits": [0, 0, 0, 0, 0], "after_n96": [225, 0, 96]}
+{"arm": "Fa-uno", "aligned_pad": 0, "unaligned_pad": 0}

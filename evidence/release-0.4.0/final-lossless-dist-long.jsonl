@@ -1,0 +1,17 @@
+{"pair": "Fl-plainA vs Fl-uno", "mean_tv": 0.2464, "cells": 48}
+{"pair": "Fl-plainA vs Fl-plainB", "mean_tv": 0.2448, "cells": 48}
+{"pair": "Fl-plainA vs Fl-uno-rep", "mean_tv": 0.2402, "cells": 48}
+{"pair": "Fl-plainA vs Fl-plainC", "mean_tv": 0.2399, "cells": 48}
+{"pair": "Fl-uno vs Fl-plainB", "mean_tv": 0.2331, "cells": 48}
+{"pair": "Fl-uno vs Fl-uno-rep", "mean_tv": 0.2435, "cells": 48}
+{"pair": "Fl-uno vs Fl-plainC", "mean_tv": 0.222, "cells": 48}
+{"pair": "Fl-plainB vs Fl-uno-rep", "mean_tv": 0.2334, "cells": 48}
+{"pair": "Fl-plainB vs Fl-plainC", "mean_tv": 0.2327, "cells": 48}
+{"pair": "Fl-uno-rep vs Fl-plainC", "mean_tv": 0.2386, "cells": 48}
+{"arm": "Fl-uno", "tv_vs_plains": [0.2464, 0.2331, 0.222], "plain_pairs": [0.2448, 0.2399, 0.2327], "max_plain_pair": 0.2448, "min_vs_plain": 0.222}
+{"arm": "Fl-uno-rep", "tv_vs_plains": [0.2402, 0.2334, 0.2386], "plain_pairs": [0.2448, 0.2399, 0.2327], "max_plain_pair": 0.2448, "min_vs_plain": 0.2334}
+{"pair": "Fl-plainA split-half", "mean_tv": 0.3145, "cells": 48}
+{"pair": "Fl-uno split-half", "mean_tv": 0.3086, "cells": 48}
+{"pair": "Fl-plainB split-half", "mean_tv": 0.3197, "cells": 48}
+{"pair": "Fl-uno-rep split-half", "mean_tv": 0.3236, "cells": 48}
+{"pair": "Fl-plainC split-half", "mean_tv": 0.3047, "cells": 48}

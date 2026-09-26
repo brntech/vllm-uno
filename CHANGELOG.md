@@ -21,7 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- The patch manifest is an ordered three-layer series: `0003-uno-hybrid-kv-draft-vocab.patch` (`vllm/v1/worker/gpu/spec_decode/uno.py`, `vllm/lora/layers/base_linear.py`, `vllm/v1/core/sched/scheduler.py`, and the KV-admission, draft-vocabulary and scheduler tests) on top of v0.3.0's two layers. The reconstructed release tree is `99227666da0498bbaba12534b9834176d2bfd9f2`.
+- The patch manifest is an ordered three-layer series: `0003-uno-hybrid-kv-draft-vocab.patch` (`vllm/v1/worker/gpu/spec_decode/uno.py`, `vllm/lora/layers/base_linear.py`, `vllm/v1/core/sched/scheduler.py`, and the KV-admission, draft-vocabulary and scheduler tests) on top of v0.3.0's two layers. The reconstructed release tree is `4aa655488f2c8d86fcc3692b037e03a991dcc9ba`.
 - Gemma 4 profile: `max_model_len=32768` (`UNO_MAX_MODEL_LEN` overrides), `max_num_seqs=8`, `gpu_memory_utilization=0.90`, hybrid KV cache manager on, capture sizes covering every draft shape up to 32 rows (8 requests x K=4) and the 40-row verify batch.
 
 ## [0.3.0] - 2026-09-15

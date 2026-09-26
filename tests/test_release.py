@@ -186,7 +186,7 @@ class ReleaseTests(unittest.TestCase):
                          ["tests/v1/core/test_scheduler.py", "tests/v1/spec_decode/test_uno_draft_rows_kv.py",
                           "tests/v1/spec_decode/test_uno_draft_vocab.py", "vllm/lora/layers/base_linear.py",
                           "vllm/v1/core/sched/scheduler.py", "vllm/v1/worker/gpu/spec_decode/uno.py"])
-        self.assertEqual(data["final_tree"], "99227666da0498bbaba12534b9834176d2bfd9f2")
+        self.assertEqual(data["final_tree"], "4aa655488f2c8d86fcc3692b037e03a991dcc9ba")
         gemma = data["patches"][1]["files"]
         for module in ("vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py",
                        "vllm/v1/attention/ops/triton_unified_attention.py",

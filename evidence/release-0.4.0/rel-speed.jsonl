@@ -1,0 +1,6 @@
+{"arm": "Fr-uno-1", "requests": 72, "completion_tokens": 29369, "http_seconds": 147.65, "ms_per_token_http": 5.028, "drafts": 7947.0, "accepted": 21434.0, "tau": 3.6971, "p_prefix_ge": [0.9858, 0.7522, 0.5583, 0.4008]}
+{"arm": "Fr-uno-2", "requests": 72, "completion_tokens": 29923, "http_seconds": 147.91, "ms_per_token_http": 4.943, "drafts": 8108.0, "accepted": 21829.0, "tau": 3.6923, "p_prefix_ge": [0.987, 0.751, 0.5557, 0.3985]}
+{"arm": "Fr-plain-1", "requests": 72, "completion_tokens": 29161, "http_seconds": 218.52, "ms_per_token_http": 7.493}
+{"arm": "Fr-plain-2", "requests": 72, "completion_tokens": 30407, "http_seconds": 227.8, "ms_per_token_http": 7.492}
+{"arm": "Fr-dflash-1", "requests": 72, "completion_tokens": 29728, "http_seconds": 141.91, "ms_per_token_http": 4.773, "drafts": 9180.0, "accepted": 20538.0, "tau": 3.2373, "p_prefix_ge": [0.6476, 0.4363, 0.3178, 0.2452, 0.1963, 0.1598, 0.1293, 0.105]}
+{"arm": "Fr-dflash-2", "requests": 72, "completion_tokens": 30229, "http_seconds": 143.82, "ms_per_token_http": 4.758, "drafts": 9319.0, "accepted": 20898.0, "tau": 3.2425, "p_prefix_ge": [0.6473, 0.4379, 0.3163, 0.2484, 0.2002, 0.1613, 0.1289, 0.1022]}

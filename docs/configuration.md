@@ -12,7 +12,7 @@ model and KV cache, while the adapter is active only on noisy draft rows.
 | Upstream vLLM base commit | `00972dfd72988942138a7a6089eaee08580210b8` |
 | Code base (v0.2.0 content) | `3ad49350281a6b73de58449aadb293a8b398fb5d` |
 | Release head (Gemma 4 layer) | `cf87916880b051e8782521dfe2afa12e0627e172` |
-| Reconstructed release tree | `99227666da0498bbaba12534b9834176d2bfd9f2` (v0.3.0's was `0149f03eb8287bdfdcc916752b3851405695d350`) |
+| Reconstructed release tree | `4aa655488f2c8d86fcc3692b037e03a991dcc9ba` (v0.3.0's was `0149f03eb8287bdfdcc916752b3851405695d350`) |
 | Base image | `public.ecr.aws/q9t5s3a7/vllm-ci-postmerge-repo:00972dfd72988942138a7a6089eaee08580210b8@sha256:d55cb6858435cda5ab080987213b4a6b6bfce14ca9e0ffa2ecfab2b222818497` |
 | Base vLLM version | `0.29.1rc1.dev99+g00972dfd7` |
 | Patch series | `0001-uno-mrv2-base.patch`, `0002-uno-gemma4.patch`, then `0003-uno-hybrid-kv-draft-vocab.patch` |
@@ -26,9 +26,11 @@ it to a clean exact-base checkout; a second invocation verifies the
 already-applied tree without creating a source commit. The first patch
 reconstructs the v0.2.0 release tree (`6ceef9dfa043d9a2d3f930522ecc7480105aa5a7`)
 on the newer upstream commit; the second carries the Gemma 4 port, and every
-file in it is Python or Markdown. The third (v0.4.0) changes two Python files:
+file in it is Python or Markdown. The third (v0.4.0) changes three Python files:
 `vllm/v1/worker/gpu/spec_decode/uno.py` (hybrid-KV drafting and the draft
-vocabulary) and `vllm/lora/layers/base_linear.py` (the inactive-adapter bypass).
+vocabulary), `vllm/lora/layers/base_linear.py` (the inactive-adapter bypass) and
+`vllm/v1/core/sched/scheduler.py` (no placeholder-draft padding for Uno), plus
+their tests.
 
 ## Profiles
 
@@ -92,7 +94,7 @@ It is not a 32-active-sequence profile or a performance cell.
 | GPU memory utilization | `0.90` (79,022 tokens of KV at 32k on a 24 GB RTX 3090) |
 | CUDA graph capture sizes | `[1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40]` |
 | LoRA capacity | rank 16, 2 slots (the Uno path reserves one for its shared adapter), target modules `qkv_proj o_proj gate_up_proj down_proj` |
-| Split-KV draft attention | on by default since v0.4.0 (`UNO_GEMMA_SPLITKV=0` turns it off); every release measurement used it, and without it draft attention over a long cache dominates (28k-token prompts: 13.6 vs 7.5 ms per token) |
+| Split-KV draft attention | on by default since v0.4.0 (`UNO_GEMMA_SPLITKV=0` turns it off); every release measurement used it, and without it draft attention over a long cache dominates (28k-token prompts, first release image, one server each: 13.6 vs 7.5 ms per token) |
 | Draft vocabulary | on by default since v0.4.0: `UNO_DRAFT_VOCAB=/opt/uno-kit/release/gemma4-draft-vocab-65536.json` (65,536 Gemma 4 token ids ranked on open data); an empty value restores the full-vocabulary draft head; verification always scores the full vocabulary |
 | Draft MoE top-k | off by default; `UNO_DRAFT_MOE_TOPK=4` opts in (SM86 only) |
 | Generation defaults | `--generation-config vllm` |
@@ -146,7 +148,8 @@ UNO_PROFILE=gemma4 bash release/serve.sh [MODEL [LOCAL_ADAPTER]] [-- VLLM_ARGUME
 | `UNO_MASK_TOKEN_ID` | `151669` (`qwen3`), `262144` (`gemma4`) | Exclusive Uno noise-range upper bound; must be greater than 1 |
 | `UNO_NOISE_LOW` | unset (`qwen3`, field default 1), `0` (`gemma4`) | Inclusive Uno noise-range lower bound |
 | `UNO_NOISE_SEED` | `0` (`qwen3`), `29` (`gemma4`) | Deterministic MRV2 noise-generator seed |
-| `MODEL_REVISION` | pinned Qwen revision | Model revision passed to vLLM |
+| `MODEL_REVISION` | pinned revision per profile (Qwen3-8B; Gemma 4 AWQ `0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba`) | Model revision passed to vLLM |
+| `UNO_MAX_MODEL_LEN` | `32768` (`gemma4`) | Gemma 4 context length |
 | `UNO_ADAPTER_REVISION` | pinned adapter revision | Adapter snapshot revision |
 | `SERVED_MODEL_NAME` | `uno-qwen3-8b` (`qwen3`), `uno-gemma4-26b-a4b` (`gemma4`) | OpenAI API model name |
 | `HOST` | `0.0.0.0` | Address inside the container or direct process |

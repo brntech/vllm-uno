@@ -1,8 +1,8 @@
 diff --git a/tests/v1/core/test_scheduler.py b/tests/v1/core/test_scheduler.py
-index cf5e5b1cd7..5f0c3f862e 100644
+index cf5e5b1cd7..637f8f52ed 100644
 --- a/tests/v1/core/test_scheduler.py
 +++ b/tests/v1/core/test_scheduler.py
-@@ -1556,6 +1556,24 @@ def test_uno_reserves_suffix_before_first_draft(
+@@ -1556,6 +1556,51 @@ def test_uno_reserves_suffix_before_first_draft(
      assert manager.block_pool.get_num_free_blocks() == num_available_blocks
  
  
@@ -22,6 +22,33 @@ index cf5e5b1cd7..5f0c3f862e 100644
 +    # Eight of the nine prompt tokens are prefix-cache hits; only the last one is computed.
 +    assert output.num_scheduled_tokens == {second.request_id: 1}
 +    assert not output.scheduled_spec_decode_tokens
++
++
++def test_uno_never_pads_a_cached_one_token_newcomer_beside_a_running_request(
++    uno_scheduler_factory,
++):
++    """The same admission with another request already running (the batch-mates branch of the padding rule)."""
++    scheduler = uno_scheduler_factory(
++        enable_prefix_caching=True, num_blocks=64, max_num_seqs=2
++    )
++    cached, newcomer = create_requests(
++        num_requests=2, num_tokens=9, same_prompt=True, block_size=4,
++        req_ids=["cached", "newcomer"],
++    )
++    (running,) = create_requests(
++        num_requests=1, num_tokens=6, block_size=4, req_ids=["running"]
++    )
++    scheduler.add_request(cached)
++    scheduler.schedule()
++    scheduler.finish_requests(cached.request_id, RequestStatus.FINISHED_ABORTED)
++
++    scheduler.add_request(running)
++    scheduler.schedule()
++    scheduler.add_request(newcomer)
++    output = scheduler.schedule()
++    assert running.request_id in output.num_scheduled_tokens
++    assert output.num_scheduled_tokens[newcomer.request_id] == 1
++    assert newcomer.request_id not in output.scheduled_spec_decode_tokens
 +
 +
  def test_uno_terminal_length_bound_skips_only_all_terminal_batches(

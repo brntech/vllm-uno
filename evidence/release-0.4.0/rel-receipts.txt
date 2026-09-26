@@ -1,0 +1,7 @@
+Fr-uno-1: GPU KV cache size: 79,022 tokens | Maximum concurrency for 32,768 tokens per request: 2.41x
+Fr-plain-1: GPU KV cache size: 101,370 tokens | Maximum concurrency for 32,768 tokens per request: 3.09x
+Fr-dflash-1: GPU KV cache size: 68,463 tokens | Maximum concurrency for 32,768 tokens per request: 2.09x
+unit+scheduler suite (image vllm-uno:0.4.0-diag3 == release files): 541 passed, 316 deselected, 26 warnings, 8 errors in 238.57s (0:03:58)
+e2e test_uno.py: 8 passed, 17 warnings in 3231.10s (0:53:51)
+release image id sha256:49696266008b58df562fff509da9ee16c727c30f149616722918bfea3fbc0234 tree 99227666da0498bbaba12534b9834176d2bfd9f2
+first image id sha256:4d0eae680a0040fb24b71e3ab4c084202f33d9cbe9ca4eee5b25518e3eb8f91b tree 4da8b19f944050655e21e89ceb37562a324755d0

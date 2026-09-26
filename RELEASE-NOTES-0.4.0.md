@@ -11,7 +11,7 @@ adapter branch entirely. On one RTX 3090 with the new
 
 The package is v0.3.0 plus one patch (`0003-uno-hybrid-kv-draft-vocab.patch`: three vLLM files and their tests) on the same digest-pinned
 vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed release tree is
-`99227666da0498bbaba12534b9834176d2bfd9f2`.
+`4aa655488f2c8d86fcc3692b037e03a991dcc9ba`.
 
 ## What changed
 
@@ -28,8 +28,8 @@ vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed rele
   path runs the base layer alone instead of launching and zero-filling the auxiliary branch.
 - **Gemma 4 profile:** split-KV draft attention on by default (`UNO_GEMMA_SPLITKV=0` turns it off), 32k context
   (`UNO_MAX_MODEL_LEN` overrides), hybrid KV cache manager on, `max_num_seqs=8`,
-  `gpu_memory_utilization=0.90`, CUDA graphs covering 32 draft rows and 40-row verify batches. At 32k the Gemma 4 profile holds 79k tokens of KV,
-  against 45k for the DFlash drafter on the same card and settings.
+  `gpu_memory_utilization=0.90`, CUDA graphs covering 32 draft rows and 40-row verify batches. At 32k the Gemma 4 profile holds 79k tokens of KV
+  (plain 101k, the DFlash drafter 68k with the same serving flags).
 
 ## Fixed, and a known issue in v0.3.0
 
@@ -42,20 +42,22 @@ traffic rarely meets the condition. v0.4.0 fixes it in the scheduler, with a reg
 
 ## What this release validates
 
-`docs/validation.md` carries the runs; the short version, one RTX 3090, P10K adapter, K=4:
+`docs/validation.md` carries the runs; the short version, one RTX 3090, P10K adapter, K=4. "Final" rows ran on the
+release image; "first" rows on the first release image, which lacks only the two fixes above:
 
 | check | result |
 | --- | --- |
-| Production traffic (72 real requests, one at a time) | 5.028 / 4.943 ms per token vs plain 7.493 / 7.492: **1.50x** (DFlash K=8 in the same session: 1.57x) |
-| Long prompts, 2k / 6k / 10k / 14k / 20k / 28k tokens | **1.47x / 1.35x / 1.36x / 1.33x / 1.28x / 1.26x** plain (DFlash 1.14x / 0.94x / 0.86x / 0.75x / 0.74x / 0.69x) |
-| Greedy replays vs plain servers (72 requests) | 61 and 57 diverge; plain vs plain 60 |
-| Sampled distributions, short prompts, prefix caching on (mean TV) | 0.056 to 0.067; plain vs plain 0.048 to 0.062, two halves of one server 0.060 to 0.073 |
-| Sampled distributions, 3k-14k documents (mean TV) | 0.222 to 0.246; plain vs plain 0.233 to 0.245 |
+| Production traffic (72 real requests, one at a time), final | 5.028 / 4.943 ms per token vs plain 7.493 / 7.492: **1.50x** (DFlash K=8 in the same session: 1.57x) |
+| Long prompts, 2k / 6k / 10k / 14k / 20k / 28k tokens, first (median decode time; Uno 16 requests per length over two servers, plain and DFlash 8) | **1.47x / 1.35x / 1.36x / 1.33x / 1.28x / 1.26x** plain (DFlash 1.14x / 0.94x / 0.86x / 0.75x / 0.74x / 0.69x) |
+| Greedy replays vs plain servers (72 requests), first | 61 and 57 diverge; plain vs plain 60 |
+| Sampled distributions, short prompts, prefix caching on (mean TV), final Uno vs first-image plain servers | 0.056 to 0.067; plain vs plain 0.048 to 0.062, two halves of one server 0.060 to 0.073 |
+| Sampled distributions, 3k-14k documents (mean TV), first | 0.222 to 0.246; plain vs plain 0.233 to 0.245 |
 
 ## Scope
 
 One GPU type (RTX 3090, AMD64). The production number is one request at a time; with several users sending long
-prompts at once, prompt processing dominates and plain decoding keeps pace with any speculative method. The Qwen3-8B
+prompts at once, prompt processing dominated and plain decoding kept pace with Uno and DFlash in our concurrent
+long-prompt test. The Qwen3-8B
 profile is unchanged from v0.3.0.
 
 ## Credits
