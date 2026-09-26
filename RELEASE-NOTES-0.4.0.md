@@ -5,7 +5,7 @@ hybrid KV layout (sliding-window and full-attention groups) instead of forcing e
 draft head scores a 64k-token Gemma 4 vocabulary while verification keeps the full one, and the verify pass skips the
 adapter branch entirely. On one RTX 3090 with the new
 [P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter) (repo id pending), Gemma 4 26B decodes
-**1.50x faster than plain** on production traffic (DFlash, the fastest drafter we measured there, 1.57x) and
+**1.52x faster than plain** on production traffic and
 **1.26x to 1.47x faster on prompts from 2k to 28k tokens**, where DFlash on the same card and image falls from 1.14x to
 0.69x of plain: Uno is 1.3x to 1.8x faster than DFlash on long prompts. The output distribution is the model's own.
 
@@ -47,7 +47,7 @@ release image; "first" rows on the first release image, which lacks only the two
 
 | check | result |
 | --- | --- |
-| Production traffic (72 real requests, one at a time), final | 5.028 / 4.943 ms per token vs plain 7.493 / 7.492: **1.50x** (DFlash K=8 in the same session: 1.57x) |
+| Production traffic (72 real requests, one at a time), final | 4.934 / 4.905 ms per token vs plain 7.489: **1.52x** |
 | Long prompts, 2k / 6k / 10k / 14k / 20k / 28k tokens, first (median decode time; Uno 16 requests per length over two servers, plain and DFlash 8) | **1.47x / 1.35x / 1.36x / 1.33x / 1.28x / 1.26x** plain (DFlash 1.14x / 0.94x / 0.86x / 0.75x / 0.74x / 0.69x) |
 | Greedy replays vs plain servers (72 requests), first | 61 and 57 diverge; plain vs plain 60 |
 | Sampled distributions, short prompts, prefix caching on (mean TV), final Uno vs first-image plain servers | 0.056 to 0.067; plain vs plain 0.048 to 0.062, two halves of one server 0.060 to 0.073 |

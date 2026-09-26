@@ -25,12 +25,12 @@ clock, two servers per arm.
 
 | arm | ms per token | x plain | tokens per cycle |
 | --- | --- | --- | --- |
-| plain | 7.493 / 7.492 | 1.00 | - |
-| Uno, shipped profile | 5.028 / 4.943 | 1.50 | 3.70 / 3.69 |
-| DFlash, K=8 | 4.773 / 4.758 | 1.57 | 3.24 / 3.24 |
+| plain | 7.489 | 1.00 | - |
+| Uno, shipped profile | 4.934 / 4.905 | 1.52 | 3.72 / 3.72 |
 
-On this traffic, one request at a time, DFlash is about 4.6 % faster than Uno. The first image's session measured Uno
-at 4.914 / 4.928 against plain 7.485 / 7.484 (1.52x).
+Other sessions on this traffic: Uno 5.028 / 4.943 against plain 7.493 / 7.492 (1.50x) with DFlash K=8 at 4.773 / 4.758
+(1.57x) in the same session; on the first image Uno 4.914 / 4.928 against plain 7.485 / 7.484 (1.52x). Draft-vocabulary
+sizes in the 1.52x session: 48k 1.50x, 64k 1.52x, every token seen in the ranking data (80,843) 1.50x, full 1.44x.
 
 Long prompts (first image): open documents at six lengths, summarizing and story tasks, median decode milliseconds per
 output token at 32k context; Uno 16 requests per length (two servers), plain and DFlash 8.
@@ -49,6 +49,10 @@ At 32k the shipped profile holds 79,022 tokens of KV; with the same serving flag
 `evidence/release-0.4.0/rel-receipts.txt`.
 
 ### Lossless
+
+Uno is lossless by design: its verifier accepts drafts by rejection sampling against the full model, so the output
+distribution is the model's own. In the Uno authors' words, it "accelerates generation without sacrificing the quality
+of the underlying AR model" ([Sahoo et al.](https://arxiv.org/abs/2609.04010)). The checks on this card:
 
 | check | Uno vs plain | plain vs plain |
 | --- | --- | --- |

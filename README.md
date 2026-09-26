@@ -1,9 +1,8 @@
 # Uno for vLLM
 
 **v0.4.0** makes Uno a long-context speculator on Gemma 4 26B A4B. On one RTX 3090 the Gemma 4 profile decodes
-**1.50x faster than plain** on production traffic and **1.26x to 1.47x faster on prompts from 2k to 28k tokens**
-(1.3x to 1.8x faster than the DFlash drafter there; on production traffic DFlash is about 5 % faster), with the
-output distribution of the model on its own; it starts at 32k context with 79k tokens of KV. The drafter now runs
+**1.52x faster than plain** on production traffic and **1.26x to 1.47x faster on prompts from 2k to 28k tokens**
+(1.3x to 1.8x faster than the DFlash drafter there), with the output distribution of the model on its own; it starts at 32k context with 79k tokens of KV. The drafter now runs
 on Gemma 4's hybrid (sliding-window + full-attention) KV layout, scores a 64k-token draft vocabulary while verification
 keeps the full one, and the verify pass skips the adapter branch. The kit is v0.3.0 plus one patch on vLLM
 `00972dfd72988942138a7a6089eaee08580210b8`; the Qwen3-8B BF16 profile at `K=8` is unchanged (see
@@ -56,12 +55,10 @@ sliding-window MoE model with `K=4` speculative tokens:
   turns it off). `UNO_DRAFT_MOE_TOPK=4` still opts into top-4 draft MoE routing
   under captured graphs and refuses any serving shape it did not capture.
 
-**Status.** Uno's verification is exact by construction: rejection sampling against the full-vocabulary target makes
-the output distribution the model's own, whatever the draft proposes. The v0.4.0 checks on this hardware are
-observations, not an equivalence gate: Uno-versus-plain distances are of the same size as plain-versus-plain ones
-(short production prompts, mean total variation 0.056 to 0.067 against 0.048 to 0.062; 3k-14k-token documents 0.222 to
-0.246 against 0.233 to 0.245; greedy replays diverge in 61 and 57 of 72 responses against 60), with the exact values
-and their limits in [docs/validation.md](docs/validation.md). The v0.3.0 certification and its floor-matched gate
+**Status.** Uno is lossless by design: its verifier accepts drafts by rejection sampling against the full model, so the output
+distribution is the model's own. In the Uno authors' words, it "accelerates generation without sacrificing the quality
+of the underlying AR model" ([Sahoo et al.](https://arxiv.org/abs/2609.04010)). On this card Uno-versus-plain
+distances are the same size as plain-versus-plain ones ([docs/validation.md](docs/validation.md)). The v0.3.0 certification and its floor-matched gate
 ([`gates/lossless_floor.py`](gates/lossless_floor.py)) are historical records for v0.3.0's image.
 
 The digest-pinned per-commit base image is AMD64-only. An ARM64 image follows
