@@ -4,60 +4,73 @@
 
 One NVIDIA RTX 3090 (24 GB), Linux AMD64, `cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit` revision
 `0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba`, the P10K Uno adapter (rank 16; `adapter_model.safetensors` sha256
-`2f9e7c8f3db6f0259bbf7699ab0fc2f36e19185956f3364d97cef56e11544629`), `K=4`. Two stages, 2026-09-26:
+`2f9e7c8f3db6f0259bbf7699ab0fc2f36e19185956f3364d97cef56e11544629`), `K=4`. Every arm runs the release image through
+`release/serve.sh` with `UNO_PROFILE=gemma4` and no overrides except the served-model name and the Gemma 4 tool and
+reasoning parsers the production payloads use; plain and DFlash (`z-lab/gemma-4-26B-A4B-it-DFlash`, K=8) run on the same
+image with the same serving flags minus Uno's. Fresh servers per arm; each speed comparison is one session on one card.
+The short-prompt distributions compare the final image's Uno server with the plain servers of the first image's session
+(the plain path does not touch the changed code).
 
-1. **Release candidate, controlled comparison.** v0.3.0 plus the two v0.4.0 files and the draft vocabulary, served with
-   fixed lab flags (one request at a time for production traffic, prefix caching off, split-KV draft attention on),
-   against the development build the long-context results were first measured on and against plain decoding on the
-   same image. Plain, candidate and development arms alternate (ABBA), two fresh servers each.
-2. **Release image through its own launcher.** `ghcr.io/brntech/vllm-uno:0.4.0` built by `release/build.sh` (its two
-   changed Python files are byte-identical to stage 1's), launched by `release/serve.sh` with `UNO_PROFILE=gemma4` and
-   no overrides except the served-model name and the Gemma 4 tool and reasoning parsers the production payloads use.
+Two images, 2026-09-26: the first release image (tree `4da8b19f`), and the final one (tree `99227666`), which adds the
+scheduler fix below and the full-KV admission fix and is otherwise identical. Production speed, the short-prompt
+distributions and the fix's reproduction were rerun on the final image; long prompts, greedy replays and the
+long-document distributions are from the first image.
 
 ### Speed
 
-Production traffic: 72 real requests, replayed one at a time, milliseconds per output token on the HTTP clock.
+Production traffic (final image): 72 real requests, replayed one at a time, milliseconds per output token on the HTTP
+clock, two servers per arm.
 
 | arm | ms per token | x plain | tokens per cycle |
 | --- | --- | --- | --- |
-| plain | 7.542 / 7.551 | 1.00 | - |
-| release candidate (stage 1) | 4.975 / 4.952 | 1.52 | 3.67 / 3.69 |
-| release image, shipped profile (stage 2) | 4.926 / 4.910 | 1.53 | 3.69 / 3.71 |
+| plain | 7.493 / 7.492 | 1.00 | - |
+| Uno, shipped profile | 5.028 / 4.943 | 1.50 | 3.70 / 3.69 |
+| DFlash, K=8 | 4.773 / 4.758 | 1.57 | 3.24 / 3.24 |
 
-Long prompts: open documents at six lengths, 16 requests per length in stage 1 (8 in stage 2), summarizing and story
-tasks, median decode milliseconds per output token at 32k context. Plain and the DFlash drafter
-(`z-lab/gemma-4-26B-A4B-it-DFlash`, K=8, its own recommended configuration) were measured on the same card and model.
+On this traffic, one request at a time, DFlash is about 4.6 % faster than Uno. The first image's session measured Uno
+at 4.914 / 4.928 against plain 7.485 / 7.484 (1.52x).
 
-| prompt tokens | plain | DFlash | stage 1 | stage 2 | stage 2 x plain | DFlash x plain |
+Long prompts (first image): open documents at six lengths, summarizing and story tasks, median decode milliseconds per
+output token at 32k context; Uno 16 requests per length (two servers), plain and DFlash 8.
+
+| prompt tokens | plain | DFlash | Uno | Uno x plain | DFlash x plain | Uno x DFlash |
 | --- | --- | --- | --- | --- | --- | --- |
-| ~2,000 | 7.56 | 6.09 | 5.21 | 5.24 | 1.44 | 1.24 |
-| ~6,100 | 8.08 | 8.44 | 5.94 | 5.76 | 1.40 | 0.96 |
-| ~10,000 | 8.52 | 8.91 | 6.28 | 6.21 | 1.37 | 0.96 |
-| ~13,900 | 8.74 | 11.60 | 6.49 | 6.36 | 1.37 | 0.75 |
-| ~20,000 | 9.42 | 13.49 | 7.34 | 7.18 | 1.31 | 0.70 |
-| ~27,700 | 9.80 | 14.90 | 7.71 | 7.49 | 1.31 | 0.66 |
+| ~2,000 | 7.41 | 6.49 | 5.05 | 1.47 | 1.14 | 1.29 |
+| ~6,100 | 7.93 | 8.44 | 5.87 | 1.35 | 0.94 | 1.44 |
+| ~10,000 | 8.37 | 9.74 | 6.14 | 1.36 | 0.86 | 1.59 |
+| ~13,900 | 8.58 | 11.44 | 6.44 | 1.33 | 0.75 | 1.78 |
+| ~20,000 | 9.26 | 12.52 | 7.26 | 1.28 | 0.74 | 1.72 |
+| ~27,700 | 9.63 | 14.00 | 7.62 | 1.26 | 0.69 | 1.84 |
 
-At 32k the shipped profile holds 79,022 tokens of KV; DFlash held 45,885 to 69,025 on the same card and settings.
+At 32k the shipped profile holds 79,022 tokens of KV; DFlash holds 45,323 on the same card and settings.
 
 ### Lossless
 
-Same instruments as v0.3.0's development runs, stage 1, the candidate against fresh plain servers:
-
-| check | candidate vs plain | plain vs plain |
+| check | Uno vs plain | plain vs plain |
 | --- | --- | --- |
-| greedy replay of the 72 production requests, responses that diverge | 56, 57 | 58 |
-| sampled distributions, 24 production prompts x 96 samples x first 8 tokens, mean total variation | 0.047 / 0.034 / 0.044 | 0.045 / 0.044 / 0.038 (two halves of one plain server: 0.046 to 0.059) |
-| sampled distributions, six 3k-14k-token documents x 64 samples x first 8 tokens, mean total variation | 0.212 / 0.224 / 0.197 | 0.227 / 0.213 / 0.203 |
+| greedy replay of the 72 production requests, responses that diverge (first image) | 61, 57 | 60 |
+| sampled distributions, 24 production prompts x 96 samples x first 8 tokens, mean total variation (final image, prefix caching on) | 0.056 / 0.061 / 0.067 | 0.048 / 0.062 / 0.057 (two halves of one server: 0.060 to 0.073) |
+| sampled distributions, six 3k-14k-token documents x 64 samples x first 8 tokens, mean total variation (first image; two Uno servers) | 0.222 to 0.246 | 0.233 to 0.245 |
 
 Every long document exceeds the 1,024-token sliding window, so the hybrid-KV path (sliding groups freeing old blocks
 while draft rows write per-group slots) is exercised. Greedy decoding is not bit-exact across servers on this card for
 plain decoding either; the comparison is against that plain-versus-plain range.
 
-### What stage 2 caught
+### What the release checks caught
 
-The first stage-2 image left split-KV draft attention opt-in, as v0.3.0 did, and ran 28k-token prompts at 13.6 ms per
-token. Every stage-1 run had it on. The gemma4 profile now turns it on by default; the numbers above are the rebuilt
-image.
+- **Prefix caching and a one-token cached prefill.** On the first image the short-prompt distributions failed with
+  prefix caching on (mean TV 0.086 to 0.104) and passed with it off. All of it was one production prompt of 225 tokens:
+  an exact repeat of it left one token to compute after the cache hit, vLLM's scheduler padded that prefill like a
+  resumed decode with placeholder draft tokens, and Uno's probabilistic verification accepted them, emitting `<pad>` in
+  86 of 96 samples. The scheduler no longer pads Uno requests; the reproduction went from 90 of 96 bad samples to 0, and
+  `test_uno_never_pads_a_cached_one_token_prefill` fails before the fix and passes after it. v0.3.0 has the same path.
+- **Full-KV admission.** The first image refused a sliding-window layer promoted to a full KV allocation (hybrid KV
+  cache manager off); the final image admits it again, with a test.
+- **Split-KV default.** An early image left split-KV draft attention opt-in, as v0.3.0 did, and ran 28k-token prompts
+  at 13.6 ms per token; the gemma4 profile now turns it on by default.
+
+The final image passes the patched tree's Uno tests on the card: 541 unit and scheduler tests and the 8 end-to-end
+`test_uno.py` cases.
 
 ### Scope
 

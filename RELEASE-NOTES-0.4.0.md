@@ -5,8 +5,9 @@ hybrid KV layout (sliding-window and full-attention groups) instead of forcing e
 draft head scores a 64k-token Gemma 4 vocabulary while verification keeps the full one, and the verify pass skips the
 adapter branch entirely. On one RTX 3090 with the new
 [P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter) (repo id pending), Gemma 4 26B decodes
-**1.53x faster than plain** on production traffic and **1.31x to 1.44x faster on prompts from 2k to 28k tokens**, where
-the DFlash drafter measured on the same card falls to 0.66x of plain. The output distribution is the model's own.
+**1.50x faster than plain** on production traffic (DFlash, the fastest drafter we measured there, 1.57x) and
+**1.26x to 1.47x faster on prompts from 2k to 28k tokens**, where DFlash on the same card and image falls from 1.14x to
+0.69x of plain: Uno is 1.3x to 1.8x faster than DFlash on long prompts. The output distribution is the model's own.
 
 The package is v0.3.0 plus one patch (`0003-uno-hybrid-kv-draft-vocab.patch`: three vLLM files and their tests) on the same digest-pinned
 vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed release tree is
@@ -28,7 +29,7 @@ vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed rele
 - **Gemma 4 profile:** split-KV draft attention on by default (`UNO_GEMMA_SPLITKV=0` turns it off), 32k context
   (`UNO_MAX_MODEL_LEN` overrides), hybrid KV cache manager on, `max_num_seqs=8`,
   `gpu_memory_utilization=0.90`, CUDA graphs covering 32 draft rows and 40-row verify batches. At 32k the Gemma 4 profile holds 79k tokens of KV,
-  more than the 46k to 69k the DFlash drafter gets on the same card.
+  against 45k for the DFlash drafter on the same card and settings.
 
 ## Fixed, and a known issue in v0.3.0
 
@@ -45,11 +46,11 @@ traffic rarely meets the condition. v0.4.0 fixes it in the scheduler, with a reg
 
 | check | result |
 | --- | --- |
-| Production traffic (72 real requests, one at a time), release image | 4.926 / 4.910 ms per token vs plain 7.542 / 7.551: **1.53x** |
-| Long prompts, 2k / 6k / 10k / 14k / 20k / 28k tokens, release image | **1.44x / 1.40x / 1.37x / 1.37x / 1.31x / 1.31x** plain (DFlash 1.24x to 0.66x) |
-| Greedy replays vs plain servers (72 requests) | 56 and 57 diverge; plain vs plain 58 |
-| Sampled distributions, short prompts (mean TV) | 0.034 to 0.047; plain vs plain 0.038 to 0.045, two halves of one plain server 0.046 to 0.059 |
-| Sampled distributions, 3k-14k documents (mean TV) | 0.197 to 0.224; plain vs plain 0.203 to 0.227 |
+| Production traffic (72 real requests, one at a time) | 5.028 / 4.943 ms per token vs plain 7.493 / 7.492: **1.50x** (DFlash K=8 in the same session: 1.57x) |
+| Long prompts, 2k / 6k / 10k / 14k / 20k / 28k tokens | **1.47x / 1.35x / 1.36x / 1.33x / 1.28x / 1.26x** plain (DFlash 1.14x / 0.94x / 0.86x / 0.75x / 0.74x / 0.69x) |
+| Greedy replays vs plain servers (72 requests) | 61 and 57 diverge; plain vs plain 60 |
+| Sampled distributions, short prompts, prefix caching on (mean TV) | 0.056 to 0.067; plain vs plain 0.048 to 0.062, two halves of one server 0.060 to 0.073 |
+| Sampled distributions, 3k-14k documents (mean TV) | 0.222 to 0.246; plain vs plain 0.233 to 0.245 |
 
 ## Scope
 
