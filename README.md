@@ -1,8 +1,9 @@
 # Uno for vLLM
 
-**v0.4.0** makes Uno a long-context speculator on Gemma 4 26B A4B. On one RTX 3090 the Gemma 4 profile decodes
-**1.52x faster than plain** on production traffic and **1.26x to 1.47x faster on prompts from 2k to 28k tokens**
-(1.3x to 1.8x faster than the DFlash drafter there), with the output distribution of the model on its own; it starts at 32k context with 79k tokens of KV. The drafter now runs
+**v0.4.0** makes Uno a long-context speculator on Gemma 4 26B A4B, the model BroadNet serves in production in English
+and Arabic. On one RTX 3090 the Gemma 4 profile decodes BroadNet's production traffic **1.52x faster than plain** and
+prompts from 2k to 28k tokens **1.26x to 1.47x faster** (1.3x to 1.8x faster than the DFlash drafter there), with the
+output distribution of the model on its own; it starts at 32k context with 79k tokens of KV. The drafter now runs
 on Gemma 4's hybrid (sliding-window + full-attention) KV layout, scores a 64k-token draft vocabulary while verification
 keeps the full one, and the verify pass skips the adapter branch. The kit is v0.3.0 plus one patch on vLLM
 `00972dfd72988942138a7a6089eaee08580210b8`; the Qwen3-8B BF16 profile at `K=8` is unchanged (see

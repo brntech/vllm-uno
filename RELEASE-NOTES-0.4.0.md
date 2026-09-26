@@ -1,13 +1,19 @@
 # Uno for vLLM v0.4.0
 
-Uno for vLLM v0.4.0 makes Uno a long-context speculator on Gemma 4 26B A4B. The drafter now runs on Gemma 4's own
-hybrid KV layout (sliding-window and full-attention groups) instead of forcing every layer into full attention, the
-draft head scores a 64k-token Gemma 4 vocabulary while verification keeps the full one, and the verify pass skips the
-adapter branch entirely. On one RTX 3090 with the new
-[P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter) (repo id pending), Gemma 4 26B decodes
-**1.52x faster than plain** on production traffic and
-**1.26x to 1.47x faster on prompts from 2k to 28k tokens**, where DFlash on the same card and image falls from 1.14x to
-0.69x of plain: Uno is 1.3x to 1.8x faster than DFlash on long prompts. The output distribution is the model's own.
+Uno for vLLM v0.4.0 makes Gemma 4 26B A4B, the model BroadNet runs in production for its clients in English and
+Arabic, the fastest Gemma 4 26B on long prompts we have measured: **1.3x to 1.8x faster than DFlash**, the fastest
+Gemma 4 drafter we found, at every length from 2k to 28k tokens, and **1.52x faster than plain decoding** on our
+production traffic, on a single 24 GB RTX 3090 with the new
+[P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter). The output is the model's own. The
+drafter now runs on Gemma 4's own hybrid KV layout, scores a 64k-token draft vocabulary while verification keeps the
+full one, and the verify pass skips the adapter branch.
+
+**Why Gemma 4 26B A4B.** It is the model behind BroadNet's production agent workloads: email triage and drafting,
+service-health monitoring and incident triage, multi-agent coordination, code review, in English and Arabic. The
+Gemma 4 family leads the open models in our published Arabic benchmark, on the strength of dialect-authentic
+generation, and this model is the base of our Arabic-tuned models. Every speed number here is measured on 72 real
+requests from that traffic, replayed on our own hardware, not on a synthetic benchmark; the adapter itself is trained
+on open data only.
 
 The package is v0.3.0 plus one patch (`0003-uno-hybrid-kv-draft-vocab.patch`: three vLLM files and their tests) on the same digest-pinned
 vLLM `00972dfd72988942138a7a6089eaee08580210b8` CI image; the reconstructed release tree is
