@@ -49,7 +49,7 @@ case $profile in
     # v0.4.0: Uno drafts on Gemma 4's hybrid (sliding-window + full) KV layout, so the hybrid KV cache manager stays on
     # and the profile starts at 32k context; the draft head scores the shipped 64k Gemma 4 draft vocabulary
     # (UNO_DRAFT_VOCAB= empty restores the full-vocabulary draft head). Verification always scores the full vocabulary.
-    export VLLM_UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}
+    export UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}
     flags=(--dtype bfloat16 --attention-backend TRITON_ATTN --language-model-only
       --enable-prefix-caching --seed 29
       --max-model-len ${UNO_MAX_MODEL_LEN:-32768} --max-num-seqs 8 --max-num-batched-tokens 2048

@@ -2,7 +2,7 @@
   "base_commit": "00972dfd72988942138a7a6089eaee08580210b8",
   "code_base": "3ad49350281a6b73de58449aadb293a8b398fb5d",
   "head_commit": "cf87916880b051e8782521dfe2afa12e0627e172",
-  "final_tree": "4e99c57abbfa38534559081f49c8cc87d8c38ef9",
+  "final_tree": "e5c6278877bab3a6fdba5a26babdf321c3ce2bdb",
   "patches": [
     {
       "file": "0001-uno-mrv2-base.patch",
@@ -70,7 +70,7 @@
     },
     {
       "file": "0003-uno-hybrid-kv-draft-vocab.patch",
-      "sha256_lf": "45af320c77f7872d5baf1d107e5e791f20deeccd05bdb5b4cfba59731b2c2431",
+      "sha256_lf": "0b5a4fe4c33ac2335a9323f84885a02785b27b861abb9b6acd3b55f2b5d6199f",
       "files": [
         "vllm/lora/layers/base_linear.py",
         "vllm/v1/worker/gpu/spec_decode/uno.py"

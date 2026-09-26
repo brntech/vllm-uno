@@ -125,7 +125,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("--language-model-only", flags)
         # v0.4.0: Uno drafts on the hybrid (sliding-window + full) KV layout, so the manager stays on.
         self.assertNotIn("--disable-hybrid-kv-cache-manager", flags)
-        self.assertIn("VLLM_UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}", block)
+        self.assertIn("export UNO_DRAFT_VOCAB=${UNO_DRAFT_VOCAB-/opt/uno-kit/release/gemma4-draft-vocab-65536.json}", block)
         self.assertIn("--max-lora-rank 16", flags)
         self.assertIn("--max-loras 2", flags)
         self.assertIn("${UNO_K:-4}", block)
@@ -179,7 +179,7 @@ class ReleaseTests(unittest.TestCase):
                           "0003-uno-hybrid-kv-draft-vocab.patch"])
         self.assertEqual(data["patches"][2]["files"],
                          ["vllm/lora/layers/base_linear.py", "vllm/v1/worker/gpu/spec_decode/uno.py"])
-        self.assertEqual(data["final_tree"], "4e99c57abbfa38534559081f49c8cc87d8c38ef9")
+        self.assertEqual(data["final_tree"], "e5c6278877bab3a6fdba5a26babdf321c3ce2bdb")
         gemma = data["patches"][1]["files"]
         for module in ("vllm/v1/worker/gpu/spec_decode/uno_draft_moe.py",
                        "vllm/v1/attention/ops/triton_unified_attention.py",

@@ -23,7 +23,7 @@ index df7cfe7122..c8ac24ec05 100644
          output_size = sum(self.output_slices)
  
 diff --git a/vllm/v1/worker/gpu/spec_decode/uno.py b/vllm/v1/worker/gpu/spec_decode/uno.py
-index 385f017b2b..9b67d9e975 100644
+index 385f017b2b..afbac8ac2e 100644
 --- a/vllm/v1/worker/gpu/spec_decode/uno.py
 +++ b/vllm/v1/worker/gpu/spec_decode/uno.py
 @@ -50,6 +50,43 @@ if TYPE_CHECKING:
@@ -74,7 +74,7 @@ index 385f017b2b..9b67d9e975 100644
          # a later fallback in serving could never announce itself.
          self.num_warmup_proposals = 0
  
-+    # Draft-vocabulary overlay (VLLM_UNO_DRAFT_VOCAB); None is the original full-vocabulary draft head.
++    # Draft vocabulary (UNO_DRAFT_VOCAB); None is the original full-vocabulary draft head.
 +    _draft_vocab_ids: torch.Tensor | None = None
 +    _draft_vocab_weight: torch.Tensor | None = None
 +    _draft_vocab_full: torch.Tensor | None = None
@@ -84,20 +84,20 @@ index 385f017b2b..9b67d9e975 100644
 +    def _arm_draft_vocab(self) -> None:
 +        import json as _json
 +        import os as _os
-+        path = _os.environ.get("VLLM_UNO_DRAFT_VOCAB", "").strip()
++        path = _os.environ.get("UNO_DRAFT_VOCAB", "").strip()
 +        if not path:
 +            return
 +        if self.use_local_argmax_reduction:
-+            raise ValueError("VLLM_UNO_DRAFT_VOCAB is not compatible with local argmax reduction")
++            raise ValueError("UNO_DRAFT_VOCAB is not compatible with local argmax reduction")
 +        ids = sorted(set(int(t) for t in _json.load(open(path))["token_ids"]))
 +        holder = next((m for m in self.model.modules()
 +                       if isinstance(getattr(m, "lm_head", None), torch.nn.Module)
 +                       and getattr(m, "logits_processor", None) is not None), None)
 +        if holder is None:
-+            raise ValueError("VLLM_UNO_DRAFT_VOCAB: no module with lm_head and logits_processor")
++            raise ValueError("UNO_DRAFT_VOCAB: no module with lm_head and logits_processor")
 +        weight = holder.lm_head.weight
 +        if not ids or ids[0] < 0 or ids[-1] >= weight.shape[0]:
-+            raise ValueError("VLLM_UNO_DRAFT_VOCAB ids out of range")
++            raise ValueError("UNO_DRAFT_VOCAB ids out of range")
 +        idx = torch.tensor(ids, dtype=torch.int64, device=weight.device)
 +        self._draft_vocab_ids = idx
 +        self._draft_vocab_weight = weight.index_select(0, idx).contiguous()
@@ -107,7 +107,7 @@ index 385f017b2b..9b67d9e975 100644
 +        rows = self.max_num_reqs * self.k
 +        self._draft_vocab_full = torch.full((rows, lp.org_vocab_size), float("-inf"),
 +                                            dtype=weight.dtype, device=weight.device)
-+        logger.info("Uno draft vocabulary overlay: %d of %d head rows (%s)", len(ids), weight.shape[0], path)
++        logger.info("Uno draft vocabulary: %d of %d head rows (%s)", len(ids), weight.shape[0], path)
 +
 +    def _draft_vocab_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:
 +        logits = torch.mm(hidden_states, self._draft_vocab_weight.t())
