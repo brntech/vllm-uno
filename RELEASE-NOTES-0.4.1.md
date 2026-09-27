@@ -1,6 +1,6 @@
 # Uno for vLLM v0.4.1
 
-Uno for vLLM v0.4.1 makes Gemma 4 26B A4B decode about 1 % faster on the RTX 3090, with no change to its output: the
+Uno for vLLM v0.4.1 makes Gemma 4 26B A4B decode about 1 % faster on the RTX 3090, and the output is the model's own. The
 Gemma 4 profile now ships tuned kernel configs for the adapter's LoRA layers. In the release session the profile runs
 BroadNet's production traffic **1.53x faster than plain decoding** (1.51x with the tuned configs turned off, same image,
 same session).
@@ -13,7 +13,7 @@ byte-identical to v0.4.0's.
 ## What changed
 
 - **Tuned LoRA kernel configs for the RTX 3090.** Uno's draft pass runs the adapter through vLLM's LoRA shrink and
-  expand Triton kernels, which used vLLM's generic default configs. v0.4.1 ships configs tuned for every shape the
+  expand Triton kernels, which used vLLM's generic default configs. v0.4.1 ships configs tuned for the shapes the
   Gemma 4 draft pass launches with the rank-16 adapter (shrink over 2,112 to 8,192 inputs, expand to 2,112 to 8,192
   outputs, 4 to 40 rows), chosen by timing each candidate under CUDA graphs, as served, and checking every winner
   against a reference product. At one request (four draft rows) the adapter's kernel time per layer falls from about
