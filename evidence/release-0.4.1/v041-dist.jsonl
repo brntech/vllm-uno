@@ -1,0 +1,17 @@
+{"pair": "V1d-plainA vs V1d-uno", "mean_tv": 0.0556, "cells": 192}
+{"pair": "V1d-plainA vs V1d-plainB", "mean_tv": 0.0505, "cells": 192}
+{"pair": "V1d-plainA vs V1d-uno-rep", "mean_tv": 0.0546, "cells": 192}
+{"pair": "V1d-plainA vs V1d-plainC", "mean_tv": 0.0512, "cells": 192}
+{"pair": "V1d-uno vs V1d-plainB", "mean_tv": 0.0564, "cells": 192}
+{"pair": "V1d-uno vs V1d-uno-rep", "mean_tv": 0.0485, "cells": 192}
+{"pair": "V1d-uno vs V1d-plainC", "mean_tv": 0.0526, "cells": 192}
+{"pair": "V1d-plainB vs V1d-uno-rep", "mean_tv": 0.0539, "cells": 192}
+{"pair": "V1d-plainB vs V1d-plainC", "mean_tv": 0.0501, "cells": 192}
+{"pair": "V1d-uno-rep vs V1d-plainC", "mean_tv": 0.0525, "cells": 192}
+{"arm": "V1d-uno", "tv_vs_plains": [0.0556, 0.0564, 0.0526], "plain_pairs": [0.0505, 0.0512, 0.0501], "max_plain_pair": 0.0512, "min_vs_plain": 0.0526}
+{"arm": "V1d-uno-rep", "tv_vs_plains": [0.0546, 0.0539, 0.0525], "plain_pairs": [0.0505, 0.0512, 0.0501], "max_plain_pair": 0.0512, "min_vs_plain": 0.0525}
+{"pair": "V1d-plainA split-half", "mean_tv": 0.0613, "cells": 192}
+{"pair": "V1d-uno split-half", "mean_tv": 0.0705, "cells": 192}
+{"pair": "V1d-plainB split-half", "mean_tv": 0.0556, "cells": 192}
+{"pair": "V1d-uno-rep split-half", "mean_tv": 0.0614, "cells": 192}
+{"pair": "V1d-plainC split-half", "mean_tv": 0.0679, "cells": 192}

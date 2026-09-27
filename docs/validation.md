@@ -1,5 +1,26 @@
 # Validation
 
+## v0.4.1 release status: tuned LoRA kernel configs validated
+
+v0.4.1 adds two config files and one environment variable to the Gemma 4 profile; the vLLM package in the image is
+byte-identical to v0.4.0's (hash of every `.py` file under `vllm/`: `85f3fca3a6aeaee6` in both images). Checked on the
+release-candidate image, one RTX 3090, P10K adapter (`evidence/release-0.4.1/`):
+
+- **Receipts** (`v041-receipts.txt`): every tuned server logs `Using tuned LoRA kernel configs`; every server started
+  with `VLLM_TUNED_CONFIG_FOLDER=` logs `Using default LoRA kernel configs`.
+- **Speed** (`v041-speed.jsonl`, production72, balanced tuned / off / DFlash / off / tuned / plain): tuned 4.970 / 4.921
+  ms per token, off 4.970 / 5.002 (-0.8 %), τ 3.69-3.72 in both; plain 7.552 (tuned 1.53x, off 1.51x); DFlash K=8
+  4.863. The same config files on the v0.4.0 image, in an earlier balanced session (`overlay-session-2.jsonl`): 4.882 /
+  4.875 against 4.942 / 4.923 (-1.1 %). A third session with the configs on an overlay image
+  (`overlay-session-1.jsonl`, not shipped) measured -1.1 %.
+- **Lossless** (`v041-dist.jsonl`, the v0.4.0 short check: 24 production prompts x 96 samples x first 8 tokens, prefix
+  caching on): mean TV Uno vs plain 0.053-0.056 (two Uno servers x three plain servers), plain vs plain 0.050-0.051,
+  Uno vs Uno 0.049, split halves within each arm 0.056-0.071; v0.4.0's release check read 0.055-0.064 against plain
+  pairs 0.048-0.062.
+- **Configs** (`tune-report.json`, `tune_lora.py`): shrink 240 and expand 108 candidates per shape and row count, timed
+  under CUDA graphs; each winner matched a float32 reference; per layer at four draft rows
+  the adapter kernels fall from about 35 to about 24.5 microseconds.
+
 ## v0.4.0 release status: Gemma 4 long-context profile validated
 
 One NVIDIA RTX 3090 (24 GB), Linux AMD64, `cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit` revision

@@ -1,5 +1,9 @@
 # Uno for vLLM
 
+**v0.4.1** ships tuned kernel configs for the adapter's LoRA layers on the RTX 3090: the Gemma 4 profile decodes about
+1 % faster with the same output, 1.53x plain on BroadNet's production traffic in the release session (see
+[RELEASE-NOTES-0.4.1.md](RELEASE-NOTES-0.4.1.md)). Everything below is unchanged from v0.4.0.
+
 **v0.4.0** makes Uno a long-context speculator on Gemma 4 26B A4B, the model BroadNet serves in production in English
 and Arabic. On one RTX 3090 the Gemma 4 profile decodes BroadNet's production traffic **1.52x faster than plain** and
 prompts from 2k to 28k tokens **1.26x to 1.47x faster** (1.3x to 1.8x faster than the DFlash drafter there), with the

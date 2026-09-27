@@ -95,6 +95,7 @@ It is not a 32-active-sequence profile or a performance cell.
 | CUDA graph capture sizes | `[1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40]` |
 | LoRA capacity | rank 16, 2 slots (the Uno path reserves one for its shared adapter), target modules `qkv_proj o_proj gate_up_proj down_proj` |
 | Split-KV draft attention | on by default since v0.4.0 (`UNO_GEMMA_SPLITKV=0` turns it off); every release measurement used it, and without it draft attention over a long cache dominates (28k-token prompts on early v0.4.0 kit images, one server each: 13.6 vs 7.5 ms per token; `evidence/release-0.4.0/kit-*.jsonl`) |
+| Tuned LoRA kernel configs | on by default since v0.4.1: `VLLM_TUNED_CONFIG_FOLDER=/opt/uno-kit/release/lora-configs` holds Triton configs for the adapter's shrink and expand kernels tuned on the RTX 3090 for the draft pass's shapes (about 1 % less time per token there, same output); vLLM matches files by GPU name, so other GPUs keep the defaults; an empty value turns them off |
 | Draft vocabulary | on by default since v0.4.0: `UNO_DRAFT_VOCAB=/opt/uno-kit/release/gemma4-draft-vocab-65536.json` (65,536 Gemma 4 token ids ranked on open data); an empty value restores the full-vocabulary draft head; verification always scores the full vocabulary |
 | Draft MoE top-k | off by default; `UNO_DRAFT_MOE_TOPK=4` opts in (SM86 only) |
 | Generation defaults | `--generation-config vllm` |
@@ -109,6 +110,7 @@ CLI flags:
 | Variable | Effect |
 |---|---|
 | `UNO_GEMMA_SPLITKV` | `1` (gemma4 default) segments the draft attention over the KV axis and logs the engaged `width`, `head_size`, `q_heads`, `kv_heads` and `segments` per head family; `0` turns it off |
+| `VLLM_TUNED_CONFIG_FOLDER` | vLLM's folder of tuned LoRA kernel configs (`<GPU name>_SHRINK.json`, `<GPU name>_EXPAND_FALSE.json`); gemma4 default `/opt/uno-kit/release/lora-configs` (RTX 3090 files); empty turns them off |
 | `UNO_DRAFT_VOCAB` | Path to a JSON file `{"token_ids": [...]}`: the draft head scores only those ids (gemma4 default: the shipped 64k list); empty or unset is the full-vocabulary draft head |
 | `UNO_DRAFT_MOE_TOPK=4` | Captures the draft MoE routers at top-4 while the verifier keeps the configured top-8; an uncaptured serving shape is refused by dispatch key, environment variable and variant name |
 

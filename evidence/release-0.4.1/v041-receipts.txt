@@ -1,0 +1,6 @@
+V1d-uno tuned=2 default=0 nofile=0
+V1d-uno-rep tuned=2 default=0 nofile=0
+V1-T-1 tuned=2 default=0 nofile=0
+V1-off-1 tuned=0 default=1 nofile=2
+V1-off-2 tuned=0 default=1 nofile=2
+V1-T-2 tuned=2 default=0 nofile=0
