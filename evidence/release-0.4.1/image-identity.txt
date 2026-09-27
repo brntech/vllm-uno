@@ -3,4 +3,6 @@
 # cd .../vllm && find . -name "*.py" -type f | sort | xargs sha256sum | sha256sum | cut -c1-16
 vllm-uno:0.4.0 sha256:4a88e0e2a73d4d850e8bcfbaded672a9b70a3184ddd92edcd758b71cf17fa646 vllm-py-hash=85f3fca3a6aeaee6
 vllm-uno:0.4.1-rc1 sha256:6ad09d2177125fb2dab2bc1b9e6ab2b8f23f0bc408db34a6b6b6be102dbc860d vllm-py-hash=85f3fca3a6aeaee6
-vllm-uno:0.4.1 sha256:38514ad3b5cda462c47415ccc1408f1a9b3258c5db8ecd3d05ddd738a7d8a72a vllm-py-hash=85f3fca3a6aeaee6
+vllm-uno:0.4.1 (smoke-tested build) sha256:38514ad3b5cda462c47415ccc1408f1a9b3258c5db8ecd3d05ddd738a7d8a72a vllm-py-hash=85f3fca3a6aeaee6 runtime-hash=efa4d3f27d4d4e4e
+vllm-uno:0.4.1 (published build, docs only differ) sha256:f679879cada7b90d658246305801f2e9316e6f21f75cb7c3d7cd8fa37642ca34 vllm-py-hash=85f3fca3a6aeaee6 runtime-hash=efa4d3f27d4d4e4e
+# runtime-hash: sha256 over sha256sum of release/serve.sh, release/lora-configs/*.json, release/gemma4-draft-vocab-65536.json
