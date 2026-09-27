@@ -1,0 +1,8 @@
+# check_configs.py on the release-candidate image (vllm-uno:0.4.1-rc1)
+INFO 09-27 16:02:36 [utils.py:188] Using tuned LoRA kernel configs from /opt/uno-kit/release/lora-configs/NVIDIA_GeForce_RTX_3090_SHRINK.json.
+INFO 09-27 16:02:36 [utils.py:188] Using tuned LoRA kernel configs from /opt/uno-kit/release/lora-configs/NVIDIA_GeForce_RTX_3090_EXPAND_FALSE.json.
+{"checked": 66, "fails": 0, "gpu": "NVIDIA GeForce RTX 3090"}
+# check_configs.py on the final image (vllm-uno:0.4.1)
+INFO 09-27 16:21:10 [utils.py:188] Using tuned LoRA kernel configs from /opt/uno-kit/release/lora-configs/NVIDIA_GeForce_RTX_3090_EXPAND_FALSE.json.
+{"checked": 66, "fails": 0, "gpu": "NVIDIA GeForce RTX 3090"}
+check_rc=0

@@ -1,0 +1,2 @@
+{"arm": "V1F-T", "requests": 72, "completion_tokens": 29596, "http_seconds": 147.62, "ms_per_token_http": 4.988, "drafts": 8036.0, "accepted": 21571.0, "tau": 3.6843, "p_prefix_ge": [0.9849, 0.743, 0.557, 0.3993]}
+{"arm": "V1F-off", "requests": 72, "completion_tokens": 29350, "http_seconds": 146.15, "ms_per_token_http": 4.98, "drafts": 7869.0, "accepted": 21485.0, "tau": 3.7303, "p_prefix_ge": [0.987, 0.761, 0.5689, 0.4134]}

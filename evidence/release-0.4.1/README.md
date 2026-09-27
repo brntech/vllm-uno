@@ -10,3 +10,4 @@
 | `tune_lora.py` | the tuner, adapted for the stock kernels of the release image (run with `VLLM_TUNED_CONFIG_FOLDER` unset) |
 | `check_configs.py`, `check-configs.txt` | the shipped files through vLLM's own loader on the release image's kernels: every shape and row count picks a shipped entry and matches a float32 reference |
 | `image-identity.txt` | image ids and the vLLM package hash, identical in v0.4.0 and v0.4.1 |
+| `final-image-receipts.txt`, `final-image-smoke.jsonl` | the final image: one server with the profile defaults (tuned configs loaded) and one with `VLLM_TUNED_CONFIG_FOLDER=` (vLLM defaults, no missing-file warning); a function check, one server each, not a speed comparison |

@@ -1,0 +1,2 @@
+V1F-T tuned=2 default=0 nofile=0
+V1F-off tuned=0 default=1 nofile=0
