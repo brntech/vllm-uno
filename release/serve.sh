@@ -21,8 +21,10 @@ Environment: UNO_PROFILE, UNO_K, UNO_MASK_TOKEN_ID, UNO_NOISE_SEED, UNO_NOISE_LO
   SERVED_MODEL_NAME=uno-qwen3-8b, HOST=0.0.0.0, PORT=8000, PYTHON=python3.
   Engine-side switches read by the runner: UNO_GEMMA_SPLITKV (split-KV draft
   attention; gemma4 default 1, 0 turns it off), UNO_DRAFT_VOCAB (draft
-  vocabulary JSON; gemma4 default the shipped 64k list, empty turns it off) and
-  UNO_DRAFT_MOE_TOPK=4 (draft MoE top-k opt-in; gemma4 only).
+  vocabulary JSON; gemma4 default the shipped 64k list, empty turns it off),
+  VLLM_TUNED_CONFIG_FOLDER (LoRA kernel configs; gemma4 default the shipped
+  RTX 3090 files, empty turns them off) and UNO_DRAFT_MOE_TOPK=4 (draft MoE
+  top-k opt-in; gemma4 only).
 UNO_DRY_RUN=1 prints the command without importing vLLM/downloading weights.
 Extra flags after -- override defaults; re-gate any changed configuration.
 HELP
@@ -63,6 +65,7 @@ case $profile in
     # vLLM loads <GPU name>_SHRINK.json / _EXPAND_FALSE.json from this folder; any other GPU finds no file for its name
     # and keeps vLLM's default configs. VLLM_TUNED_CONFIG_FOLDER= (empty) turns the tuned configs off.
     export VLLM_TUNED_CONFIG_FOLDER=${VLLM_TUNED_CONFIG_FOLDER-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lora-configs}
+    [[ -n $VLLM_TUNED_CONFIG_FOLDER ]] || unset VLLM_TUNED_CONFIG_FOLDER
     flags=(--dtype bfloat16 --attention-backend TRITON_ATTN --language-model-only
       --enable-prefix-caching --seed 29
       --max-model-len ${UNO_MAX_MODEL_LEN:-32768} --max-num-seqs 8 --max-num-batched-tokens 2048
@@ -140,6 +143,7 @@ cmd=(env VLLM_USE_V2_MODEL_RUNNER=1 VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_LORA
   --generation-config vllm "${flags[@]}"
   --speculative-config "$spec")
 [[ -z $model_rev ]] || cmd+=(--revision "$model_rev")
+[[ -z ${VLLM_TUNED_CONFIG_FOLDER:-} ]] || cmd=("${cmd[0]}" "VLLM_TUNED_CONFIG_FOLDER=$VLLM_TUNED_CONFIG_FOLDER" "${cmd[@]:1}")
 cmd+=("$@")
 printf 'Uno launch (profile=%s adapter_revision=%s): ' "$profile" "$adapter_rev" >&2
 printf '%q ' "${cmd[@]}" >&2

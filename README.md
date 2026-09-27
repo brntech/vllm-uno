@@ -74,7 +74,7 @@ when vLLM publishes a release image containing this base.
 After the maintainer publishes the release, pull the AMD64 image:
 
 ```bash
-docker pull ghcr.io/brntech/vllm-uno:0.4.0
+docker pull ghcr.io/brntech/vllm-uno:0.4.1
 ```
 
 Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured
@@ -88,7 +88,7 @@ loopback-only API:
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.4.0 \
+  ghcr.io/brntech/vllm-uno:0.4.1 \
   Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B
 ```
 
@@ -101,7 +101,7 @@ docker run --rm --name vllm-uno-gemma --gpus all --ipc=host \
   -v /path/to/hf-cache:/root/.cache/huggingface \
   -v /path/to/uno-adapter:/adapter:ro \
   -e UNO_PROFILE=gemma4 \
-  ghcr.io/brntech/vllm-uno:0.4.0 \
+  ghcr.io/brntech/vllm-uno:0.4.1 \
   cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter
 ```
 
@@ -128,7 +128,7 @@ From the checked-out release tag, audit and build the supported AMD64 image:
 
 ```bash
 python3 release/stack.py audit
-PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.4.0
+PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.4.1
 ```
 
 The build starts from the digest-pinned CI image containing the exact base

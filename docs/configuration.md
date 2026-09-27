@@ -1,6 +1,6 @@
 # Configuration
 
-Uno for vLLM v0.4.0 supports two reproducible single-GPU serving profiles on
+Uno for vLLM v0.4.1 supports two reproducible single-GPU serving profiles on
 Linux AMD64: Qwen3-8B BF16 at `K=8` and Gemma 4 26B A4B AWQ at `K=4`. Both
 package the Model Runner V2 implementation: the Uno draft shares the target
 model and KV cache, while the adapter is active only on noisy draft rows.
@@ -126,7 +126,7 @@ re-gate it before combining it with the v0.4.0 hybrid-KV profile.
 Build AMD64 only:
 
 ```bash
-PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.4.0
+PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.4.1
 ```
 
 `BASE_IMAGE` must retain the shown immutable digest and commit-matched

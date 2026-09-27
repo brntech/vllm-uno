@@ -4,6 +4,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -147,6 +148,23 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn(4, config["cudagraph_capture_sizes"])
         self.assertIn(8, config["cudagraph_capture_sizes"])
 
+    def dry_run(self, profile, **env):
+        run_env = {k: v for k, v in os.environ.items() if k != "VLLM_TUNED_CONFIG_FOLDER"}
+        run_env.update(UNO_PROFILE=profile, UNO_DRY_RUN="1", PYTHON=sys.executable, **env)
+        args = ["cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit", tempfile.gettempdir()] if profile == "gemma4" else []
+        out = subprocess.run(["bash", str(ROOT / "release/serve.sh"), *args], env=run_env, capture_output=True,
+                             text=True, check=True)
+        return out.stdout
+
+    def test_tuned_lora_configs_are_on_for_gemma4_only_and_empty_turns_them_off(self):
+        folder = (ROOT / "release/lora-configs").resolve()
+        match = re.search(r"VLLM_TUNED_CONFIG_FOLDER=(\S+)", self.dry_run("gemma4"))
+        self.assertIsNotNone(match)
+        self.assertEqual(Path(match.group(1)).resolve(), folder)
+        self.assertTrue((folder / "NVIDIA_GeForce_RTX_3090_SHRINK.json").is_file())
+        self.assertNotIn("VLLM_TUNED_CONFIG_FOLDER", self.dry_run("qwen3"))
+        self.assertNotIn("VLLM_TUNED_CONFIG_FOLDER", self.dry_run("gemma4", VLLM_TUNED_CONFIG_FOLDER=""))
+
     def test_gemma4_lora_configs_cover_the_draft_shapes(self):
         # vLLM reads config_data[max_loras][num_slices][m][k][n]; the file names carry the GPU name as vLLM mangles it.
         folder = ROOT / "release/lora-configs"
@@ -199,6 +217,9 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn(f"version: {version}\n", citation)
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertIn(f"## [{version}]", changelog)
+        released = re.search(rf"^## \[{re.escape(version)}\] - (\d{{4}}-\d{{2}}-\d{{2}})$", changelog, re.M)
+        self.assertIsNotNone(released)
+        self.assertIn(f"date-released: {released.group(1)}\n", citation)
         self.assertIn(f"[{version}]: https://github.com/brntech/vllm-uno/releases/tag/v{version}", changelog)
 
     def test_patch_series_is_the_three_ordered_layers(self):

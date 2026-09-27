@@ -1,7 +1,7 @@
 """Tune vLLM LoRA shrink/expand Triton configs for Uno's draft-pass shapes (Gemma 4 26B A4B, rank 16) on this GPU.
 Times each candidate under CUDA graphs (as served), checks the winner against a torch reference, and writes
 VLLM_TUNED_CONFIG_FOLDER files: <gpu>_SHRINK.json and <gpu>_EXPAND_FALSE.json, keyed [max_loras][slices][m][k][n].
-Runs on the release image (stock LoRA kernels). Usage: python3 tune_lora.py OUT_DIR   (one JSON line per shape and m on stdout: default vs best microseconds)."""
+Runs on the release image (stock LoRA kernels). Usage: python3 tune_lora.py OUT_DIR   (one JSON line per shape and m on stdout: default vs best microseconds; run with VLLM_TUNED_CONFIG_FOLDER unset)."""
 import itertools, json, sys, time
 import torch, triton
 import vllm.lora.ops.triton_ops.lora_shrink_op as S
@@ -10,6 +10,10 @@ from vllm.lora.ops.triton_ops.lora_kernel_metadata import LoRAKernelMeta
 from vllm.lora.ops.triton_ops.utils import get_lora_op_configs
 
 out_dir = sys.argv[1]
+import os
+if os.environ.get("VLLM_TUNED_CONFIG_FOLDER"):
+    sys.exit("unset VLLM_TUNED_CONFIG_FOLDER: the baseline must be vLLM's default configs")
+os.makedirs(out_dir, exist_ok=True)
 dev = torch.device("cuda"); dt = torch.bfloat16; R = 16; MAXL = 2
 torch.manual_seed(0)
 MS = [4, 8, 12, 16, 20, 24, 28, 32, 40]
@@ -67,8 +71,8 @@ for name, (K, ns) in SHRINK.items():
         if not ok:
             best, best_t = default, d_t
         shr_json.setdefault(str(MAXL + 1), {}).setdefault(str(ns), {}).setdefault(str(m), {}).setdefault(str(K), {})[str(R)] = best
-        report.append(dict(op="shrink", shape=name, m=m, default_us=round(d_t * 1e3, 2), best_us=round(best_t * 1e3, 2), ok=ok, best=best))
-        print(json.dumps(report[-1]), f"t={time.time() - t0:.0f}s", flush=True)
+        report.append(dict(elapsed_s=round(time.time() - t0), op="shrink", shape=name, m=m, default_us=round(d_t * 1e3, 2), best_us=round(best_t * 1e3, 2), ok=ok, best=best))
+        print(json.dumps(report[-1]), flush=True)
 
 for name, outs in EXPAND.items():
     ns = len(outs); N = max(outs)
@@ -94,10 +98,10 @@ for name, outs in EXPAND.items():
         if not ok:
             best, best_t = default, d_t
         exp_json.setdefault(str(MAXL + 1), {}).setdefault(str(ns), {}).setdefault(str(m), {}).setdefault(str(R), {})[str(N)] = best
-        report.append(dict(op="expand", shape=name, m=m, default_us=round(d_t * 1e3, 2), best_us=round(best_t * 1e3, 2), ok=ok, best=best))
-        print(json.dumps(report[-1]), f"t={time.time() - t0:.0f}s", flush=True)
+        report.append(dict(elapsed_s=round(time.time() - t0), op="expand", shape=name, m=m, default_us=round(d_t * 1e3, 2), best_us=round(best_t * 1e3, 2), ok=ok, best=best))
+        print(json.dumps(report[-1]), flush=True)
 
 json.dump(shr_json, open(f"{out_dir}/{gpu}_SHRINK.json", "w"), indent=1)
 json.dump(exp_json, open(f"{out_dir}/{gpu}_EXPAND_FALSE.json", "w"), indent=1)
 json.dump(report, open(f"{out_dir}/tune-report.json", "w"), indent=1)
-print("DONE", gpu, f"{time.time() - t0:.0f}s", flush=True)
+print("DONE", gpu, f"{time.time() - t0:.0f}s", file=sys.stderr, flush=True)
