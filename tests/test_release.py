@@ -127,6 +127,9 @@ class ReleaseTests(unittest.TestCase):
         self.assertNotIn("--disable-hybrid-kv-cache-manager", flags)
         self.assertIn("gemma4-draft-vocab-65536.json}", block)
         self.assertIn("export UNO_GEMMA_SPLITKV=${UNO_GEMMA_SPLITKV-1}", block)
+        # v0.4.1: tuned LoRA kernel configs for the RTX 3090, on by default, empty turns them off.
+        self.assertIn("export VLLM_TUNED_CONFIG_FOLDER=${VLLM_TUNED_CONFIG_FOLDER-", block)
+        self.assertIn("/lora-configs}", block)
         launcher = (ROOT / "release/serve.sh").read_text(encoding="utf-8")
         self.assertIn("model_rev=0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba", launcher)
         self.assertIn("--max-lora-rank 16", flags)
@@ -143,6 +146,28 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn(rows, config["cudagraph_capture_sizes"])
         self.assertIn(4, config["cudagraph_capture_sizes"])
         self.assertIn(8, config["cudagraph_capture_sizes"])
+
+    def test_gemma4_lora_configs_cover_the_draft_shapes(self):
+        # vLLM reads config_data[max_loras][num_slices][m][k][n]; the file names carry the GPU name as vLLM mangles it.
+        folder = ROOT / "release/lora-configs"
+        shapes = {"SHRINK": {"3": {"2816": "16"}, "2": {"2816": "16"}, "1": {"4096": "16", "8192": "16", "2112": "16"}},
+                  "EXPAND_FALSE": {"3": {"16": ("8192", "4096")}, "2": {"16": ("2112",)}, "1": {"16": ("2816",)}}}
+        assets = json.loads((ROOT / "release/assets.json").read_text())
+        for op, slices in shapes.items():
+            name = f"release/lora-configs/NVIDIA_GeForce_RTX_3090_{op}.json"
+            self.assertIn(name, assets)
+            data = json.loads((ROOT / name).read_text())
+            self.assertEqual(list(data), ["3"])  # max_loras 2 -> three slots (no-adapter slot included)
+            for ns, ks in slices.items():
+                self.assertEqual(sorted(map(int, data["3"][ns])), [4, 8, 12, 16, 20, 24, 28, 32, 40])
+                for m, by_k in data["3"][ns].items():
+                    for k, ns_ in ks.items():
+                        for n in (ns_ if isinstance(ns_, tuple) else (ns_,)):
+                            cfg = by_k[k][n]
+                            for key in ("block_m", "block_n", "block_k", "num_warps", "num_stages"):
+                                self.assertIsInstance(cfg[key], int)
+                            if op == "SHRINK":
+                                self.assertGreaterEqual(cfg["split_k"], 1)
 
     def test_mrv2_speculative_config_has_only_the_mrv2_uno_fields(self):
         launcher = (ROOT / "release/serve.sh").read_text(encoding="utf-8")
@@ -165,7 +190,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_release_identity_is_consistent(self):
         version = (ROOT / "release/VERSION").read_text(encoding="utf-8").strip()
-        self.assertEqual(version, "0.4.0")
+        self.assertEqual(version, "0.4.1")
         dockerfile = (ROOT / "release/Dockerfile").read_text(encoding="utf-8")
         self.assertIn(f'org.opencontainers.image.version="{version}"', dockerfile)
         self.assertIn("ai.uno.upstream.commit=\"00972dfd72988942138a7a6089eaee08580210b8\"", dockerfile)

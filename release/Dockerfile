@@ -7,7 +7,7 @@ USER root
 WORKDIR /opt/uno-kit
 LABEL org.opencontainers.image.title="Uno for vLLM" \
       org.opencontainers.image.source="https://github.com/brntech/vllm-uno" \
-      org.opencontainers.image.version="0.4.0" \
+      org.opencontainers.image.version="0.4.1" \
       org.opencontainers.image.licenses="Apache-2.0" \
       ai.uno.upstream.commit="00972dfd72988942138a7a6089eaee08580210b8" \
       ai.uno.head.commit="cf87916880b051e8782521dfe2afa12e0627e172" \

@@ -59,6 +59,10 @@ case $profile in
     # Split-KV draft attention is on by default for Gemma 4 since v0.4.0: at 32k context the draft rows' attention over a
     # long cache dominates, and every v0.4.0 measurement (speed and lossless) ran with it. UNO_GEMMA_SPLITKV=0 turns it off.
     export UNO_GEMMA_SPLITKV=${UNO_GEMMA_SPLITKV-1}
+    # v0.4.1: tuned Triton configs for the adapter's LoRA kernels on the RTX 3090 (Uno's draft-pass shapes, m 4-40).
+    # vLLM loads <GPU name>_SHRINK.json / _EXPAND_FALSE.json from this folder; any other GPU finds no file for its name
+    # and keeps vLLM's default configs. VLLM_TUNED_CONFIG_FOLDER= (empty) turns the tuned configs off.
+    export VLLM_TUNED_CONFIG_FOLDER=${VLLM_TUNED_CONFIG_FOLDER-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lora-configs}
     flags=(--dtype bfloat16 --attention-backend TRITON_ATTN --language-model-only
       --enable-prefix-caching --seed 29
       --max-model-len ${UNO_MAX_MODEL_LEN:-32768} --max-num-seqs 8 --max-num-batched-tokens 2048

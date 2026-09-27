@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-27
+
+### Added
+
+- Tuned Triton configs for the adapter's LoRA kernels on the RTX 3090 (`release/lora-configs/NVIDIA_GeForce_RTX_3090_SHRINK.json` and `_EXPAND_FALSE.json`), enabled by default in the Gemma 4 profile through `VLLM_TUNED_CONFIG_FOLDER`. They cover the shapes Uno's draft pass launches on Gemma 4 26B A4B with the rank-16 adapter (shrink over 2,112-8,192 inputs, expand to 2,112-8,192 outputs, 4 to 40 rows) and were chosen by timing every candidate under CUDA graphs and checking each winner against a reference product. vLLM matches the files by GPU name, so any other GPU keeps its default configs; `VLLM_TUNED_CONFIG_FOLDER=` (empty) turns them off. Only the draft pass runs these kernels (verification skips the adapter branch), so the output is unchanged.
+
+### Changed
+
+- No change to the patch series, the reconstructed release tree (`4aa655488f2c8d86fcc3692b037e03a991dcc9ba`) or the base image.
+
 ## [0.4.0] - 2026-09-26
 
 ### Added
@@ -108,3 +118,5 @@ First public tagged version of Uno for vLLM.
 [0.3.0]: https://github.com/brntech/vllm-uno/releases/tag/v0.3.0
 
 [0.4.0]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.0
+
+[0.4.1]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.1
