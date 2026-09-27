@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -149,7 +150,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn(8, config["cudagraph_capture_sizes"])
 
     def dry_run(self, profile, **env):
-        run_env = {k: v for k, v in os.environ.items() if k != "VLLM_TUNED_CONFIG_FOLDER"}
+        launcher_vars = ("UNO_", "VLLM_", "MODEL_REVISION", "SERVED_MODEL_NAME", "HOST", "PORT", "PYTHON")
+        run_env = {k: v for k, v in os.environ.items() if not k.startswith(launcher_vars)}
         run_env.update(UNO_PROFILE=profile, UNO_DRY_RUN="1", PYTHON=sys.executable, **env)
         args = ["cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit", tempfile.gettempdir()] if profile == "gemma4" else []
         out = subprocess.run(["bash", str(ROOT / "release/serve.sh"), *args], env=run_env, capture_output=True,
@@ -158,9 +160,9 @@ class ReleaseTests(unittest.TestCase):
 
     def test_tuned_lora_configs_are_on_for_gemma4_only_and_empty_turns_them_off(self):
         folder = (ROOT / "release/lora-configs").resolve()
-        match = re.search(r"VLLM_TUNED_CONFIG_FOLDER=(\S+)", self.dry_run("gemma4"))
-        self.assertIsNotNone(match)
-        self.assertEqual(Path(match.group(1)).resolve(), folder)
+        tokens = [t for t in shlex.split(self.dry_run("gemma4")) if t.startswith("VLLM_TUNED_CONFIG_FOLDER=")]
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(Path(tokens[0].split("=", 1)[1]).resolve(), folder)
         self.assertTrue((folder / "NVIDIA_GeForce_RTX_3090_SHRINK.json").is_file())
         self.assertNotIn("VLLM_TUNED_CONFIG_FOLDER", self.dry_run("qwen3"))
         self.assertNotIn("VLLM_TUNED_CONFIG_FOLDER", self.dry_run("gemma4", VLLM_TUNED_CONFIG_FOLDER=""))

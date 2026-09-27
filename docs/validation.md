@@ -18,7 +18,10 @@ release-candidate image, one RTX 3090, P10K adapter (`evidence/release-0.4.1/`):
   pairs 0.048-0.062.
 - **Configs** (`tune-report.json`, `tune_lora.py`): shrink 240 and expand 108 candidates per shape and row count, timed
   under CUDA graphs; each winner matched a float32 reference; per layer at four draft rows
-  the adapter kernels fall from about 35 to about 24.5 microseconds.
+  the adapter kernels fall from about 35 to about 24.5 microseconds (kernel timings from a diagnostic build whose shrink
+  kernel is stock and whose expand kernel also writes zeros to rows without an adapter; `evidence/release-0.4.1/README.md`).
+  On the release image, `check_configs.py` confirms every shape and row count loads a shipped entry and matches a
+  float32 reference (66/66 on the candidate and the final image, `check-configs.txt`).
 
 ## v0.4.0 release status: Gemma 4 long-context profile validated
 
