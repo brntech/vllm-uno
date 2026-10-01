@@ -1,5 +1,37 @@
 # Validation
 
+## v0.4.2 release status: 28,560-prompt Gemma 4 adapter validated
+
+v0.4.2 changes the adapter only: `Broadnet/gemma-4-26B-A4B-uno-adapter` at Hub commit
+`90e7186d225d7d0c5746e6f84ba5280e6d3077a0`, rank 16, `adapter_model.safetensors` sha256
+`abfdde5cfefad7bbbd8525ca38da4da2464b07aa0724beb65dca1fa7f592f2ee` (75,627,016 bytes), trained on 28,560 open prompts
+and published at its last stage's step 17,120. The P10K adapter measured in the v0.4.0 and v0.4.1 sections below stays
+at Hub revision `p10k`. Checked on the unchanged v0.4.1 image (`ghcr.io/brntech/vllm-uno:0.4.1`, digest
+`sha256:f679879cada7b90d658246305801f2e9316e6f21f75cb7c3d7cd8fa37642ca34`), one RTX 3090, `UNO_PROFILE=gemma4`, K=4,
+the shipped 64k draft vocabulary; plain and DFlash (`z-lab/gemma-4-26B-A4B-it-DFlash`, K=8) on the same image, fresh
+servers per arm (`evidence/release-0.4.2/`):
+
+- **Speed** (`v042-speed.jsonl`, production72: 72 real requests, one at a time, milliseconds per output token on the
+  HTTP clock; one session, two servers per arm): v0.4.2 adapter 4.657 / 4.619 ms per token (1.569x plain, τ 3.76 /
+  3.80); DFlash K=8 4.663 / 4.649 (1.563x); P10K 4.719 / 4.705 (1.545x, τ 3.70 / 3.72); plain 7.276 / 7.281. The same
+  session's unpublished 20,000-prompt stage ran 4.682 / 4.642 (τ 3.75 / 3.78).
+- **Long prompts** (`ctx3-L3-*.json`, `table.md`: open documents at six lengths, summarizing and story tasks, median
+  decode time per output token at 32k context; Uno 16 requests per length over two servers, plain and DFlash 8, one
+  session):
+
+  | prompt tokens | plain | DFlash | Uno | Uno x plain | DFlash x plain | Uno x DFlash |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | ~2,000 | 7.26 | 6.29 | 4.87 | 1.49 | 1.15 | 1.29 |
+  | ~6,100 | 7.79 | 8.08 | 5.49 | 1.42 | 0.96 | 1.47 |
+  | ~10,000 | 8.24 | 8.80 | 5.86 | 1.41 | 0.94 | 1.50 |
+  | ~13,900 | 8.48 | 11.29 | 6.22 | 1.36 | 0.75 | 1.81 |
+  | ~20,000 | 9.17 | 12.74 | 6.97 | 1.32 | 0.72 | 1.83 |
+  | ~27,700 | 9.53 | 14.42 | 7.29 | 1.31 | 0.66 | 1.98 |
+
+- **Lossless** (`v042-dist.jsonl`, the v0.4.0 short check: 24 production prompts x 96 samples x first 8 tokens, prefix
+  caching on): mean TV Uno vs plain 0.057 over the six pairs (two Uno servers x three plain servers, 0.048-0.068),
+  plain vs plain 0.056 over the three pairs (0.053-0.059), split halves within each arm 0.058-0.067.
+
 ## v0.4.1 release status: tuned LoRA kernel configs validated
 
 v0.4.1 adds two config files and one environment variable to the Gemma 4 profile; the vLLM package in the image is

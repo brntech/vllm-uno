@@ -1,0 +1,10 @@
+{"arm": "Ts3a-add-s2-s10000-1", "requests": 72, "completion_tokens": 29499, "http_seconds": 138.11, "ms_per_token_http": 4.682, "drafts": 7880.0, "accepted": 21643.0, "tau": 3.7466, "p_prefix_ge": [0.9887, 0.76, 0.5747, 0.4231]}
+{"arm": "Ts3a-add-s2-s10000-2", "requests": 72, "completion_tokens": 29578, "http_seconds": 137.29, "ms_per_token_http": 4.642, "drafts": 7836.0, "accepted": 21772.0, "tau": 3.7785, "p_prefix_ge": [0.987, 0.7702, 0.586, 0.4353]}
+{"arm": "Ts3a-add-s3-s17120-1", "requests": 72, "completion_tokens": 29529, "http_seconds": 137.52, "ms_per_token_http": 4.657, "drafts": 7847.0, "accepted": 21687.0, "tau": 3.7637, "p_prefix_ge": [0.9841, 0.7651, 0.5825, 0.432]}
+{"arm": "Ts3a-add-s3-s17120-2", "requests": 72, "completion_tokens": 29472, "http_seconds": 136.13, "ms_per_token_http": 4.619, "drafts": 7771.0, "accepted": 21722.0, "tau": 3.7953, "p_prefix_ge": [0.9883, 0.7716, 0.5894, 0.446]}
+{"arm": "Ts3a-dflash-1", "requests": 72, "completion_tokens": 29957, "http_seconds": 139.68, "ms_per_token_http": 4.663, "drafts": 9215.0, "accepted": 20730.0, "tau": 3.2496, "p_prefix_ge": [0.6577, 0.4454, 0.3156, 0.2444, 0.195, 0.1602, 0.1284, 0.103]}
+{"arm": "Ts3a-dflash-2", "requests": 72, "completion_tokens": 29653, "http_seconds": 137.86, "ms_per_token_http": 4.649, "drafts": 9116.0, "accepted": 20526.0, "tau": 3.2516, "p_prefix_ge": [0.6508, 0.4464, 0.3223, 0.2476, 0.1955, 0.159, 0.1275, 0.1027]}
+{"arm": "Ts3a-p10k-1", "requests": 72, "completion_tokens": 29680, "http_seconds": 140.05, "ms_per_token_http": 4.719, "drafts": 8021.0, "accepted": 21675.0, "tau": 3.7023, "p_prefix_ge": [0.9873, 0.7529, 0.5573, 0.4048]}
+{"arm": "Ts3a-p10k-2", "requests": 72, "completion_tokens": 29771, "http_seconds": 140.06, "ms_per_token_http": 4.705, "drafts": 8013.0, "accepted": 21766.0, "tau": 3.7163, "p_prefix_ge": [0.987, 0.7565, 0.5636, 0.4092]}
+{"arm": "Ts3a-plain-1", "requests": 72, "completion_tokens": 29826, "http_seconds": 217.03, "ms_per_token_http": 7.276}
+{"arm": "Ts3a-plain-2", "requests": 72, "completion_tokens": 29530, "http_seconds": 215.0, "ms_per_token_http": 7.281}

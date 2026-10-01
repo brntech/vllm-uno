@@ -1,5 +1,11 @@
 # Uno for vLLM
 
+**v0.4.2** ships a new Gemma 4 26B A4B adapter trained on 28,560 open prompts: on one RTX 3090 the Gemma 4 profile
+decodes BroadNet's production traffic **1.57x faster than plain**, matching the DFlash drafter (1.56x in the same
+session); prompts from 2k to 28k tokens decode 1.31x to 1.49x faster than plain (1.29x to 1.98x faster than DFlash);
+the output is the model's own (see [RELEASE-NOTES-0.4.2.md](RELEASE-NOTES-0.4.2.md)). The image is unchanged:
+v0.4.2 runs on `ghcr.io/brntech/vllm-uno:0.4.1`. The previous adapter stays at Hub revision `p10k`.
+
 **v0.4.1** ships tuned kernel configs for the adapter's LoRA layers on the RTX 3090: the Gemma 4 profile decodes about
 1 % faster (1.53x plain on BroadNet's production traffic in the release session), and the output is the model's own
 (see [RELEASE-NOTES-0.4.1.md](RELEASE-NOTES-0.4.1.md)). Everything below is unchanged from v0.4.0.

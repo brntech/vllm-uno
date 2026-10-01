@@ -1,0 +1,17 @@
+{"pair": "R3d-plainA vs R3d-s3", "mean_tv": 0.048, "cells": 192}
+{"pair": "R3d-plainA vs R3d-plainB", "mean_tv": 0.0554, "cells": 192}
+{"pair": "R3d-plainA vs R3d-s3-rep", "mean_tv": 0.0616, "cells": 192}
+{"pair": "R3d-plainA vs R3d-plainC", "mean_tv": 0.0592, "cells": 192}
+{"pair": "R3d-s3 vs R3d-plainB", "mean_tv": 0.0566, "cells": 192}
+{"pair": "R3d-s3 vs R3d-s3-rep", "mean_tv": 0.067, "cells": 192}
+{"pair": "R3d-s3 vs R3d-plainC", "mean_tv": 0.057, "cells": 192}
+{"pair": "R3d-plainB vs R3d-s3-rep", "mean_tv": 0.0496, "cells": 192}
+{"pair": "R3d-plainB vs R3d-plainC", "mean_tv": 0.0532, "cells": 192}
+{"pair": "R3d-s3-rep vs R3d-plainC", "mean_tv": 0.0678, "cells": 192}
+{"arm": "R3d-s3", "tv_vs_plains": [0.048, 0.0566, 0.057], "plain_pairs": [0.0554, 0.0592, 0.0532], "max_plain_pair": 0.0592, "min_vs_plain": 0.048}
+{"arm": "R3d-s3-rep", "tv_vs_plains": [0.0616, 0.0496, 0.0678], "plain_pairs": [0.0554, 0.0592, 0.0532], "max_plain_pair": 0.0592, "min_vs_plain": 0.0496}
+{"pair": "R3d-plainA split-half", "mean_tv": 0.0664, "cells": 192}
+{"pair": "R3d-s3 split-half", "mean_tv": 0.0672, "cells": 192}
+{"pair": "R3d-plainB split-half", "mean_tv": 0.0582, "cells": 192}
+{"pair": "R3d-s3-rep split-half", "mean_tv": 0.0628, "cells": 192}
+{"pair": "R3d-plainC split-half", "mean_tv": 0.0671, "cells": 192}

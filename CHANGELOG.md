@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-01
+
+### Changed
+
+- New Gemma 4 26B A4B adapter at `Broadnet/gemma-4-26B-A4B-uno-adapter` (Hub commit `90e7186d225d7d0c5746e6f84ba5280e6d3077a0`), trained on 28,560 open prompts: the previous 10k-prompt adapter continued through three more stages of new open rows, published at the last stage's step 17,120. Same rank-16 shape and `adapter_config.json`; `adapter_model.safetensors` sha256 `abfdde5cfefad7bbbd8525ca38da4da2464b07aa0724beb65dca1fa7f592f2ee` (75,627,016 bytes). On one RTX 3090 it runs BroadNet's production traffic 1.57x faster than plain decoding (DFlash K=8 1.56x in the same session) and decodes 2k-28k-token prompts 1.31x-1.49x faster than plain and 1.29x-1.98x faster than DFlash; Uno-versus-plain distribution distances match plain-versus-plain ones (`docs/validation.md`, `evidence/release-0.4.2/`).
+- The previous 10k-prompt adapter stays available at Hub revision `p10k`.
+- No change to the image (`ghcr.io/brntech/vllm-uno:0.4.1`), the patch series, the profile or the draft vocabulary.
+
 ## [0.4.1] - 2026-09-27
 
 ### Added
@@ -117,3 +125,5 @@ First public tagged version of Uno for vLLM.
 [0.4.0]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.0
 
 [0.4.1]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.1
+
+[0.4.2]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.2
