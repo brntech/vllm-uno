@@ -7,7 +7,7 @@ same session).
 
 Everything else is v0.4.0: the same patch series, the same reconstructed release tree
 (`4aa655488f2c8d86fcc3692b037e03a991dcc9ba`), the same digest-pinned base image and the same
-[P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter). The vLLM package inside the image is
+[P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter/tree/p10k). The vLLM package inside the image is
 byte-identical to v0.4.0's.
 
 ## What changed

@@ -5,6 +5,9 @@ Uno for vLLM v0.4.2 ships a new Gemma 4 26B A4B adapter, trained on 28,560 open 
 decoding**, matching the DFlash drafter (K=8, 1.56x in the same session), and decodes long prompts from 2k to 28k
 tokens **1.31x to 1.49x faster than plain and 1.29x to 1.98x faster than DFlash**. The output is the model's own.
 
+On a single RTX 3090 at 32k context that is **216 tokens per second per request on production traffic** (DFlash 215,
+plain 137) and **137 tokens per second on a 28k-token prompt** (DFlash 69, plain 105).
+
 The image does not change: v0.4.2 runs on `ghcr.io/brntech/vllm-uno:0.4.1`
 (`sha256:f679879cada7b90d658246305801f2e9316e6f21f75cb7c3d7cd8fa37642ca34`), with the same patch series, profile and
 64k draft vocabulary.

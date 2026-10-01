@@ -4,7 +4,7 @@ Uno for vLLM v0.4.0 makes Gemma 4 26B A4B, the model BroadNet runs in production
 Arabic, the fastest Gemma 4 26B on long prompts we have measured: **1.3x to 1.8x faster than DFlash**, the fastest
 Gemma 4 drafter we found, at every length from 2k to 28k tokens, and **1.52x faster than plain decoding** on our
 production traffic, on a single 24 GB RTX 3090 with the new
-[P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter). The output is the model's own. The
+[P10K adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter/tree/p10k). The output is the model's own. The
 drafter now runs on Gemma 4's own hybrid KV layout, scores a 64k-token draft vocabulary while verification keeps the
 full one, and the verify pass skips the adapter branch.
 
