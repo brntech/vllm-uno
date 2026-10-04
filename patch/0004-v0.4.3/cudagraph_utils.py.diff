@@ -1,0 +1,20 @@
+--- a/cudagraph_utils.py
++++ b/cudagraph_utils.py
+@@ -289,6 +289,17 @@
+             )
+         else:
+             decode_query_lens = [self.decode_query_len]
++            # The prompt-lookup length gate verifies K (not K + L) draft rows for long requests; capture
++            # that uniform width too so it replays a FULL graph like the ungated width. Target model only: Uno's
++            # draft graphs use this class too (decode_query_len = K) and must keep their single width.
++            if isinstance(self, ModelCudaGraphManager):
++                from vllm.v1.worker.gpu.spec_decode.uno_plookup import (
++                    plookup_gate_decode_query_lens,
++                )
++
++                decode_query_lens = plookup_gate_decode_query_lens(
++                    decode_query_lens, speculative_config
++                )
+ 
+         capture_varlen_decode = (
+             separate_decode_routine and bool(decode_mode) and self.varlen_decode

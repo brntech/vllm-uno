@@ -1,0 +1,50 @@
+/usr/local/lib/python3.12/dist-packages/hypothesis/_settings.py:193: HypothesisWarning: The database setting is not configured, and the default location is unusable - falling back to an in-memory database for this session.  path=PosixPath('/t/.hypothesis/examples')
+  self, setting.name, getattr(defaults, setting.name)
+W1004 16:28:59.139000 7 torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+WARNING 10-04 16:29:00 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 10-04 16:29:00 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 10-04 16:29:00 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+Running 1 items in this shard
+K5 mixed: max tokens per cycle full 8, gated 6
+K5 mixed full (K+L) pos 0: n=768 TV=0.0210 p=0.475
+K5 mixed full (K+L) pos 1: n=716 TV=0.0340 p=0.125
+K5 mixed full (K+L) pos 2: n=665 TV=0.0204 p=0.392
+K5 mixed full (K+L) pos 3: n=638 TV=0.0095 p=0.286
+K5 mixed full (K+L) pos 4: n=629 TV=0.0198 p=0.335
+K5 mixed full (K+L) pos 5: n=612 TV=0.0213 p=0.308
+K5 mixed full (K+L) pos 6: n=350 TV=0.0294 p=0.139
+K5 mixed full (K+L) pos 7: n=299 TV=0.0728 p=0.375
+K5 mixed gated (K) pos 0: n=768 TV=0.0220 p=0.295
+K5 mixed gated (K) pos 1: n=713 TV=0.0273 p=0.35
+K5 mixed gated (K) pos 2: n=666 TV=0.0108 p=0.922
+K5 mixed gated (K) pos 3: n=636 TV=0.0128 p=0.238
+K5 mixed gated (K) pos 4: n=627 TV=0.0141 p=0.83
+K5 mixed gated (K) pos 5: n=614 TV=0.0072 p=0.997
+.
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+../usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: 14 warnings
+  /usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+test_recipe_k5.py::test_mixed_batch_gated_and_full_requests_are_exact_k5
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+test_recipe_k5.py::test_mixed_batch_gated_and_full_requests_are_exact_k5
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: invalid value encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+test_recipe_k5.py::test_mixed_batch_gated_and_full_requests_are_exact_k5
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: divide by zero encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 3 deselected, 19 warnings in 1046.31s (0:17:26)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+rc=0

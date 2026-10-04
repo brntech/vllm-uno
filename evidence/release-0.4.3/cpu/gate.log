@@ -1,0 +1,56 @@
+/usr/local/lib/python3.12/dist-packages/hypothesis/_settings.py:193: HypothesisWarning: The database setting is not configured, and the default location is unusable - falling back to an in-memory database for this session.  path=PosixPath('/t/.hypothesis/examples')
+  self, setting.name, getattr(defaults, setting.name)
+W1004 15:40:30.361000 7 torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+WARNING 10-04 15:40:31 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 10-04 15:40:31 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 10-04 15:40:31 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+Running 2 items in this shard
+mixed: max tokens per cycle full 7, gated 5
+mixed full (K+L) pos 0: n=768 TV=0.0211 p=0.152
+mixed full (K+L) pos 1: n=740 TV=0.0181 p=0.368
+mixed full (K+L) pos 2: n=734 TV=0.0190 p=0.659
+mixed full (K+L) pos 3: n=718 TV=0.0278 p=0.0764
+mixed full (K+L) pos 4: n=705 TV=0.0139 p=0.806
+mixed full (K+L) pos 5: n=395 TV=0.0236 p=0.497
+mixed full (K+L) pos 6: n=344 TV=0.0537 p=0.436
+mixed gated (K) pos 0: n=768 TV=0.0082 p=0.956
+mixed gated (K) pos 1: n=745 TV=0.0076 p=0.854
+mixed gated (K) pos 2: n=736 TV=0.0224 p=0.0517
+mixed gated (K) pos 3: n=718 TV=0.0293 p=0.301
+mixed gated (K) pos 4: n=704 TV=0.0267 p=0.0894
+.stale columns: full reached pos 4 412, 5 412, 6 412; gated max tokens 5
+gated under stale columns pos 0: n=512 TV=0.0108 p=0.902
+gated under stale columns pos 1: n=506 TV=0.0197 p=0.221
+gated under stale columns pos 2: n=496 TV=0.0515 p=0.0672
+gated under stale columns pos 3: n=451 TV=0.0191 p=0.858
+gated under stale columns pos 4: n=417 TV=0.0675 p=0.0889
+.
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+../usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: 14 warnings
+  /usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+test_plgate.py::test_mixed_batch_gated_and_full_requests_are_exact
+test_plgate.py::test_gated_request_never_reads_its_lookup_columns
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+test_plgate.py::test_mixed_batch_gated_and_full_requests_are_exact
+test_plgate.py::test_gated_request_never_reads_its_lookup_columns
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: invalid value encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+test_plgate.py::test_mixed_batch_gated_and_full_requests_are_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: divide by zero encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2 passed, 22 deselected, 21 warnings in 1707.73s (0:28:27)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+rc=0

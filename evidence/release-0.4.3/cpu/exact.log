@@ -1,0 +1,50 @@
+/usr/local/lib/python3.12/dist-packages/hypothesis/_settings.py:193: HypothesisWarning: The database setting is not configured, and the default location is unusable - falling back to an in-memory database for this session.  path=PosixPath('/t/.hypothesis/examples')
+  self, setting.name, getattr(defaults, setting.name)
+Running 6 items in this shard
+W1004 15:40:29.823000 7 torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+exact arm pos 0: n=3072 TV=0.0269 p=0.238
+exact arm pos 1: n=2819 TV=0.0149 p=0.128
+exact arm pos 2: n=2715 TV=0.0219 p=0.469
+exact arm pos 3: n=223 TV=0.0849 p=0.194
+exact arm pos 4: n=106 too few, not tested
+.control pos 2: n=680 TV=0.2897 p=6.44e-104
+.wide greedy: 1024 cycles, lookup row 1 reached 723, lookup row 2 reached 723
+.wide posctl stale: reached pos 4 225, pos 5 225, pos 6 225
+.wide posctl stale2: reached pos 4 445, pos 5 97, pos 6 97
+.wide posctl eps=0.5 pos 4: n=459 TV=0.2130 p=5.84e-16 p(lookup)=0.358 emitted share=0.560
+.
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+test_plookup.py: 14 warnings
+  /usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+test_plookup.py::test_point_mass_lookup_is_exact_under_vllm_rejection_kernels
+test_plookup.py::test_negative_control_without_point_mass_is_detected
+test_plookup.py::test_wide_posctl_stale_accepts_every_reached_lookup
+test_plookup.py::test_wide_posctl_stale2_breaks_only_the_second_lookup_row
+test_plookup.py::test_wide_posctl_eps_is_detected
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+test_plookup.py::test_point_mass_lookup_is_exact_under_vllm_rejection_kernels
+test_plookup.py::test_negative_control_without_point_mass_is_detected
+test_plookup.py::test_wide_posctl_stale_accepts_every_reached_lookup
+test_plookup.py::test_wide_posctl_stale2_breaks_only_the_second_lookup_row
+test_plookup.py::test_wide_posctl_eps_is_detected
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: invalid value encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+test_plookup.py::test_wide_posctl_stale2_breaks_only_the_second_lookup_row
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: divide by zero encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+6 passed, 24 deselected, 27 warnings in 1525.11s (0:25:25)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+rc=0

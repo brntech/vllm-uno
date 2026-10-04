@@ -1,9 +1,52 @@
 # Validation
 
+## v0.4.3 release status: prompt lookup, length gate and startup checks validated
+
+v0.4.3 is the v0.4.1 release image plus the overlay in `patch/0004-v0.4.3/` (nine patched runtime files, hashes in
+`evidence/release-0.4.3/image-files.sha256`). The new settings are off by default; the recommended Gemma 4 settings
+are `UNO_K=5 UNO_PLOOKUP_L=2 UNO_PLOOKUP_MAX_CTX=4096 UNO_DRAFT_MOE_TOPK=4` with the 38,560-prompt adapter at
+`Broadnet/gemma-4-26B-A4B-uno-adapter` main (`adapter_model.safetensors` sha256
+`e784e5df1c2235f354de2161894f9b244b0cd72930888a0600cdaccf7d842c60`, 75,627,016 bytes).
+
+- **CPU tests** (`tests/v0.4.3/`, results in `evidence/release-0.4.3/cpu/`): **96 passed, 0 failed, pytest rc 0 in
+  every group**, on the release image with `--network none` and no GPU. Triton's interpreter runs vLLM's own rejection
+  and resample kernels and the prompt-lookup kernels on the served shapes (K=4 and K=5 drafts, L=2 lookup tokens,
+  vocabularies above 8,192 tokens), and the emitted tokens are checked position by position against the model's
+  distribution: greedy, temperature 1, temperature 0.7 with top-p 0.9, and batches that mix gated and ungated
+  requests. Deliberately broken lookup rows are caught by the same tests. The fast group includes the 32 startup-check
+  tests (`test_startup_refusal.py`), which build the speculator through the real constructor, draft CUDA graph setup
+  and `capture()` at the profile's shape. Per-group statistics: `evidence/release-0.4.3/cpu/SUMMARY.md`.
+- **Reproduce the CPU tests** from `tests/v0.4.3/` with the image tagged `vllm-uno:0.4.3` (or `IMG=<image>`): `bash
+  release_cpu_groups.sh fast`, then `wave1` and `wave2`; poll with `wait_release_cpu.sh`. Each group runs in its own
+  detached container and writes its log and real pytest exit code to `tests/results/cpu/<group>.log` and `.rc`.
+- **Speed** (`evidence/release-0.4.3/`, one RTX 3090, one session, two rounds per arm in balanced order; DFlash K8 on
+  the stock `vllm/vllm-openai:v0.30.0` image with the same serve flags; `TABLES.md` is computed from the JSON files):
+
+  | workload | Uno v0.4.3 | DFlash K8, vLLM 0.30.0 | plain |
+  | --- | ---: | ---: | ---: |
+  | production traffic, one at a time: ms per token (two rounds) | 4.401 / 4.473 | 4.763 / 4.712 | 7.450 / 7.466 |
+  | speed-up over plain | 1.68x | 1.57x | 1.00x |
+  | production traffic, four at a time: tokens per second, whole batch | 501 / 490 | 505 / 506 | 358 / 360 |
+  | documents, 2k-token prompts: median ms per token (speed-up) | 5.07 (1.46x) | 6.10 (1.22x) | 7.41 |
+  | documents, 14k-token prompts | 6.08 (1.41x) | 9.92 (0.86x) | 8.55 |
+  | documents, 28k-token prompts | 7.51 (1.28x) | 14.49 (0.66x) | 9.58 |
+
+- **KV cache** at 32k context on a 24 GB RTX 3090 (`kv-cache.json`): 74,161 tokens with the recommended settings;
+  79,022 for v0.4.2 as published, measured in the same session.
+- **Lookup on vs off** (`lookup-ablation.json`, a separate session, the previous adapter, K=4): with the gate at 4,096,
+  3.0 % less time per token on production traffic than lookup off.
+- **Startup checks on a GPU** (one RTX 3090): the recommended settings plus `--enforce-eager` exit at startup with the
+  refusal and never serve; `UNO_K=6` with the other recommended settings exits before any request, naming the missing
+  draft batch sizes; the recommended settings start with every draft batch captured and serve a greedy smoke request.
+- **Lossless**: every candidate, drafted or copied, goes through vLLM's own rejection sampler against the distribution
+  it was drawn from; a copied token is a point-mass proposal, accepted with exactly the model's probability for it.
+  The CPU tests above check this on the served shapes.
+
 ## v0.4.2 release status: 28,560-prompt Gemma 4 adapter validated
 
-v0.4.2 changes the adapter only: `Broadnet/gemma-4-26B-A4B-uno-adapter` at Hub commit
-`90e7186d225d7d0c5746e6f84ba5280e6d3077a0`, rank 16, `adapter_model.safetensors` sha256
+v0.4.2 changes the adapter only: `Broadnet/gemma-4-26B-A4B-uno-adapter` at Hub revision `s3` (Hub's main branch
+holds the v0.4.3 adapter; download this one with `hf download Broadnet/gemma-4-26B-A4B-uno-adapter --revision s3`),
+first published at Hub commit `90e7186d225d7d0c5746e6f84ba5280e6d3077a0`, rank 16, `adapter_model.safetensors` sha256
 `abfdde5cfefad7bbbd8525ca38da4da2464b07aa0724beb65dca1fa7f592f2ee` (75,627,016 bytes), trained on 28,560 open prompts
 and published at its last stage's step 17,120. The P10K adapter measured in the v0.4.0 and v0.4.1 sections below stays
 at Hub revision `p10k`. Checked on the unchanged v0.4.1 image (`ghcr.io/brntech/vllm-uno:0.4.1`, digest
@@ -220,7 +263,7 @@ steps at that cutoff; position 1 is smoke only.
 | Chunk contract, a chunk-1 pair against a chunk-32 copy of one pass | refused by name, exit 2 | `logs/judge-kit-chunk-mismatch-v2.log` |
 | Chunk contract, a floor recorded at chunk 32 | refused by name, exit 2 | `logs/judge-kit-floor-chunk-mismatch.log` |
 | Plain arm flags vs the released profile | 33 of 33 flags present, no `--speculative-config`, two LoRA slots | `evidence/flags-check-plain.txt` |
-| Uno engagement | `Uno launch (profile=gemma4 ...)`, `UNO_GEMMA_SPLITKV engaged width={2,4,5} head_size={256,512}` | `logs/bl-rel2-gemma-uno.engagement.txt` |
+| Uno engagement | `Uno launch (profile=gemma4 ...)`, `UNO_GEMMA_SPLITKV engaged width={2,4,5} head_size={256,512}` | `logs/rel2-gemma-uno.engagement.txt` |
 | Profile boots and serves | PASS | `runs/gemma/candidate-r2/verdict.json` |
 | Plain reference, matched flags (two LoRA slots) | PASS, n=256 | `runs/gemma/reference-r2/reference.json` |
 | Candidate functional greedy | PASS, 4 prompts × 256 tokens | `runs/gemma/candidate-r2/uno-greedy-functional.jsonl` |
@@ -267,7 +310,7 @@ steps at that cutoff; position 1 is smoke only.
   to that root), `prefix-image-run/` (the pre-fix image's passes and judge records) and
   `greedy-receipt/` (the greedy comparison).
 - Greedy comparison, one fresh server per arm in the order `plain-a`, `uno`, `plain-b`, the plain
-  launch being `tools/bl-rel2-plain-gemma.sh` from the archive and the Uno launch the profile above:
+  launch being `tools/rel2-plain-gemma.sh` from the archive and the Uno launch the profile above:
 
   ```bash
   python3 gates/golden.py --url http://127.0.0.1:8000 --model uno-gemma4-26b-a4b --prompts gates/prompts_dbg_chat.json --temperature 0 --max-tokens 256 --out runs/<arm>.jsonl
@@ -511,7 +554,7 @@ Strict greedy comparison is deliberately `NOT_A_RELEASE_GATE` for this RTX
 3090 CUDA-graph instrument. This release did not run a plain-versus-plain
 double run and did not convert a strict output difference into a correctness
 failure. The source attribution is the local MRV2 record
-`docs/lanes/bl-mrv2-final-gates.md`: its graph-mode plain self controls showed
+`docs/lanes/mrv2-final-gates.md`: its graph-mode plain self controls showed
 the `p2/t31` and `p1/t31` self-flips, while the later separate-engine control
 with `VLLM_UNO_GREEDY_CONTROL_ENGINES=2` completed the seven matrix variants
 7/7. The warm-up fix in head `5da193...` covers served sampling modes before

@@ -1,0 +1,11 @@
+--- a/triton_unified_attention.py
++++ b/triton_unified_attention.py
+@@ -85,7 +85,7 @@
+     requirement; PyTorch view strides are not consulted by those kernels.
+     """
+     width = uno_static_query_width
+-    if width not in (2, 3, 4, 5):
++    if width not in (2, 3, 4, 5, 6, 7, 8, 9):  # prompt lookup: verify widths up to K + L + 1
+         return False
+     if num_seqs != 1 or max_seqlen_q != width:
+         return False

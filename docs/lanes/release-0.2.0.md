@@ -49,7 +49,7 @@ warnings across all validation traffic. Gate counters recorded 2,738 drafts,
 
 The sampled and mixed G2v2 gates are the release lossless evidence. Strict
 greedy is not a gate on this RTX 3090 CUDA-graph instrument: the documented
-source control in `docs/lanes/bl-mrv2-final-gates.md` attributes graph-mode
+source control in `docs/lanes/mrv2-final-gates.md` attributes graph-mode
 plain self-flips and later completes the separate-engine seven-row control.
 No plain-versus-plain double run was performed here.
 

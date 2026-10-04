@@ -14,7 +14,7 @@ The image does not change: v0.4.2 runs on `ghcr.io/brntech/vllm-uno:0.4.1`
 
 ## What changed
 
-- **New adapter** at [Broadnet/gemma-4-26B-A4B-uno-adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter)
+- **New adapter** at [Broadnet/gemma-4-26B-A4B-uno-adapter](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter/tree/s3)
   (Hub commit `90e7186d225d7d0c5746e6f84ba5280e6d3077a0`). The previous 10k-prompt adapter, then three more stages of
   new open rows (5,000, 5,000 and 8,560), each continuing from the one before; the published checkpoint is the last
   stage's step 17,120. Same rank-16 shape and the same `adapter_config.json`, so it drops in where the old one was.
@@ -51,11 +51,17 @@ samples each, two Uno and three plain servers: mean total variation 0.057 over t
 
 ## Upgrade
 
-Keep `ghcr.io/brntech/vllm-uno:0.4.1` and download the adapter again; the run command is unchanged. The previous
-10k-prompt adapter stays available at revision `p10k`:
+Keep `ghcr.io/brntech/vllm-uno:0.4.1` and download the adapter again; the run command is unchanged. Since v0.4.3 the
+Hub's main branch holds a newer adapter; this release's adapter is at revision `s3`:
+
+```bash
+hf download Broadnet/gemma-4-26B-A4B-uno-adapter --revision s3 --local-dir /path/to/uno-adapter
+```
+
+The previous 10k-prompt adapter stays available at revision `p10k`:
 
 ```bash
 hf download Broadnet/gemma-4-26B-A4B-uno-adapter --revision p10k --local-dir /path/to/p10k-adapter
 ```
 
-then mount that directory as `/adapter`.
+then mount the downloaded directory as `/adapter`.

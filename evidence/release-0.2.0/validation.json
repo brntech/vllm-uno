@@ -57,7 +57,7 @@
     "num_speculative_tokens": 8,
     "draft_row_bound": 128,
     "capture_sizes": [1, 2, 4, 8, 16, 32, 64, 128, 144],
-    "production_shape_source": "docs/lanes/bl-mrv2-final-ninecell.md"
+    "production_shape_source": "docs/lanes/mrv2-final-ninecell.md"
   },
   "local_package_gates": {
     "package_check": {
@@ -134,7 +134,7 @@
     "status": "NOT_A_RELEASE_GATE",
     "release_run_plain_self_control": false,
     "release_run_strict_compare": false,
-    "source_attribution": "docs/lanes/bl-mrv2-final-gates.md: graph-mode plain self-flips; later VLLM_UNO_GREEDY_CONTROL_ENGINES=2 control completes matrix 7/7",
+    "source_attribution": "docs/lanes/mrv2-final-gates.md: graph-mode plain self-flips; later VLLM_UNO_GREEDY_CONTROL_ENGINES=2 control completes matrix 7/7",
     "candidate_functional_greedy": "PASS",
     "receipt": "candidate/verdict.json"
   },

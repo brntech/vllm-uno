@@ -210,9 +210,15 @@ class ReleaseTests(unittest.TestCase):
 
     def test_release_identity_is_consistent(self):
         version = (ROOT / "release/VERSION").read_text(encoding="utf-8").strip()
-        self.assertEqual(version, "0.4.1")
+        self.assertEqual(version, "0.4.3")
+        # v0.4.3 is the published v0.4.1 image plus the patch/0004-v0.4.3 overlay; release/Dockerfile builds that base.
+        overlay = (ROOT / "patch/0004-v0.4.3/Dockerfile").read_text(encoding="utf-8")
+        self.assertIn(f'org.opencontainers.image.version="{version}"', overlay)
+        self.assertIn("ghcr.io/brntech/vllm-uno:0.4.1@sha256:"
+                      "f679879cada7b90d658246305801f2e9316e6f21f75cb7c3d7cd8fa37642ca34", overlay)
+        self.assertIn(f"echo {version} > /opt/uno-kit/release/VERSION", overlay)
         dockerfile = (ROOT / "release/Dockerfile").read_text(encoding="utf-8")
-        self.assertIn(f'org.opencontainers.image.version="{version}"', dockerfile)
+        self.assertIn('org.opencontainers.image.version="0.4.1"', dockerfile)
         self.assertIn("ai.uno.upstream.commit=\"00972dfd72988942138a7a6089eaee08580210b8\"", dockerfile)
         self.assertIn("ai.uno.head.commit=\"cf87916880b051e8782521dfe2afa12e0627e172\"", dockerfile)
         citation = (ROOT / "CITATION.cff").read_text(encoding="utf-8")

@@ -1,0 +1,17 @@
+--- a/serve.sh
++++ b/serve.sh
+@@ -124,9 +124,13 @@
+ mask_token_id=int(sys.argv[3])
+ if mask_token_id <= 1: raise SystemExit('UNO_MASK_TOKEN_ID must be greater than 1')
+ noise_seed=int(sys.argv[4])
++# Prompt lookup: UNO_PLOOKUP_L lookup tokens are verified after the K Uno drafts (engine reads the same variable).
++import os
++pl=os.environ.get('UNO_PLOOKUP_L','').strip() or '0'
++if not pl.isdigit() or int(pl) > 8: raise SystemExit('UNO_PLOOKUP_L must be an integer in 0..8')
+ c=dict(method='uno', uno_lora_path=sys.argv[1],
+        uno_mask_token_id=mask_token_id, uno_noise_seed=noise_seed,
+-       num_speculative_tokens=k)
++       num_speculative_tokens=k+int(pl))
+ if sys.argv[5]:
+     noise_low=int(sys.argv[5])
+     if not 0 <= noise_low < mask_token_id: raise SystemExit('UNO_NOISE_LOW must satisfy 0 <= UNO_NOISE_LOW < UNO_MASK_TOKEN_ID')

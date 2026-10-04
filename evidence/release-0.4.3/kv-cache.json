@@ -1,0 +1,9 @@
+{
+ "what": "KV cache size the server reports at startup (GPU KV cache size line), 32k profile",
+ "arms": {
+  "uno-v0.4.3-recipe": 74161,
+  "uno-v0.4.2 (vllm-uno:0.4.1 image + the 28.6k-prompt adapter, profile defaults)": 79022,
+  "plain": 101370,
+  "dflash-k8-vllm-0.30.0": 68463
+ }
+}

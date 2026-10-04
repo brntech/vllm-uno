@@ -1,0 +1,183 @@
+--- a/uno.py
++++ b/uno.py
+@@ -37,9 +37,18 @@
+ from vllm.v1.worker.gpu.model_states.interface import ModelState
+ from vllm.v1.worker.gpu.spec_decode.speculator import DraftModelSpeculator
+ from vllm.v1.worker.gpu.spec_decode.uno_draft_moe import (
++    ENV_NAME as _DRAFT_MOE_ENV,
+     DraftMoECaptureState,
++    DraftMoEConfigurationError,
+     draft_moe_capture_scope,
+     refuse_uncaptured_eager_draft,
++    uno_draft_moe_enabled,
++)
++from vllm.v1.worker.gpu.spec_decode.uno_plookup import (
++    NMAX as _PLOOKUP_NMAX,
++    PromptLookup,
++    plookup_gate_decode_query_lens,
++    plookup_len_from_env,
+ )
+ from vllm.v1.worker.gpu.spec_decode.uno_prepare import prepare_uno_inputs_fused
+ from vllm.v1.worker.utils import AttentionGroup
+@@ -627,7 +636,33 @@
+         if device.type != "cuda" or not current_platform.is_cuda():
+             raise ValueError("Uno currently requires an NVIDIA CUDA device")
+         super().__init__(vllm_config, device)
+-        self.k = self.num_speculative_steps
++        # Prompt lookup: num_speculative_tokens = K Uno drafts + L prompt-lookup
++        # tokens; Uno itself drafts K rows. L = 0 is the v0.4.2 path.
++        self.plookup_len = plookup_len_from_env()
++        self.k = self.num_speculative_steps - self.plookup_len
++        if self.k < 1:
++            raise ValueError(
++                "UNO_PLOOKUP_L must be smaller than num_speculative_tokens "
++                "(the serve script sets num_speculative_tokens = UNO_K + UNO_PLOOKUP_L)"
++            )
++        self.plookup: PromptLookup | None = None
++        if self.plookup_len:
++            if self.draft_logits is None:
++                raise ValueError("Uno prompt lookup needs probabilistic drafts")
++            self.plookup = PromptLookup(
++                self.k, self.plookup_len, self.max_num_reqs, device
++            )
++            self.plookup.init_draft_logits(self.draft_logits)
++            logger.info(
++                "Uno prompt lookup: L=%d lookup tokens after K=%d Uno drafts "
++                "(verify width %d, suffix n-gram %d..1, point-mass drafts)",
++                self.plookup_len,
++                self.k,
++                self.num_speculative_steps + 1,
++                _PLOOKUP_NMAX,
++            )
++        else:
++            logger.info("Uno prompt lookup: off (K=%d)", self.k)
+         if self.max_num_reqs * self.k > self.max_num_tokens:
+             raise ValueError(
+                 "Uno requires max_num_batched_tokens >= "
+@@ -866,6 +901,72 @@
+             decode_query_len=self.k,
+             lora_capture_cases=[self._draft_dispatch_lora_case()],
+         )
++        self._refuse_draft_top_k_without_capture(cudagraph_mode)
++
++    def _refuse_draft_top_k_without_capture(
++        self, cudagraph_mode: CUDAGraphMode
++    ) -> None:
++        """Refuse UNO_DRAFT_MOE_TOPK at startup when capture() will not run.
++
++        The draft top-k variant exists only inside the graphs capture() records,
++        and a real proposal with no captured graph is refused. A launch that
++        never reaches capture() used to start and then stop at its first
++        request: --enforce-eager (the worker skips capture), cudagraph mode NONE
++        or PIECEWISE (no FULL decode graph for the draft), attention without
++        uniform-batch graphs, no capture size that holds one request's draft
++        rows, or a FULL-only mode in which the target captures nothing (the
++        runner calls capture() only after a target capture). Whatever capture()
++        does record is checked against every reachable batch afterwards, in
++        _log_draft_graph_coverage.
++        """
++        if not uno_draft_moe_enabled():
++            return
++        assert self.cudagraph_manager is not None
++        model_config = self.vllm_config.model_config
++        cc = self.vllm_config.compilation_config
++        sizes = sorted(cc.cudagraph_capture_sizes or [])
++        max_size = cc.max_cudagraph_capture_size or 0
++        widths = [self.num_speculative_steps + 1]
++        target_captures = bool(sizes)
++        if target_captures and cudagraph_mode.mixed_mode() == CUDAGraphMode.NONE:
++            # FULL-only: the target captures a uniform decode graph only where a
++            # size rounds up to its verify width within the largest size, as in
++            # CudaGraphManager._init_candidates.
++            widths = plookup_gate_decode_query_lens(widths, self.speculative_config)
++            target_captures = any(
++                -(-s // w) * w <= min(max_size, self.max_num_reqs * w)
++                for s in sizes
++                for w in widths
++            )
++        if model_config is not None and model_config.enforce_eager:
++            reason = "--enforce-eager skips CUDA graph capture"
++        elif cudagraph_mode.decode_mode() != CUDAGraphMode.FULL:
++            reason = (
++                f"cudagraph_mode {cudagraph_mode.name} captures no FULL decode "
++                "graph for the draft"
++            )
++        elif self.cudagraph_manager.cudagraph_mode == CUDAGraphMode.NONE:
++            reason = "the attention backend has no uniform-batch CUDA graph support"
++        elif not self.cudagraph_manager.needs_capture():
++            reason = (
++                f"no cudagraph_capture_sizes entry holds the {self.k} draft rows "
++                "of one request"
++            )
++        elif not target_captures:
++            reason = (
++                "the target model captures no graph at these cudagraph_capture_sizes "
++                "(decode widths "
++                f"{widths}), and draft capture runs only after a target capture"
++            )
++        else:
++            return
++        raise DraftMoEConfigurationError(
++            f"{_DRAFT_MOE_ENV} needs captured draft graphs, and this launch "
++            f"captures none: {reason}. Remove --enforce-eager, use "
++            "cudagraph_mode FULL_AND_PIECEWISE with capture sizes up to "
++            f"max_num_seqs x {self.k} = {self.max_num_reqs * self.k}, or unset "
++            f"{_DRAFT_MOE_ENV}."
++        )
+ 
+     def capture(self) -> None:
+         assert self.cudagraph_manager is not None
+@@ -980,6 +1081,22 @@
+             for n in range(1, self.max_num_reqs + 1)
+             if not manager.key_is_covered(n, n * self.k, self.k, draft_loras)
+         ]
++        if self.draft_moe_state is not None and (uncovered or not captured):
++            # The draft top-k variant exists only inside captured graphs and
++            # refuses an uncaptured proposal, so an uncovered request count
++            # would stop the engine mid-serve once that many requests are in
++            # flight. Refuse here, before the server accepts any request.
++            raise DraftMoEConfigurationError(
++                f"{_DRAFT_MOE_ENV}={self.draft_moe_state.top_k} needs a captured "
++                "draft graph for every reachable draft batch, and these draft "
++                f"dispatch keys have none: {_format_dispatch_keys(uncovered)} "
++                f"(max_num_seqs={self.max_num_reqs} x {self.k} draft rows per "
++                f"request = {self.max_num_reqs * self.k} rows; largest captured "
++                f"draft batch {max((key[0] for key in captured), default=0)}). "
++                "Lower UNO_K or max_num_seqs, add a cudagraph_capture_sizes "
++                f"entry of at least {self.max_num_reqs * self.k}, or unset "
++                f"{_DRAFT_MOE_ENV}."
++            )
+         if not captured:
+             logger.info(
+                 "Uno draft CUDA graphs: nothing captured, so every proposal "
+@@ -1045,7 +1162,14 @@
+             self.sample_col[:count],
+             self.draft_logits,
+         )
+-        self.draft_tokens[:num_reqs].copy_(tokens.view(num_reqs, self.k))
++        self.draft_tokens[:num_reqs, : self.k].copy_(tokens.view(num_reqs, self.k))
++
++    def bind_token_history(
++        self, all_token_ids: torch.Tensor, total_len: torch.Tensor
++    ) -> None:
++        """Give the prompt lookup the verified token history (no-op when off)."""
++        if self.plookup is not None:
++            self.plookup.bind_history(all_token_ids, total_len)
+ 
+     def _uno_group_slots(self, count: int) -> None:
+         bt = self.block_tables
+@@ -1196,4 +1320,14 @@
+                             desc.num_tokens,
+                             n,
+                         )
++        if self.plookup is not None:
++            # Runs on dummy proposals too, so its kernels compile at warmup.
++            assert self.draft_logits is not None
++            self.plookup.extend(
++                n, input_batch.idx_mapping, self.draft_tokens, self.draft_logits
++            )
++            if not (dummy_run or is_profile) and self.plookup.num_served == 0:
++                logger.info("Uno prompt lookup is active on served proposals.")
++            if not (dummy_run or is_profile):
++                self.plookup.num_served += 1
+         return self.draft_tokens[:n]

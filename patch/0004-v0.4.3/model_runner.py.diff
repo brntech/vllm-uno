@@ -1,0 +1,24 @@
+--- a/model_runner.py
++++ b/model_runner.py
+@@ -453,6 +453,11 @@
+                     self.speculator.load_model(self.model)
+                     if isinstance(self.speculator, UnoSpeculator):
+                         self._install_uno_lora(self.speculator)
++                        # Prompt lookup: the lookup reads the verified history.
++                        self.speculator.bind_token_history(
++                            self.req_states.all_token_ids.gpu,
++                            self.req_states.total_len.gpu,
++                        )
+                     eplb_models_added = self.eplb.maybe_register_speculator(
+                         self.speculator, self.speculative_config, load_dummy_weights
+                     )
+@@ -1170,7 +1175,8 @@
+             return
+         plan = enumerate_uno_served_launches(
+             max_num_reqs=self.max_num_reqs,
+-            k=self.speculator.k,
++            # Prompt lookup: verification rows are num_speculative_steps + 1 (K + L + 1).
++            k=self.num_speculative_steps,
+             max_num_tokens=self.max_num_tokens,
+             max_model_len=self.max_model_len,
+             num_sm=num_compute_units(self.device.index),

@@ -1,0 +1,11 @@
+--- a/triton_attn.py
++++ b/triton_attn.py
+@@ -74,7 +74,7 @@
+     """
+     if not use_uno or num_reqs != 1:
+         return None
+-    if max_query_len not in (2, 3, 4, 5):
++    if max_query_len not in (2, 3, 4, 5, 6, 7, 8, 9):  # prompt lookup: verify widths up to K + L + 1
+         return None
+     if num_actual_tokens != max_query_len or causal is not True:
+         return None

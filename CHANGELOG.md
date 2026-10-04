@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-04
+
+### Added
+
+- Prompt lookup after Uno's drafts in the Gemma 4 profile (`UNO_PLOOKUP_L=L`, 1 to 8; unset or `0` is off). Each proposal is K Uno drafts followed by L tokens copied from the request: the tokens that followed the most recent earlier occurrence of the longest matching suffix (up to 4 tokens) of the prompt, the answer so far and this step's drafts. `release/serve.sh` sets `num_speculative_tokens = K + L`, so one target pass verifies all K + L candidates. A copied token is a point-mass proposal that vLLM's rejection sampler accepts with exactly the model's probability for it, so the output is the model's own.
+- A per-request length gate (`UNO_PLOOKUP_MAX_CTX=N`): a request whose context (prompt plus output) is above N tokens verifies only Uno's K drafts. The choice depends on the request's length alone and is made before the step runs. The target also captures full CUDA graphs at the gated width.
+- Startup checks for `UNO_DRAFT_MOE_TOPK=4`: the server refuses to start when it will capture no draft graph (`--enforce-eager`, a CUDA graph mode without full decode graphs, or capture sizes too small for one request's drafts), and when a reachable draft batch (up to `max_num_seqs` x `UNO_K` rows) has no captured graph, naming the missing batch sizes. Under the profile defaults `UNO_K` of 5 or less starts; `UNO_K=6` or more, or `--max-num-seqs` above 8 at `UNO_K=5`, is refused.
+- Recommended Gemma 4 settings, measured: `UNO_K=5 UNO_PLOOKUP_L=2 UNO_PLOOKUP_MAX_CTX=4096 UNO_DRAFT_MOE_TOPK=4` (`UNO_DRAFT_MOE_TOPK=4` on compute-capability-8.6 GPUs only). On one RTX 3090, BroadNet's production traffic one request at a time decodes 1.68x faster than plain (DFlash K8 in vLLM 0.30.0: 1.57x); 14k and 28k-token documents decode 1.41x and 1.28x faster than plain. KV cache at 32k context: 74,161 tokens (79,022 for v0.4.2). `RELEASE-NOTES-0.4.3.md`, `evidence/release-0.4.3/`.
+- 96 CPU tests in `tests/v0.4.3/`, run on the release image with vLLM's real rejection kernels in Triton's interpreter (`evidence/release-0.4.3/cpu/`).
+
+### Changed
+
+- Image `ghcr.io/brntech/vllm-uno:0.4.3` = the v0.4.1 release image plus the overlay in `patch/0004-v0.4.3/`, built from the repository root (`docker build -f patch/0004-v0.4.3/Dockerfile .`). Uno's static-width verify attention covers up to 9 rows (K + L + 1). Same base image, vLLM build, profile defaults, draft vocabulary and LoRA kernel configs; an unconfigured v0.4.3 server runs the v0.4.2 path.
+- The Gemma 4 instructions point at a new adapter at `Broadnet/gemma-4-26B-A4B-uno-adapter` main, trained on 38,560 open prompts (`adapter_model.safetensors` sha256 `e784e5df1c2235f354de2161894f9b244b0cd72930888a0600cdaccf7d842c60`, 75,627,016 bytes, same `adapter_config.json`). The v0.4.2 adapter stays at Hub revision `s3`, the 10k-prompt adapter at `p10k`; the v0.4.2 instructions now download `--revision s3`.
+
 ## [0.4.2] - 2026-10-01
 
 ### Changed
@@ -127,3 +142,5 @@ First public tagged version of Uno for vLLM.
 [0.4.1]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.1
 
 [0.4.2]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.2
+
+[0.4.3]: https://github.com/brntech/vllm-uno/releases/tag/v0.4.3

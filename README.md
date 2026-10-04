@@ -1,14 +1,23 @@
 # Uno for vLLM
 
+**v0.4.3** adds prompt lookup to the Gemma 4 profile: after Uno's drafts, two more candidates are copied from the
+request itself, and the model checks them all in the same pass. With the recommended settings (five Uno drafts, two
+lookup tokens, draft passes through 4 of the 8 experts) and a new adapter trained on 38,560 open prompts, on one RTX
+3090 Gemma 4 26B A4B decodes BroadNet's production traffic, one request at a time, **1.68x faster than plain** (DFlash
+K8 in vLLM 0.30.0: 1.57x); 14k and 28k-token documents decode **1.41x and 1.28x faster than plain**. The output is
+the model's own (see [RELEASE-NOTES-0.4.3.md](RELEASE-NOTES-0.4.3.md)). The new settings are off by default, so an
+unconfigured v0.4.3 server runs the v0.4.2 path; image `ghcr.io/brntech/vllm-uno:0.4.3`. The v0.4.2 adapter stays at
+Hub revision `s3`, the 10k-prompt adapter at `p10k`.
+
 **v0.4.2** ships a new Gemma 4 26B A4B adapter trained on 28,560 open prompts: on one RTX 3090 the Gemma 4 profile
 decodes BroadNet's production traffic **1.57x faster than plain**, matching the DFlash drafter (1.56x in the same
 session); prompts from 2k to 28k tokens decode 1.31x to 1.49x faster than plain (1.29x to 1.98x faster than DFlash);
 the output is the model's own (see [RELEASE-NOTES-0.4.2.md](RELEASE-NOTES-0.4.2.md)). The image is unchanged:
-v0.4.2 runs on `ghcr.io/brntech/vllm-uno:0.4.1`. The previous adapter stays at Hub revision `p10k`.
+v0.4.2 runs on `ghcr.io/brntech/vllm-uno:0.4.1`. Its adapter is at Hub revision `s3`.
 
 **v0.4.1** ships tuned kernel configs for the adapter's LoRA layers on the RTX 3090: the Gemma 4 profile decodes about
 1 % faster (1.53x plain on BroadNet's production traffic in the release session), and the output is the model's own
-(see [RELEASE-NOTES-0.4.1.md](RELEASE-NOTES-0.4.1.md)). Everything below is unchanged from v0.4.0.
+(see [RELEASE-NOTES-0.4.1.md](RELEASE-NOTES-0.4.1.md)); the rest is unchanged from v0.4.0.
 
 **v0.4.0** makes Uno a long-context speculator on Gemma 4 26B A4B, the model BroadNet serves in production in English
 and Arabic. On one RTX 3090 the Gemma 4 profile decodes BroadNet's production traffic **1.52x faster than plain** and
@@ -63,8 +72,13 @@ sliding-window MoE model with `K=4` speculative tokens:
   40-row verify batch.
 - On by default: split-KV draft attention (`UNO_GEMMA_SPLITKV=0` turns it off)
   and the shipped 64k Gemma 4 draft vocabulary (an empty `UNO_DRAFT_VOCAB=`
-  turns it off). `UNO_DRAFT_MOE_TOPK=4` still opts into top-4 draft MoE routing
-  under captured graphs and refuses any serving shape it did not capture.
+  turns it off).
+- Off by default, recommended since v0.4.3: prompt lookup after Uno's drafts
+  (`UNO_PLOOKUP_L`) with a per-request length gate (`UNO_PLOOKUP_MAX_CTX`),
+  `UNO_K=5`, and top-4 draft MoE routing (`UNO_DRAFT_MOE_TOPK=4`, RTX 30-series
+  class GPUs only), which runs only inside captured draft graphs and refuses at
+  startup any launch that would leave a reachable draft batch uncaptured
+  ([docs/configuration.md](docs/configuration.md)).
 
 **Status.** Uno is lossless by design: its verifier accepts drafts by rejection sampling against the full model, so the output
 distribution is the model's own. In the Uno authors' words, it "accelerates generation without sacrificing the quality
@@ -80,7 +94,7 @@ when vLLM publishes a release image containing this base.
 After the maintainer publishes the release, pull the AMD64 image:
 
 ```bash
-docker pull ghcr.io/brntech/vllm-uno:0.4.1
+docker pull ghcr.io/brntech/vllm-uno:0.4.3
 ```
 
 Use a Linux AMD64 host with a compatible NVIDIA driver and Docker configured
@@ -94,22 +108,35 @@ loopback-only API:
 docker run --rm --name vllm-uno --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v vllm-uno-hf-cache:/root/.cache/huggingface \
-  ghcr.io/brntech/vllm-uno:0.4.1 \
+  ghcr.io/brntech/vllm-uno:0.4.3 \
   Qwen/Qwen3-8B s-sahoo/uno-qwen3-8B
 ```
 
-For Gemma 4, mount the model cache and the adapter directory and select the
-gemma4 profile:
+For Gemma 4, download the adapter (main is the 38,560-prompt adapter; the v0.4.2
+adapter is at revision `s3`, the 10k-prompt adapter at `p10k`):
+
+```bash
+hf download Broadnet/gemma-4-26B-A4B-uno-adapter --local-dir /path/to/uno-adapter
+```
+
+then mount the model cache and the adapter directory and select the gemma4
+profile with the recommended settings:
 
 ```bash
 docker run --rm --name vllm-uno-gemma --gpus all --ipc=host \
   -p 127.0.0.1:8000:8000 \
   -v /path/to/hf-cache:/root/.cache/huggingface \
   -v /path/to/uno-adapter:/adapter:ro \
-  -e UNO_PROFILE=gemma4 \
-  ghcr.io/brntech/vllm-uno:0.4.1 \
-  cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter
+  -e UNO_PROFILE=gemma4 -e UNO_K=5 -e UNO_PLOOKUP_L=2 -e UNO_PLOOKUP_MAX_CTX=4096 -e UNO_DRAFT_MOE_TOPK=4 \
+  ghcr.io/brntech/vllm-uno:0.4.3 \
+  cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter \
+  -- --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4
 ```
+
+The flags after `--` turn on Gemma 4's tool-call and reasoning parsers, as on the
+measured servers. `UNO_DRAFT_MOE_TOPK=4` is for compute-capability-8.6 GPUs (RTX
+30-series class) only; leave it out elsewhere. Without the four settings the
+server runs the v0.4.2 path.
 
 When `/health` is ready, send an OpenAI-compatible request using `uno-qwen3-8b`
 for Qwen or `uno-gemma4-26b-a4b` for Gemma:
@@ -141,7 +168,20 @@ The build starts from the digest-pinned CI image containing the exact base
 repository, checks out the pinned commit locally inside that image, applies the
 ordered three-layer patch series, and overlays only the verified Python source. It
 preserves the base image's compiled CUDA libraries and does not clone vLLM from
-GitHub during the image build.
+GitHub during the image build. That is the v0.4.1 image, the base of every later
+release.
+
+The v0.4.3 image is the published v0.4.1 image (pinned by digest) plus the
+prompt-lookup overlay in [`patch/0004-v0.4.3/`](patch/0004-v0.4.3/); build it
+from the repository root so the image holds this release's documents:
+
+```bash
+docker build -f patch/0004-v0.4.3/Dockerfile -t vllm-uno:0.4.3 .
+```
+
+[`evidence/release-0.4.3/image-files.sha256`](evidence/release-0.4.3/image-files.sha256)
+lists the hashes of the nine patched runtime files (`/opt/uno-plookup.sha256` in
+the image).
 
 ## Upstream contribution
 
@@ -173,8 +213,11 @@ and in [docs/validation.md](docs/validation.md).
 
 ## Validation
 
-[docs/validation.md](docs/validation.md) carries the v0.4.0 checks on the final
-image and, below them, the v0.3.0 release record. The Qwen3-8B profile's
+[docs/validation.md](docs/validation.md) records the v0.4.3 checks (96 CPU tests
+in [`tests/v0.4.3/`](tests/v0.4.3/) on the release image, with vLLM's real
+rejection kernels; the measurement session in
+[`evidence/release-0.4.3/`](evidence/release-0.4.3/)), the v0.4.2, v0.4.1 and
+v0.4.0 checks, and, below them, the v0.3.0 release record. The Qwen3-8B profile's
 launcher settings are unchanged since v0.3.0, but patch 0003 changes shared
 code (the LoRA linear layer and the scheduler); on the v0.4.0 image it has passed
 the patched tree's Uno unit tests and the eight greedy end-to-end `test_uno.py`
@@ -185,7 +228,11 @@ path fixed in v0.4.0.
 
 ## Repository map
 
-- [`patch/`](patch/) - ordered patch series against the pinned vLLM commit
+- [`patch/`](patch/) - ordered patch series against the pinned vLLM commit, and
+  the v0.4.3 overlay on the v0.4.1 image ([`patch/0004-v0.4.3/`](patch/0004-v0.4.3/))
+- [`tests/`](tests/) - release tests; [`tests/v0.4.3/`](tests/v0.4.3/) runs on
+  the release image
+- [`evidence/`](evidence/) - per-release measurement and validation evidence
 - [`release/stack.py`](release/stack.py) - audit and source assembly
 - [`release/apply.sh`](release/apply.sh) - apply or verify the patch in an
   exact-base checkout

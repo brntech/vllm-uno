@@ -1,0 +1,84 @@
+--- a/scheduler.py
++++ b/scheduler.py
+@@ -271,6 +271,8 @@
+         self.use_uno = (
+             speculative_config is not None and speculative_config.method == "uno"
+         )
++        # Per-request prompt-lookup length gate (UNO_PLOOKUP_MAX_CTX); needs use_uno and num_spec_tokens.
++        self._init_uno_plookup_gate()
+         # Positions past the computed tokens that the drafter reads mid-prefill.
+         # Eagle-family drafters read 1 ahead, but multi-module MTP reads
+         # num_spec_tokens ahead at chunked-prefill boundaries. Determines the
+@@ -1544,6 +1546,63 @@
+             )
+         return scheduler_output
+ 
++    def _init_uno_plookup_gate(self) -> None:
++        """Prompt-lookup length gate: requests whose context exceeds UNO_PLOOKUP_MAX_CTX verify only Uno's K drafts.
++
++        Uno + prompt lookup proposes K Uno drafts followed by L lookup tokens (num_spec_tokens = K + L). For a
++        request whose context (prompt + output, in-flight tokens included) is above the threshold, the scheduler
++        schedules only the first K draft rows, so the lookup rows are never verified and cost no verify width.
++        The draft count is chosen from the request's length before the step runs, never from token values.
++        """
++        self._uno_plookup_len = 0
++        self._uno_plookup_max_ctx: int | None = None
++        self._uno_plookup_gated_steps = 0
++        if not self.use_uno:
++            return
++        from vllm.v1.worker.gpu.spec_decode.uno_plookup import (
++            plookup_len_from_env,
++            plookup_max_ctx_from_env,
++        )
++
++        lookup_len = plookup_len_from_env()
++        max_ctx = plookup_max_ctx_from_env()
++        if max_ctx is None or lookup_len == 0:
++            return
++        if self.num_spec_tokens <= lookup_len:
++            raise ValueError("UNO_PLOOKUP_MAX_CTX needs num_speculative_tokens = K + UNO_PLOOKUP_L with K >= 1")
++        self._uno_plookup_len = lookup_len
++        self._uno_plookup_max_ctx = max_ctx
++        logger.info(
++            "Uno prompt lookup gate: L=%d lookup rows only while a request's context is <= %d tokens; "
++            "longer requests verify K=%d Uno drafts",
++            lookup_len,
++            max_ctx,
++            self.num_spec_tokens - lookup_len,
++        )
++
++    def _uno_plookup_gate(self, request: Request, spec_token_ids: list[int]) -> list[int]:
++        """Drop the lookup rows (the last L of K + L) of a request whose context is above the gate."""
++        if self._uno_plookup_max_ctx is None or not spec_token_ids:
++            return spec_token_ids
++        from vllm.v1.worker.gpu.spec_decode.uno_plookup import gated_num_spec
++
++        context_len = request.num_tokens + request.num_output_placeholders
++        n = gated_num_spec(
++            len(spec_token_ids), self._uno_plookup_len, self._uno_plookup_max_ctx, context_len
++        )
++        if n == len(spec_token_ids):
++            return spec_token_ids
++        if self._uno_plookup_gated_steps == 0:
++            logger.info(
++                "Uno prompt lookup gate engaged: context %d > %d, verifying %d of %d draft rows",
++                context_len,
++                self._uno_plookup_max_ctx,
++                n,
++                len(spec_token_ids),
++            )
++        self._uno_plookup_gated_steps += 1
++        return spec_token_ids[:n]
++
+     def _uno_output_token_limit(self, request: Request) -> int:
+         return min(request.max_tokens, self.max_model_len - request.num_prompt_tokens)
+ 
+@@ -2607,7 +2666,7 @@
+                 metadata = request.structured_output_request
+                 spec_token_ids = strip_speculative_padding(spec_token_ids)
+                 spec_token_ids = metadata.grammar.validate_tokens(spec_token_ids)  # type: ignore[union-attr]
+-            request.spec_token_ids = spec_token_ids
++            request.spec_token_ids = self._uno_plookup_gate(request, spec_token_ids)  # prompt-lookup length gate
+ 
+     def update_draft_token_ids_in_output(
+         self, draft_token_ids: DraftTokenIds, scheduler_output: SchedulerOutput

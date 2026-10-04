@@ -380,7 +380,7 @@
               0.2699
             ]
           },
-          "receipt": "logs/bl-rel2-gemma-uno.engagement.txt"
+          "receipt": "logs/rel2-gemma-uno.engagement.txt"
         },
         "detection_power": "256 draws per position per arm with a pooled-label permutation null; Bonferroni cutoff 2.78e-04 (36 tests) or 2.27e-04 (44 tests); smallest attainable p 2.78e-05 / 2.27e-05, so a test rejects only when at most nine permutation draws reach the observed TV; PASS means no discrepancy was detected at this sample size, not proven equivalence"
       },

@@ -78,7 +78,7 @@ It is not a 32-active-sequence profile or a performance cell.
 | Setting | Default |
 |---|---|
 | Speculative method | `uno` |
-| Candidate width | `num_speculative_tokens=4` |
+| Candidate width | `num_speculative_tokens=4` (`UNO_K`; K + `UNO_PLOOKUP_L` with prompt lookup) |
 | Uno adapter path | the local adapter directory passed on the command line |
 | Uno noise range | `uno_noise_low=0`, `uno_mask_token_id=262144` |
 | Uno noise seed | `uno_noise_seed=29` |
@@ -91,20 +91,21 @@ It is not a 32-active-sequence profile or a performance cell.
 | Maximum model length | 32,768 tokens (`UNO_MAX_MODEL_LEN` overrides) |
 | Maximum active sequences | 8 |
 | Maximum batched tokens | 2,048 |
-| GPU memory utilization | `0.90` (79,022 tokens of KV at 32k on a 24 GB RTX 3090) |
+| GPU memory utilization | `0.90` (79,022 tokens of KV at 32k on a 24 GB RTX 3090; 74,161 with the v0.4.3 recommended settings) |
 | CUDA graph capture sizes | `[1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40]` |
 | LoRA capacity | rank 16, 2 slots (the Uno path reserves one for its shared adapter), target modules `qkv_proj o_proj gate_up_proj down_proj` |
 | Split-KV draft attention | on by default since v0.4.0 (`UNO_GEMMA_SPLITKV=0` turns it off); every release measurement used it, and without it draft attention over a long cache dominates (28k-token prompts on early v0.4.0 kit images, one server each: 13.6 vs 7.5 ms per token; `evidence/release-0.4.0/kit-*.jsonl`) |
 | Tuned LoRA kernel configs | on by default since v0.4.1: `VLLM_TUNED_CONFIG_FOLDER=/opt/uno-kit/release/lora-configs` holds Triton configs for the adapter's shrink and expand kernels tuned on the RTX 3090 for the draft pass's shapes (about 1 % less time per token there; the output is the model's own); vLLM matches files by GPU name, so other GPUs keep the defaults; an empty value turns them off |
 | Draft vocabulary | on by default since v0.4.0: `UNO_DRAFT_VOCAB=/opt/uno-kit/release/gemma4-draft-vocab-65536.json` (65,536 Gemma 4 token ids ranked on open data); an empty value restores the full-vocabulary draft head; verification always scores the full vocabulary |
-| Draft MoE top-k | off by default; `UNO_DRAFT_MOE_TOPK=4` opts in (SM86 only) |
+| Prompt lookup | off by default; since v0.4.3 `UNO_PLOOKUP_L=L` (1 to 8) verifies L tokens copied from the request after the K Uno drafts, and `UNO_PLOOKUP_MAX_CTX=N` limits it to requests whose context is at most N tokens |
+| Draft MoE top-k | off by default; `UNO_DRAFT_MOE_TOPK=4` opts in (SM86 only); since v0.4.3 a launch that would leave a reachable draft batch without a captured graph is refused at startup |
 | Generation defaults | `--generation-config vllm` |
 
 The Gemma capacity bound is `max_num_seqs=8` times `K=4`, so the largest served
 draft row shape is 32 rows; every multiple of four up to 32 is a capture cell,
 and 40 covers the largest verify batch (eight requests times `K+1`).
 
-Three engine-side switches are read from the process environment and are not
+These engine-side switches are read from the process environment and are not
 CLI flags:
 
 | Variable | Effect |
@@ -112,14 +113,33 @@ CLI flags:
 | `UNO_GEMMA_SPLITKV` | `1` (gemma4 default) segments the draft attention over the KV axis and logs the engaged `width`, `head_size`, `q_heads`, `kv_heads` and `segments` per head family; `0` turns it off |
 | `VLLM_TUNED_CONFIG_FOLDER` | vLLM's folder of tuned LoRA kernel configs (`<GPU name>_SHRINK.json`, `<GPU name>_EXPAND_FALSE.json`); gemma4 default `/opt/uno-kit/release/lora-configs` (RTX 3090 files); empty turns them off |
 | `UNO_DRAFT_VOCAB` | Path to a JSON file `{"token_ids": [...]}`: the draft head scores only those ids (gemma4 default: the shipped 64k list); empty or unset is the full-vocabulary draft head |
-| `UNO_DRAFT_MOE_TOPK=4` | Captures the draft MoE routers at top-4 while the verifier keeps the configured top-8; an uncaptured serving shape is refused by dispatch key, environment variable and variant name |
+| `UNO_DRAFT_MOE_TOPK=4` | Captures the draft MoE routers at top-4 while the verifier keeps the configured top-8; the 4-expert draft runs only inside captured draft graphs |
+| `UNO_PLOOKUP_L` | Since v0.4.3: lookup tokens verified after the K Uno drafts, 1 to 8; unset or `0` is off (the v0.4.2 path). `release/serve.sh` reads the same variable and sets `num_speculative_tokens = K + L`; a value outside 0..8 stops the launcher |
+| `UNO_PLOOKUP_MAX_CTX` | Since v0.4.3: a request whose context (prompt plus output) is above this many tokens verifies only the K Uno drafts; unset is no gate; must be a positive integer. The target also captures full CUDA graphs at the gated width |
 
-`UNO_DRAFT_MOE_TOPK=4` requires an SM86 device, tensor parallelism 1, and a
-capture list whose captured draft-row counts cover every serving shape the
-operator intends to run. It is validated on the capture list
-`[1,2,3,4,5,6,7,8]`, which serves one- and two-sequence requests and refuses a
-four-sequence (16 draft row) request. It was validated on v0.3.0's profile and is not part of the v0.4.0 measurements;
-re-gate it before combining it with the v0.4.0 hybrid-KV profile.
+`UNO_DRAFT_MOE_TOPK=4` requires an SM86 device and tensor parallelism 1. Since
+v0.4.3 the server checks it at startup. It refuses to start when it will capture
+no draft graph (`--enforce-eager`, cudagraph mode `NONE` or `PIECEWISE`,
+attention without uniform-batch graphs, capture sizes too small for one
+request's drafts, or a full-only mode in which the target captures nothing), and
+when a draft batch it can be asked for (1 to `max_num_seqs` requests x `UNO_K`
+rows) has no captured graph, naming the missing batch sizes. Under the profile
+defaults (8 requests, capture sizes up to 40) `UNO_K` of 5 or less starts;
+`UNO_K=6` or more, or `--max-num-seqs` above 8 at `UNO_K=5`, is refused. Before
+v0.4.3 such a server started and stopped at its first uncovered batch.
+
+### Recommended Gemma 4 settings (v0.4.3)
+
+```bash
+-e UNO_PROFILE=gemma4 -e UNO_K=5 -e UNO_PLOOKUP_L=2 -e UNO_PLOOKUP_MAX_CTX=4096 -e UNO_DRAFT_MOE_TOPK=4
+```
+
+Five Uno drafts, two lookup tokens after them for requests up to 4,096 tokens of
+context, and the draft pass routed through 4 of the 8 experts (verification
+keeps all 8). These are the settings measured for v0.4.3
+([RELEASE-NOTES-0.4.3.md](../RELEASE-NOTES-0.4.3.md), `evidence/release-0.4.3/`).
+On a GPU other than compute capability 8.6, leave out `UNO_DRAFT_MOE_TOPK=4`.
+All four are off by default; without them the server runs the v0.4.2 path.
 
 ## Build settings
 
@@ -127,6 +147,14 @@ Build AMD64 only:
 
 ```bash
 PLATFORM=linux/amd64 bash release/build.sh vllm-uno:0.4.1
+```
+
+That builds the v0.4.1 base. The v0.4.3 image is the published v0.4.1 image
+(pinned by digest) plus the overlay in `patch/0004-v0.4.3/`, built from the
+repository root:
+
+```bash
+docker build -f patch/0004-v0.4.3/Dockerfile -t vllm-uno:0.4.3 .
 ```
 
 `BASE_IMAGE` must retain the shown immutable digest and commit-matched
@@ -146,7 +174,9 @@ UNO_PROFILE=gemma4 bash release/serve.sh [MODEL [LOCAL_ADAPTER]] [-- VLLM_ARGUME
 | Variable | Default | Purpose |
 |---|---|---|
 | `UNO_PROFILE` | `qwen3` | Profile selector: `qwen3` or `gemma4` |
-| `UNO_K` | `8` (`qwen3`), `4` (`gemma4`) | Speculative candidate width; must be positive |
+| `UNO_K` | `8` (`qwen3`), `4` (`gemma4`) | Uno draft count; must be positive (gemma4 recommended: `5`) |
+| `UNO_PLOOKUP_L` | unset (off) | Prompt-lookup tokens after the Uno drafts, 0 to 8 (gemma4 recommended: `2`) |
+| `UNO_PLOOKUP_MAX_CTX` | unset (no gate) | Context length above which a request verifies no lookup tokens (gemma4 recommended: `4096`) |
 | `UNO_MASK_TOKEN_ID` | `151669` (`qwen3`), `262144` (`gemma4`) | Exclusive Uno noise-range upper bound; must be greater than 1 |
 | `UNO_NOISE_LOW` | unset (`qwen3`, field default 1), `0` (`gemma4`) | Inclusive Uno noise-range lower bound |
 | `UNO_NOISE_SEED` | `0` (`qwen3`), `29` (`gemma4`) | Deterministic MRV2 noise-generator seed |

@@ -1,0 +1,11 @@
+--- a/async_scheduler.py
++++ b/async_scheduler.py
+@@ -44,7 +44,7 @@
+             request.spec_token_ids = (
+                 []
+                 if req_id in scheduler_output.zero_next_draft_req_ids
+-                else self._spec_token_placeholders
++                else self._uno_plookup_gate(request, self._spec_token_placeholders)  # prompt-lookup length gate
+             )
+ 
+             if self.use_v2_model_runner:
