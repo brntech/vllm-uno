@@ -33,7 +33,7 @@
     "save_receipt": "/root/vllm-uno-0.2.0/evidence/relaunch-r2/image-tar.receipt"
   },
   "hardware": {
-    "host": "inference-3090",
+    "host": "rtx3090-docker-host",
     "gpu": "NVIDIA GeForce RTX 3090",
     "driver": "610.43.02",
     "memory_total_mib": 24576,

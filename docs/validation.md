@@ -422,8 +422,8 @@ or overlaps.
 
 The v0.2.0 AMD64 candidate was built from Model Runner V2 head
 `5da193919b44335ddf14eac193dfc9e8d5e59df5` on vLLM
-`b87339888d29329c42c42573e34cc2beebdcc48b`, then validated on the
-`inference-3090` RTX 3090 Docker host. The exact local image is
+`b87339888d29329c42c42573e34cc2beebdcc48b`, then validated on an
+RTX 3090 Docker host. The exact local image is
 `sha256:98034bbbf7042147838932d64e0ff7a8668bc91d1d203d4a76708d14231c1037`
 (9,956,886,869 bytes). Its saved relaunch archive is
 `/root/vllm-uno-0.2.0-relaunch.tar`, 9,956,934,144 bytes, SHA-256
