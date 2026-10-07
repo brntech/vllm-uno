@@ -1,0 +1,44 @@
+/usr/local/lib/python3.12/dist-packages/hypothesis/_settings.py:193: HypothesisWarning: The database setting is not configured, and the default location is unusable - falling back to an in-memory database for this session.  path=PosixPath('/t/.hypothesis/examples')
+  self, setting.name, getattr(defaults, setting.name)
+Running 1 items in this shard
+W1005 03:29:32.422000 7 torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+wide T=0.7 top-p 0.9 nucleus sizes per row [1, 1, 1, 1, 4, 5, 3], p(lookup) row 4 0.418
+wide T=0.7 top-p 0.9 pos 0: n=1536 TV=0.0000 p=1
+wide T=0.7 top-p 0.9 pos 1: n=1511 TV=0.0000 p=1
+wide T=0.7 top-p 0.9 pos 2: n=1472 TV=0.0000 p=1
+wide T=0.7 top-p 0.9 pos 3: n=1435 TV=0.0000 p=1
+wide T=0.7 top-p 0.9 pos 4: n=1427 TV=0.0158 p=0.318
+wide T=0.7 top-p 0.9 pos 5: n=608 TV=0.0194 p=0.598
+wide T=0.7 top-p 0.9 pos 6: n=0 too few, not tested
+.
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+test_plookup.py: 14 warnings
+  /usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+test_plookup.py::test_wide_temperature07_top_p_k4_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+test_plookup.py::test_wide_temperature07_top_p_k4_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: invalid value encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+test_plookup.py::test_wide_temperature07_top_p_k4_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: divide by zero encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+test_plookup.py::test_wide_temperature07_top_p_k4_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in add
+    output = op(lhs.data, rhs.data)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 29 deselected, 20 warnings in 1127.74s (0:18:47)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+rc=0

@@ -9,7 +9,7 @@ slower than plain. The output is the model's own.
 
 The new settings are **off by default**: an unconfigured v0.4.3 server runs exactly the v0.4.2 path. Four environment
 variables turn the recommended settings on (below). The release also points the Gemma 4 instructions at a new adapter, trained on 38,560
-open prompts ([Hugging Face](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter); the v0.4.2 adapter stays at
+open prompts ([Hugging Face](https://huggingface.co/Broadnet/gemma-4-26B-A4B-uno-adapter/tree/s5), revision `s5`; the v0.4.2 adapter stays at
 revision `s3`).
 
 ## What changed

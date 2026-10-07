@@ -1,0 +1,2047 @@
+{
+ "workload": "long documents: open-data document sets at about 2k, 14k and 28k prompt tokens, 4 document offsets x 2 tasks per level, one request at a time, up to 384 output tokens, on the same server after production72 and a prefix-cache reset",
+ "clock": "per request: decode ms per output token = (last streamed event - first streamed event) / (completion tokens - 1); a round's figure is the median over its requests",
+ "date": "2026-10-07",
+ "common_serve_settings": "model cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit revision 0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba; one RTX 3090 (24 GB); --max-model-len 32768 --max-num-seqs 8 --max-num-batched-tokens 2048 --gpu-memory-utilization 0.90 --enable-prefix-caching --language-model-only --attention-backend TRITON_ATTN --async-scheduling --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4 --seed 29; per-request metrics on (--enable-per-request-metrics); every server started fresh for its workload",
+ "images": {
+  "uno-v0.4.4-recommended": "vllm-uno:0.4.4 release build (local), sha256:34e56e950960cd86ce7e8868082e6fb038c9f3a0dff673f9c9a08e11a509b966",
+  "dflash-k8-vllm-0.30.0": "vllm/vllm-openai:v0.30.0, sha256:8a69ffad015f138d7170c4ddc429e230a3bc1c1719f67e14324749df200a4b90",
+  "plain": "the v0.4.4 image, same serve flags without the adapter and speculative decoding"
+ },
+ "arm_settings": {
+  "uno-v0.4.4-recommended": "UNO_PROFILE=gemma4 UNO_RECOMMENDED=1 (the launcher sets UNO_K=5 UNO_PLOOKUP_L=2 UNO_PLOOKUP_MAX_CTX=4096 UNO_DRAFT_MOE_TOPK=4 UNO_GEMMA_SPLITKV_MULTI=1 and capture sizes up to 64)",
+  "dflash-k8-vllm-0.30.0": "speculative method dflash, drafter z-lab/gemma-4-26B-A4B-it-DFlash revision 77d4202772dfe50b2396ec7bac9cfffc7b9e7057, num_speculative_tokens 8",
+  "plain": "no speculative decoding"
+ },
+ "adapter": "Broadnet/gemma-4-26B-A4B-uno-adapter, main (this release's adapter, trained with five-row draft blocks), adapter_model.safetensors sha256 5eda8f7879489737246b86c56f2836e2d4cd359e0bc994ea193ac9f9f658e534",
+ "rounds": "three rounds per workload; the arm order rotates (each arm runs first, second and third once)",
+ "warmup": "before its timed requests, every production72 run sent two warmup requests, one at a time, identical to the first two of the 72 requests; with prefix caching on, those two prompts were in the cache when timed. On the one-at-a-time servers the long-document requests followed production72 after a prefix-cache reset.",
+ "arms": {
+  "uno-v0.4.4-recommended": {
+   "round 1": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 261,
+      "decode_ms_per_token": 5.145,
+      "drafts": 77.0,
+      "accepted": 184.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.892,
+      "drafts": 137.0,
+      "accepted": 236.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 326,
+      "decode_ms_per_token": 4.853,
+      "drafts": 89.0,
+      "accepted": 238.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 4.979,
+      "drafts": 100.0,
+      "accepted": 277.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 3.645,
+      "drafts": 73.0,
+      "accepted": 304.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 3.57,
+      "drafts": 71.0,
+      "accepted": 306.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 294,
+      "decode_ms_per_token": 4.044,
+      "drafts": 67.0,
+      "accepted": 226.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.201,
+      "drafts": 131.0,
+      "accepted": 238.0
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.386,
+      "drafts": 113.0,
+      "accepted": 260.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.171,
+      "drafts": 132.0,
+      "accepted": 245.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.805,
+      "drafts": 107.0,
+      "accepted": 271.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.784,
+      "drafts": 102.0,
+      "accepted": 274.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.17,
+      "drafts": 111.0,
+      "accepted": 264.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.514,
+      "drafts": 136.0,
+      "accepted": 238.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.045,
+      "drafts": 108.0,
+      "accepted": 266.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.452,
+      "drafts": 134.0,
+      "accepted": 239.0
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.679,
+      "drafts": 108.0,
+      "accepted": 267.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.238,
+      "drafts": 134.0,
+      "accepted": 241.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.971,
+      "drafts": 116.0,
+      "accepted": 262.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.466,
+      "drafts": 119.0,
+      "accepted": 254.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.127,
+      "drafts": 116.0,
+      "accepted": 259.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.674,
+      "drafts": 142.0,
+      "accepted": 233.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.13,
+      "drafts": 118.0,
+      "accepted": 259.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.638,
+      "drafts": 143.0,
+      "accepted": 234.0
+     }
+    ]
+   },
+   "round 2": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 299,
+      "decode_ms_per_token": 4.757,
+      "drafts": 81.0,
+      "accepted": 218.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.022,
+      "drafts": 135.0,
+      "accepted": 234.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 318,
+      "decode_ms_per_token": 4.557,
+      "drafts": 82.0,
+      "accepted": 237.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.694,
+      "drafts": 111.0,
+      "accepted": 263.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 3.739,
+      "drafts": 75.0,
+      "accepted": 302.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 4.037,
+      "drafts": 75.0,
+      "accepted": 298.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 328,
+      "decode_ms_per_token": 4.663,
+      "drafts": 87.0,
+      "accepted": 242.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.573,
+      "drafts": 128.0,
+      "accepted": 244.0
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 351,
+      "decode_ms_per_token": 6.332,
+      "drafts": 114.0,
+      "accepted": 236.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.58,
+      "drafts": 136.0,
+      "accepted": 237.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.184,
+      "drafts": 110.0,
+      "accepted": 263.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 4.541,
+      "drafts": 83.0,
+      "accepted": 295.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 374,
+      "decode_ms_per_token": 5.953,
+      "drafts": 113.0,
+      "accepted": 260.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.437,
+      "drafts": 132.0,
+      "accepted": 241.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.141,
+      "drafts": 110.0,
+      "accepted": 265.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.144,
+      "drafts": 148.0,
+      "accepted": 225.0
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 351,
+      "decode_ms_per_token": 6.119,
+      "drafts": 98.0,
+      "accepted": 252.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.341,
+      "drafts": 136.0,
+      "accepted": 239.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.841,
+      "drafts": 114.0,
+      "accepted": 263.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.496,
+      "drafts": 137.0,
+      "accepted": 237.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.128,
+      "drafts": 116.0,
+      "accepted": 257.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.373,
+      "drafts": 140.0,
+      "accepted": 237.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.791,
+      "drafts": 110.0,
+      "accepted": 264.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.709,
+      "drafts": 141.0,
+      "accepted": 232.0
+     }
+    ]
+   },
+   "round 3": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 303,
+      "decode_ms_per_token": 4.919,
+      "drafts": 85.0,
+      "accepted": 218.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.428,
+      "drafts": 128.0,
+      "accepted": 245.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.046,
+      "drafts": 96.0,
+      "accepted": 277.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 4.821,
+      "drafts": 98.0,
+      "accepted": 279.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 3.655,
+      "drafts": 73.0,
+      "accepted": 304.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 4.009,
+      "drafts": 70.0,
+      "accepted": 303.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 291,
+      "decode_ms_per_token": 4.229,
+      "drafts": 70.0,
+      "accepted": 221.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.966,
+      "drafts": 132.0,
+      "accepted": 237.0
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.214,
+      "drafts": 114.0,
+      "accepted": 262.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.984,
+      "drafts": 139.0,
+      "accepted": 234.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.992,
+      "drafts": 105.0,
+      "accepted": 271.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 4.331,
+      "drafts": 81.0,
+      "accepted": 298.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 373,
+      "decode_ms_per_token": 5.821,
+      "drafts": 112.0,
+      "accepted": 261.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.304,
+      "drafts": 136.0,
+      "accepted": 241.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.557,
+      "drafts": 117.0,
+      "accepted": 256.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.012,
+      "drafts": 133.0,
+      "accepted": 245.0
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 382,
+      "decode_ms_per_token": 6.347,
+      "drafts": 107.0,
+      "accepted": 270.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.566,
+      "drafts": 137.0,
+      "accepted": 236.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.917,
+      "drafts": 112.0,
+      "accepted": 263.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.198,
+      "drafts": 134.0,
+      "accepted": 241.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.983,
+      "drafts": 118.0,
+      "accepted": 260.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.438,
+      "drafts": 137.0,
+      "accepted": 236.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 6.512,
+      "drafts": 108.0,
+      "accepted": 269.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.988,
+      "drafts": 130.0,
+      "accepted": 244.0
+     }
+    ]
+   }
+  },
+  "dflash-k8-vllm-0.30.0": {
+   "round 1": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 341,
+      "decode_ms_per_token": 6.81,
+      "drafts": 142.0,
+      "accepted": 198.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.919,
+      "drafts": 211.0,
+      "accepted": 172.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.249,
+      "drafts": 123.0,
+      "accepted": 260.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 4.595,
+      "drafts": 109.0,
+      "accepted": 277.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 310,
+      "decode_ms_per_token": 6.396,
+      "drafts": 121.0,
+      "accepted": 190.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 3.393,
+      "drafts": 80.0,
+      "accepted": 307.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 264,
+      "decode_ms_per_token": 6.374,
+      "drafts": 103.0,
+      "accepted": 161.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.693,
+      "drafts": 204.0,
+      "accepted": 180.0
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.245,
+      "drafts": 167.0,
+      "accepted": 217.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.424,
+      "drafts": 222.0,
+      "accepted": 161.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.656,
+      "drafts": 172.0,
+      "accepted": 211.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.237,
+      "drafts": 94.0,
+      "accepted": 292.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 354,
+      "decode_ms_per_token": 9.619,
+      "drafts": 161.0,
+      "accepted": 193.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.481,
+      "drafts": 226.0,
+      "accepted": 158.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.136,
+      "drafts": 164.0,
+      "accepted": 219.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.877,
+      "drafts": 231.0,
+      "accepted": 152.0
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.853,
+      "drafts": 193.0,
+      "accepted": 190.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 14.289,
+      "drafts": 198.0,
+      "accepted": 185.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.057,
+      "drafts": 183.0,
+      "accepted": 201.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 15.502,
+      "drafts": 216.0,
+      "accepted": 167.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.29,
+      "drafts": 187.0,
+      "accepted": 197.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 16.097,
+      "drafts": 226.0,
+      "accepted": 157.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.858,
+      "drafts": 180.0,
+      "accepted": 206.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 15.922,
+      "drafts": 223.0,
+      "accepted": 161.0
+     }
+    ]
+   },
+   "round 2": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 296,
+      "decode_ms_per_token": 6.293,
+      "drafts": 114.0,
+      "accepted": 182.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.271,
+      "drafts": 220.0,
+      "accepted": 164.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.608,
+      "drafts": 131.0,
+      "accepted": 258.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.824,
+      "drafts": 137.0,
+      "accepted": 248.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 287,
+      "decode_ms_per_token": 6.164,
+      "drafts": 108.0,
+      "accepted": 180.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 3.303,
+      "drafts": 78.0,
+      "accepted": 310.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 359,
+      "decode_ms_per_token": 5.752,
+      "drafts": 126.0,
+      "accepted": 233.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.304,
+      "drafts": 218.0,
+      "accepted": 165.0
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.568,
+      "drafts": 154.0,
+      "accepted": 231.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.055,
+      "drafts": 215.0,
+      "accepted": 169.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.657,
+      "drafts": 172.0,
+      "accepted": 211.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.243,
+      "drafts": 217.0,
+      "accepted": 167.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 361,
+      "decode_ms_per_token": 9.729,
+      "drafts": 167.0,
+      "accepted": 194.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.282,
+      "drafts": 221.0,
+      "accepted": 162.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 10.249,
+      "drafts": 184.0,
+      "accepted": 200.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.306,
+      "drafts": 221.0,
+      "accepted": 162.0
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.275,
+      "drafts": 185.0,
+      "accepted": 205.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 16.206,
+      "drafts": 225.0,
+      "accepted": 158.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.868,
+      "drafts": 180.0,
+      "accepted": 204.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 15.117,
+      "drafts": 211.0,
+      "accepted": 174.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.194,
+      "drafts": 186.0,
+      "accepted": 198.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 16.903,
+      "drafts": 237.0,
+      "accepted": 146.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.927,
+      "drafts": 181.0,
+      "accepted": 203.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 15.936,
+      "drafts": 222.0,
+      "accepted": 161.0
+     }
+    ]
+   },
+   "round 3": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 276,
+      "decode_ms_per_token": 7.008,
+      "drafts": 118.0,
+      "accepted": 157.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.159,
+      "drafts": 215.0,
+      "accepted": 171.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 368,
+      "decode_ms_per_token": 5.582,
+      "drafts": 122.0,
+      "accepted": 245.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 5.339,
+      "drafts": 125.0,
+      "accepted": 259.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 281,
+      "decode_ms_per_token": 6.721,
+      "drafts": 115.0,
+      "accepted": 166.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 3.229,
+      "drafts": 76.0,
+      "accepted": 309.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 312,
+      "decode_ms_per_token": 6.484,
+      "drafts": 123.0,
+      "accepted": 190.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.111,
+      "drafts": 209.0,
+      "accepted": 174.0
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.692,
+      "drafts": 157.0,
+      "accepted": 227.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 11.349,
+      "drafts": 203.0,
+      "accepted": 182.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.546,
+      "drafts": 169.0,
+      "accepted": 219.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.043,
+      "drafts": 159.0,
+      "accepted": 224.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 313,
+      "decode_ms_per_token": 10.368,
+      "drafts": 152.0,
+      "accepted": 160.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.205,
+      "drafts": 218.0,
+      "accepted": 166.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 10.239,
+      "drafts": 183.0,
+      "accepted": 200.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 12.021,
+      "drafts": 215.0,
+      "accepted": 168.0
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.158,
+      "drafts": 183.0,
+      "accepted": 200.0
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 16.138,
+      "drafts": 223.0,
+      "accepted": 160.0
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.546,
+      "drafts": 189.0,
+      "accepted": 194.0
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 16.652,
+      "drafts": 231.0,
+      "accepted": 152.0
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.794,
+      "drafts": 193.0,
+      "accepted": 190.0
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 18.139,
+      "drafts": 253.0,
+      "accepted": 133.0
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 13.058,
+      "drafts": 182.0,
+      "accepted": 207.0
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 14.753,
+      "drafts": 206.0,
+      "accepted": 178.0
+     }
+    ]
+   }
+  },
+  "plain": {
+   "round 1": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 295,
+      "decode_ms_per_token": 7.452,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.486,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.498,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.491,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 281,
+      "decode_ms_per_token": 7.453,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.488,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 299,
+      "decode_ms_per_token": 7.472,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.508,
+      "drafts": null,
+      "accepted": null
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.684,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.695,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.666,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.667,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 338,
+      "decode_ms_per_token": 8.636,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.653,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.615,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.607,
+      "drafts": null,
+      "accepted": null
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.716,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.715,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.701,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.662,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.696,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.688,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.701,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.696,
+      "drafts": null,
+      "accepted": null
+     }
+    ]
+   },
+   "round 2": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 307,
+      "decode_ms_per_token": 7.389,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.42,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.424,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.423,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.435,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.433,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 297,
+      "decode_ms_per_token": 7.418,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.449,
+      "drafts": null,
+      "accepted": null
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.62,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.628,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.602,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.581,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.586,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.586,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 372,
+      "decode_ms_per_token": 8.516,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.542,
+      "drafts": null,
+      "accepted": null
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.641,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.596,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.629,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.595,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.622,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.585,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.59,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.631,
+      "drafts": null,
+      "accepted": null
+     }
+    ]
+   },
+   "round 3": {
+    "2000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 2012,
+      "completion_tokens": 295,
+      "decode_ms_per_token": 7.377,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 2019,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.419,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 2041,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.425,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 2048,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.423,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 2006,
+      "completion_tokens": 294,
+      "decode_ms_per_token": 7.383,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 2013,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.433,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 2129,
+      "completion_tokens": 282,
+      "decode_ms_per_token": 7.411,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 2136,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 7.451,
+      "drafts": null,
+      "accepted": null
+     }
+    ],
+    "14000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 13922,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.619,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 13929,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.627,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 14252,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.601,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 14259,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.599,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 13658,
+      "completion_tokens": 381,
+      "decode_ms_per_token": 8.565,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 13665,
+      "completion_tokens": 380,
+      "decode_ms_per_token": 8.562,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 13807,
+      "completion_tokens": 373,
+      "decode_ms_per_token": 8.51,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 13814,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 8.544,
+      "drafts": null,
+      "accepted": null
+     }
+    ],
+    "28000": [
+     {
+      "task": "summarize",
+      "offset": 0,
+      "prompt_tokens": 27882,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.631,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 0,
+      "prompt_tokens": 27889,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.608,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 400,
+      "prompt_tokens": 27677,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.633,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 400,
+      "prompt_tokens": 27684,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.623,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 800,
+      "prompt_tokens": 27382,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.616,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 800,
+      "prompt_tokens": 27389,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.619,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "summarize",
+      "offset": 1200,
+      "prompt_tokens": 27667,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.638,
+      "drafts": null,
+      "accepted": null
+     },
+     {
+      "task": "story",
+      "offset": 1200,
+      "prompt_tokens": 27674,
+      "completion_tokens": 384,
+      "decode_ms_per_token": 9.64,
+      "drafts": null,
+      "accepted": null
+     }
+    ]
+   }
+  }
+ },
+ "tasks": [
+  "story",
+  "summarize"
+ ]
+}

@@ -1,0 +1,129 @@
+--- a/serve.sh
++++ b/serve.sh
+@@ -12,9 +12,20 @@
+   gemma4 Gemma 4 26B A4B AWQ, K=4, language-only, TRITON_ATTN, hybrid KV cache
+         manager on, max_model_len=32768 (UNO_MAX_MODEL_LEN), max_num_seqs=8,
+         gpu_memory_utilization 0.90, capture sizes covering 32 draft rows and
+-        40-row verify batches, split-KV
++        40-row verify batches (64 with UNO_GEMMA_SPLITKV_MULTI=1), split-KV
+         draft attention and the 64k Gemma 4 draft vocabulary on by default.
+         Pass the model and the local adapter directory.
++        UNO_RECOMMENDED=1 turns on the recommended settings in one switch:
++        UNO_K=5 UNO_PLOOKUP_L=2 UNO_PLOOKUP_MAX_CTX=4096 UNO_DRAFT_MOE_TOPK=4
++        UNO_GEMMA_SPLITKV_MULTI=1 (and so capture sizes to 64). A variable you
++        set yourself wins. Set empty: UNO_PLOOKUP_L= turns prompt lookup off,
++        UNO_DRAFT_MOE_TOPK= drafts with all 8 experts, UNO_GEMMA_SPLITKV_MULTI=
++        turns the multi-request path off; UNO_K= and, with lookup on,
++        UNO_PLOOKUP_MAX_CTX= are refused at startup (no measured meaning).
++        With UNO_GEMMA_SPLITKV_MULTI=1, K + UNO_PLOOKUP_L + 1 above 9 is
++        refused (wider verify steps never reach the split-KV kernel).
++        UNO_DRAFT_MOE_TOPK=4 needs an SM86 GPU (RTX 3090 class) and refuses
++        to start elsewhere: there, add UNO_DRAFT_MOE_TOPK= (empty).
+ Environment: UNO_PROFILE, UNO_K, UNO_MASK_TOKEN_ID, UNO_NOISE_SEED, UNO_NOISE_LOW,
+   MODEL_REVISION / UNO_ADAPTER_REVISION (recorded Qwen and Gemma model pins by
+   default), UNO_MAX_MODEL_LEN (gemma4 context, default 32768),
+@@ -23,14 +34,58 @@
+   attention; gemma4 default 1, 0 turns it off), UNO_DRAFT_VOCAB (draft
+   vocabulary JSON; gemma4 default the shipped 64k list, empty turns it off),
+   VLLM_TUNED_CONFIG_FOLDER (LoRA kernel configs; gemma4 default the shipped
+-  RTX 3090 files, empty turns them off) and UNO_DRAFT_MOE_TOPK=4 (draft MoE
+-  top-k opt-in; gemma4 only).
++  RTX 3090 files, empty turns them off), UNO_DRAFT_MOE_TOPK=4 (draft MoE
++  top-k opt-in; gemma4 only), UNO_PLOOKUP_L / UNO_PLOOKUP_MAX_CTX (prompt
++  lookup after the K drafts, and the context length above which a request
++  skips it) and UNO_GEMMA_SPLITKV_MULTI=1 (split-KV attention also for steps
++  with several requests in flight; gemma4 only, needs UNO_GEMMA_SPLITKV=1).
++  UNO_RECOMMENDED=1 sets the recommended values of these (gemma4 only).
+ UNO_DRY_RUN=1 prints the command without importing vLLM/downloading weights.
++Numeric settings (UNO_K, UNO_PLOOKUP_L, UNO_PLOOKUP_MAX_CTX, UNO_MASK_TOKEN_ID,
++  UNO_NOISE_SEED, UNO_NOISE_LOW, UNO_MAX_MODEL_LEN) must be whole numbers;
++  surrounding spaces are ignored, anything else is refused at startup.
+ Extra flags after -- override defaults; re-gate any changed configuration.
+ HELP
+   exit 0
+ fi
+ profile=${UNO_PROFILE:-qwen3}
++is_on() { case ${1,,} in 1|true|yes|on) return 0;; *) return 1;; esac; }
++# v0.4.4: ONE parser for every numeric override. A set, non-empty value is stripped of surrounding whitespace and must
++# then be digits; anything else (+8, 8x, a lone space) is refused here. The width check below, the settings line and
++# the Python block that builds the speculative config all read the parsed value; the engine reads it from the env.
++uint() {
++  local n v
++  for n; do
++    [[ -n ${!n:-} ]] || continue
++    v=${!n}; v=${v#"${v%%[![:space:]]*}"}; v=${v%"${v##*[![:space:]]}"}
++    [[ $v =~ ^[0-9]+$ ]] || { echo "$n must be a whole number (got '${!n}')." >&2; exit 2; }
++    printf -v "$n" '%s' "$v"
++  done
++}
++uint UNO_K UNO_PLOOKUP_L UNO_PLOOKUP_MAX_CTX UNO_MASK_TOKEN_ID UNO_NOISE_SEED UNO_NOISE_LOW UNO_MAX_MODEL_LEN
++case ${UNO_RECOMMENDED:-0} in
++  0) ;;
++  1) if [[ $profile != gemma4 ]]; then echo 'UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only.' >&2; exit 2; fi
++     # v0.4.4: the measured recipe in one switch. ${VAR-default}: a variable already set, even to empty, is kept. An empty
++     # override must mean what the help says, or be refused: an empty UNO_K would fall back to the profile's K=4 and an
++     # empty UNO_PLOOKUP_MAX_CTX with lookup on would drop the length gate, both unmeasured with the rest of the recipe.
++     [[ ${UNO_K-unset} != '' ]] || { echo 'UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1: unset it for K=5, or set a value.' >&2; exit 2; }
++     export UNO_K=${UNO_K-5} UNO_PLOOKUP_L=${UNO_PLOOKUP_L-2} UNO_PLOOKUP_MAX_CTX=${UNO_PLOOKUP_MAX_CTX-4096} \
++       UNO_DRAFT_MOE_TOPK=${UNO_DRAFT_MOE_TOPK-4} UNO_GEMMA_SPLITKV_MULTI=${UNO_GEMMA_SPLITKV_MULTI-1}
++     if [[ -z $UNO_PLOOKUP_MAX_CTX ]] && ((10#${UNO_PLOOKUP_L:-0} > 0)); then
++       echo 'UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on would run lookup at every context length: set a length, or UNO_PLOOKUP_L= to turn lookup off.' >&2
++       exit 2
++     fi ;;
++  *) echo 'UNO_RECOMMENDED must be 0 or 1.' >&2; exit 2 ;;
++esac
++# UNO_GEMMA_SPLITKV_MULTI is read here, before the profiles, so that a value no profile handles is refused on any profile.
++case ${UNO_GEMMA_SPLITKV_MULTI:-} in
++  ''|0|[Ff][Aa][Ll][Ss][Ee]|[Nn][Oo]|[Oo][Ff][Ff]) multi=0 ;;
++  1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn])
++    multi=1
++    if [[ $profile != gemma4 ]]; then echo 'UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only.' >&2; exit 2; fi ;;
++  *) echo 'UNO_GEMMA_SPLITKV_MULTI must be 1 or 0 (or true/false, yes/no, on/off).' >&2; exit 2 ;;
++esac
+ case $profile in
+   qwen3)
+     model=Qwen/Qwen3-8B
+@@ -61,6 +116,23 @@
+     # Split-KV draft attention is on by default for Gemma 4 since v0.4.0: at 32k context the draft rows' attention over a
+     # long cache dominates, and every v0.4.0 measurement (speed and lossless) ran with it. UNO_GEMMA_SPLITKV=0 turns it off.
+     export UNO_GEMMA_SPLITKV=${UNO_GEMMA_SPLITKV-1}
++    # v0.4.4: UNO_GEMMA_SPLITKV_MULTI=1 admits steps with several requests in flight (every request at the same width) to
++    # the same split-KV attention kernel; one request per step is unchanged. It needs split-KV on, and it brings capture
++    # sizes 48, 56 and 64 so that 6 to 8 requests at verify width 8 replay FULL CUDA graphs. The two go together: the
++    # larger capture sizes alone, with the stock attention kernel, cost about 21k tokens of KV cache at startup.
++    # The kernel admits verify widths 2 to 9 (K drafts + L lookup tokens + 1): a wider step would silently take the
++    # general kernel and outgrow the uniform graphs, so the launcher refuses it.
++    caps=1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40
++    if ((multi)); then
++      is_on "$UNO_GEMMA_SPLITKV" || { echo 'UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1.' >&2; exit 2; }
++      if ((10#$k + 10#${UNO_PLOOKUP_L:-0} + 1 > 9)); then  # both parsed by uint(): no value can skip this check
++        echo "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got $k + ${UNO_PLOOKUP_L:-0} + 1)." >&2; exit 2
++      fi
++      export UNO_GEMMA_SPLITKV_MULTI
++      caps+=,48,56,64
++    elif [[ -n ${UNO_GEMMA_SPLITKV_MULTI:-} ]]; then
++      export UNO_GEMMA_SPLITKV_MULTI
++    fi
+     # v0.4.1: tuned Triton configs for the adapter's LoRA kernels on the RTX 3090 (Uno's draft-pass shapes, m 4-40).
+     # vLLM loads <GPU name>_SHRINK.json / _EXPAND_FALSE.json from this folder; any other GPU finds no file for its name
+     # and keeps vLLM's default configs. VLLM_TUNED_CONFIG_FOLDER= (empty) turns the tuned configs off.
+@@ -72,7 +144,7 @@
+       --gpu-memory-utilization 0.90
+       --enable-lora --lora-dtype bfloat16 --max-lora-rank 16 --max-loras 2 --max-cpu-loras 2
+       --lora-target-modules qkv_proj o_proj gate_up_proj down_proj
+-      --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,40]}')
++      --compilation-config "{\"cudagraph_mode\":\"FULL_AND_PIECEWISE\",\"cudagraph_capture_sizes\":[$caps]}")
+     ;;
+   *)
+     echo 'UNO_PROFILE must be qwen3 or gemma4.' >&2
+@@ -149,6 +221,10 @@
+ [[ -z $model_rev ]] || cmd+=(--revision "$model_rev")
+ [[ -z ${VLLM_TUNED_CONFIG_FOLDER:-} ]] || cmd=("${cmd[0]}" "VLLM_TUNED_CONFIG_FOLDER=$VLLM_TUNED_CONFIG_FOLDER" "${cmd[@]:1}")
+ cmd+=("$@")
++if [[ $profile == gemma4 ]]; then
++  printf 'Uno settings: UNO_RECOMMENDED=%s UNO_K=%s UNO_PLOOKUP_L=%s UNO_PLOOKUP_MAX_CTX=%s UNO_DRAFT_MOE_TOPK=%s UNO_GEMMA_SPLITKV=%s UNO_GEMMA_SPLITKV_MULTI=%s capture_sizes=[%s]\n' \
++    "${UNO_RECOMMENDED:-0}" "$k" "${UNO_PLOOKUP_L:-}" "${UNO_PLOOKUP_MAX_CTX:-}" "${UNO_DRAFT_MOE_TOPK:-}" "${UNO_GEMMA_SPLITKV:-}" "${UNO_GEMMA_SPLITKV_MULTI:-}" "$caps" >&2
++fi
+ printf 'Uno launch (profile=%s adapter_revision=%s): ' "$profile" "$adapter_rev" >&2
+ printf '%q ' "${cmd[@]}" >&2
+ printf '\n' >&2

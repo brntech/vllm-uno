@@ -1,0 +1,81 @@
+--- a/triton_attn.py
++++ b/triton_attn.py
+@@ -5,6 +5,8 @@
+ from dataclasses import dataclass, replace
+ from typing import ClassVar
+ 
++import os
++
+ import torch
+ 
+ import vllm.envs as envs
+@@ -54,6 +56,11 @@
+ NUM_PAR_SOFTMAX_SEGMENTS = 16  # Number of parallel tiled softmax segments
+ 
+ 
++def _uno_splitkv_multi_enabled() -> bool:
++    """Return the opt-in for split-KV on uniform multi-request Uno steps (UNO_GEMMA_SPLITKV_MULTI)."""
++    return os.environ.get("UNO_GEMMA_SPLITKV_MULTI", "").strip().lower() in {"1", "true", "yes", "on"}
++
++
+ def _uno_static_query_width(
+     *,
+     use_uno: bool,
+@@ -72,11 +79,11 @@
+     result is static metadata selected before a CUDA graph is captured; the
+     attention kernel must never read a device QSL back to the host.
+     """
+-    if not use_uno or num_reqs != 1:
++    if not use_uno or num_reqs < 1 or (num_reqs != 1 and not _uno_splitkv_multi_enabled()):
+         return None
+     if max_query_len not in (2, 3, 4, 5, 6, 7, 8, 9):  # prompt lookup: verify widths up to K + L + 1
+         return None
+-    if num_actual_tokens != max_query_len or causal is not True:
++    if num_actual_tokens != num_reqs * max_query_len or causal is not True:
+         return None
+     if (
+         uno_custom_mask is not None
+@@ -88,11 +95,11 @@
+         return None
+     if query_start_loc_cpu.device.type != "cpu":
+         return None
+-    if query_start_loc_cpu.ndim != 1 or query_start_loc_cpu.numel() != 2:
++    if query_start_loc_cpu.ndim != 1 or query_start_loc_cpu.numel() != num_reqs + 1:
+         return None
+     if query_start_loc_cpu.dtype not in (torch.int32, torch.int64):
+         return None
+-    if query_start_loc_cpu.tolist() != [0, max_query_len]:
++    if query_start_loc_cpu.tolist() != list(range(0, (num_reqs + 1) * max_query_len, max_query_len)):
+         return None
+     return max_query_len
+ 
+@@ -201,9 +208,13 @@
+ 
+         self.num_par_softmax_segments = NUM_PAR_SOFTMAX_SEGMENTS
+         headdim_padded = next_power_of_2(self.headdim)
++        segm_rows = self.seq_threshold_3D
++        if self._use_uno and _uno_splitkv_multi_enabled():  # B uniform requests x width <= 9 rows
++            segm_rows = max(segm_rows, self.vllm_config.scheduler_config.max_num_seqs * 9)
++            logger.info("UNO_GEMMA_SPLITKV_MULTI scratch rows=%d (seq_threshold_3D=%d)", segm_rows, self.seq_threshold_3D)
+         self.softmax_segm_output = torch.empty(
+             (
+-                self.seq_threshold_3D,
++                segm_rows,
+                 self.num_heads_q,
+                 self.num_par_softmax_segments,
+                 headdim_padded,
+@@ -212,12 +223,12 @@
+             device=device,
+         )
+         self.softmax_segm_max = torch.empty(
+-            (self.seq_threshold_3D, self.num_heads_q, self.num_par_softmax_segments),
++            (segm_rows, self.num_heads_q, self.num_par_softmax_segments),
+             dtype=torch.float32,
+             device=device,
+         )
+         self.softmax_segm_expsum = torch.empty(
+-            (self.seq_threshold_3D, self.num_heads_q, self.num_par_softmax_segments),
++            (segm_rows, self.num_heads_q, self.num_par_softmax_segments),
+             dtype=torch.float32,
+             device=device,
+         )

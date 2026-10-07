@@ -1,0 +1,73 @@
+INFO 10-05 05:50:04 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=5 head_size=256
+INFO 10-05 05:50:04 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=5 head_size=256 q_heads=16 kv_heads=8 segments=16
+head=256 kv=8 window=(1023, 0) width=5 B=2 ctx=[3944, 1539]: multi==single True, engaged True, off==2D True, max|multi-2D| 1.953e-03 -> PASS
+INFO 10-05 05:50:11 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=5 head_size=256
+head=256 kv=8 window=(1023, 0) width=5 B=4 ctx=[2333, 4860, 463, 3879]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:11 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=8 width=5 head_size=256
+head=256 kv=8 window=(1023, 0) width=5 B=8 ctx=[1027, 4603, 1297, 1083, 1301, 4766, 1956, 1599]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:11 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=6 head_size=256
+INFO 10-05 05:50:11 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=6 head_size=256 q_heads=16 kv_heads=8 segments=16
+head=256 kv=8 window=(1023, 0) width=6 B=2 ctx=[4078, 2576]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:15 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=6 head_size=256
+head=256 kv=8 window=(1023, 0) width=6 B=4 ctx=[4956, 2268, 2294, 933]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:15 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=8 width=6 head_size=256
+head=256 kv=8 window=(1023, 0) width=6 B=8 ctx=[1526, 3719, 5591, 1754, 2024, 3341, 5269, 5369]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:16 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=8 head_size=256
+INFO 10-05 05:50:16 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=8 head_size=256 q_heads=16 kv_heads=8 segments=16
+head=256 kv=8 window=(1023, 0) width=8 B=2 ctx=[5349, 480]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:16 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=8 head_size=256
+head=256 kv=8 window=(1023, 0) width=8 B=4 ctx=[1381, 3012, 3863, 960]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:16 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=8 width=8 head_size=256
+head=256 kv=8 window=(1023, 0) width=8 B=8 ctx=[3595, 2085, 3022, 4499, 4811, 2488, 5378, 843]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:16 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=5 head_size=512
+INFO 10-05 05:50:16 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=5 head_size=512 q_heads=16 kv_heads=2 segments=16
+head=512 kv=2 window=(-1, -1) width=5 B=2 ctx=[2596, 4189]: multi==single True, engaged True, off==2D True, max|multi-2D| 3.906e-03 -> PASS
+INFO 10-05 05:50:21 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=5 head_size=512
+head=512 kv=2 window=(-1, -1) width=5 B=4 ctx=[871, 2357, 883, 4795]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:22 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=8 width=5 head_size=512
+head=512 kv=2 window=(-1, -1) width=5 B=8 ctx=[1082, 5371, 2740, 4169, 1073, 2341, 5411, 1280]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=6 head_size=512
+INFO 10-05 05:50:23 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=6 head_size=512 q_heads=16 kv_heads=2 segments=16
+head=512 kv=2 window=(-1, -1) width=6 B=2 ctx=[2003, 4306]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=6 head_size=512
+head=512 kv=2 window=(-1, -1) width=6 B=4 ctx=[476, 2327, 2899, 5926]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=8 width=6 head_size=512
+head=512 kv=2 window=(-1, -1) width=6 B=8 ctx=[2763, 774, 4075, 2300, 4318, 2032, 1268, 1612]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=8 head_size=512
+INFO 10-05 05:50:23 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=8 head_size=512 q_heads=16 kv_heads=2 segments=16
+head=512 kv=2 window=(-1, -1) width=8 B=2 ctx=[1577, 2945]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=8 head_size=512
+head=512 kv=2 window=(-1, -1) width=8 B=4 ctx=[5910, 5080, 3948, 3821]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=8 width=8 head_size=512
+head=512 kv=2 window=(-1, -1) width=8 B=8 ctx=[519, 4216, 4081, 4190, 1982, 1319, 5444, 2533]: multi==single True, engaged True, off==2D True, max|multi-2D| 7.812e-03 -> PASS
+INFO 10-05 05:50:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=3 width=5 head_size=256
+padded: head=256 kv=8 window=(1023, 0) width=5 B=2+1 padded ctx=[0, 3]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:27 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=5 width=5 head_size=256
+padded: head=256 kv=8 window=(1023, 0) width=5 B=4+1 padded ctx=[0, 3, 1569, 563]: real rows multi==single True, engaged True -> PASS
+padded: head=256 kv=8 window=(1023, 0) width=5 B=7+1 padded ctx=[0, 3, 709, 733, 4519, 5978, 4135]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:27 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=3 width=6 head_size=256
+padded: head=256 kv=8 window=(1023, 0) width=6 B=2+1 padded ctx=[0, 3]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:27 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=5 width=6 head_size=256
+padded: head=256 kv=8 window=(1023, 0) width=6 B=4+1 padded ctx=[0, 3, 5383, 5422]: real rows multi==single True, engaged True -> PASS
+padded: head=256 kv=8 window=(1023, 0) width=6 B=7+1 padded ctx=[0, 3, 4558, 2335, 1916, 1546, 1735]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:27 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=3 width=8 head_size=256
+padded: head=256 kv=8 window=(1023, 0) width=8 B=2+1 padded ctx=[0, 3]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:27 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=5 width=8 head_size=256
+padded: head=256 kv=8 window=(1023, 0) width=8 B=4+1 padded ctx=[0, 3, 1277, 712]: real rows multi==single True, engaged True -> PASS
+padded: head=256 kv=8 window=(1023, 0) width=8 B=7+1 padded ctx=[0, 3, 305, 4146, 3556, 2715, 4184]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:27 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=3 width=5 head_size=512
+padded: head=512 kv=2 window=(-1, -1) width=5 B=2+1 padded ctx=[0, 3]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:31 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=5 width=5 head_size=512
+padded: head=512 kv=2 window=(-1, -1) width=5 B=4+1 padded ctx=[0, 3, 1350, 708]: real rows multi==single True, engaged True -> PASS
+padded: head=512 kv=2 window=(-1, -1) width=5 B=7+1 padded ctx=[0, 3, 3071, 1847, 4808, 1475, 1684]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:31 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=3 width=6 head_size=512
+padded: head=512 kv=2 window=(-1, -1) width=6 B=2+1 padded ctx=[0, 3]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:31 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=5 width=6 head_size=512
+padded: head=512 kv=2 window=(-1, -1) width=6 B=4+1 padded ctx=[0, 3, 884, 5948]: real rows multi==single True, engaged True -> PASS
+padded: head=512 kv=2 window=(-1, -1) width=6 B=7+1 padded ctx=[0, 3, 5944, 5934, 3619, 360, 2707]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:31 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=3 width=8 head_size=512
+padded: head=512 kv=2 window=(-1, -1) width=8 B=2+1 padded ctx=[0, 3]: real rows multi==single True, engaged True -> PASS
+INFO 10-05 05:50:31 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=5 width=8 head_size=512
+padded: head=512 kv=2 window=(-1, -1) width=8 B=4+1 padded ctx=[0, 3, 4614, 675]: real rows multi==single True, engaged True -> PASS
+padded: head=512 kv=2 window=(-1, -1) width=8 B=7+1 padded ctx=[0, 3, 4663, 313, 5557, 2233, 3020]: real rows multi==single True, engaged True -> PASS
+RESULT PASS fails=0

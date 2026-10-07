@@ -1,0 +1,38 @@
+{
+ "what": "KV cache size each server reported at startup (GPU KV cache size line), 32k profile, per workload and round (the startup memory profile can differ slightly between servers of one arm)",
+ "arms": {
+  "uno-v0.4.4-recommended": {
+   "one at a time, round 1": 75768,
+   "one at a time, round 2": 75768,
+   "one at a time, round 3": 75768,
+   "four at a time, round 1": 75768,
+   "four at a time, round 2": 75731,
+   "four at a time, round 3": 75768,
+   "eight at a time, round 1": 75768,
+   "eight at a time, round 2": 75768,
+   "eight at a time, round 3": 75768
+  },
+  "dflash-k8-vllm-0.30.0": {
+   "one at a time, round 1": 68463,
+   "one at a time, round 2": 68463,
+   "one at a time, round 3": 68463,
+   "four at a time, round 1": 68463,
+   "four at a time, round 2": 68463,
+   "four at a time, round 3": 68463,
+   "eight at a time, round 1": 68463,
+   "eight at a time, round 2": 68463,
+   "eight at a time, round 3": 68463
+  },
+  "plain": {
+   "one at a time, round 1": 101370,
+   "one at a time, round 2": 101370,
+   "one at a time, round 3": 101370,
+   "four at a time, round 1": 101370,
+   "four at a time, round 2": 101370,
+   "four at a time, round 3": 101370,
+   "eight at a time, round 1": 101370,
+   "eight at a time, round 2": 101370,
+   "eight at a time, round 3": 101370
+  }
+ }
+}

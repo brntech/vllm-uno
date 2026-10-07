@@ -1,0 +1,47 @@
+/usr/local/lib/python3.12/dist-packages/hypothesis/_settings.py:193: HypothesisWarning: The database setting is not configured, and the default location is unusable - falling back to an in-memory database for this session.  path=PosixPath('/t/.hypothesis/examples')
+  self, setting.name, getattr(defaults, setting.name)
+Running 4 items in this shard
+INFO 10-05 06:15:20 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=6 head_size=256
+INFO 10-05 06:15:20 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=6 head_size=256 q_heads=16 kv_heads=8 segments=16
+head 256 width 6 ctx [0, 3, 66] + 1 padded request: multi == single on the real rows
+.INFO 10-05 06:15:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=6 head_size=512
+INFO 10-05 06:15:23 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=6 head_size=512 q_heads=16 kv_heads=2 segments=16
+head 512 width 6 ctx [0, 3, 212] + 1 padded request: multi == single on the real rows
+.INFO 10-05 06:15:27 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=8 head_size=256
+INFO 10-05 06:15:27 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=8 head_size=256 q_heads=16 kv_heads=8 segments=16
+head 256 width 8 ctx [0, 3, 217] + 1 padded request: multi == single on the real rows
+.INFO 10-05 06:15:33 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=8 head_size=512
+INFO 10-05 06:15:33 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=8 head_size=512 q_heads=16 kv_heads=2 segments=16
+head 512 width 8 ctx [0, 3, 128] + 1 padded request: multi == single on the real rows
+.
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-512-2-window1]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-512-2-window1]
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:555: RuntimeWarning: divide by zero encountered in fmod
+    return TensorHandle((lhs.data - np.fmod(lhs.data, rhs.data)) // rhs.data, lhs.dtype.scalar)
+
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-512-2-window1]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-512-2-window1]
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:555: RuntimeWarning: divide by zero encountered in floor_divide
+    return TensorHandle((lhs.data - np.fmod(lhs.data, rhs.data)) // rhs.data, lhs.dtype.scalar)
+
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-512-2-window1]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-512-2-window1]
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+4 passed, 12 deselected, 14 warnings in 18.15s
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

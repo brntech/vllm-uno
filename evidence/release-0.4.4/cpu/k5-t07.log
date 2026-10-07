@@ -1,0 +1,41 @@
+/usr/local/lib/python3.12/dist-packages/hypothesis/_settings.py:193: HypothesisWarning: The database setting is not configured, and the default location is unusable - falling back to an in-memory database for this session.  path=PosixPath('/t/.hypothesis/examples')
+  self, setting.name, getattr(defaults, setting.name)
+W1005 03:29:32.925000 7 torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+WARNING 10-05 03:29:34 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 10-05 03:29:34 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 10-05 03:29:34 [interface.py:368] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+Running 1 items in this shard
+K5 top-p design seed 13
+K5 T=0.7 top-p 0.9 nucleus sizes per row [1, 1, 1, 1, 1, 5, 3, 2], p(lookup) row 5 0.263
+K5 wide T=0.7 top-p 0.9 pos 0: n=1536 TV=0.0000 p=1
+K5 wide T=0.7 top-p 0.9 pos 1: n=1508 TV=0.0000 p=1
+K5 wide T=0.7 top-p 0.9 pos 2: n=1483 TV=0.0000 p=1
+K5 wide T=0.7 top-p 0.9 pos 3: n=1408 TV=0.0000 p=1
+K5 wide T=0.7 top-p 0.9 pos 4: n=1391 TV=0.0000 p=1
+K5 wide T=0.7 top-p 0.9 pos 5: n=1304 TV=0.0168 p=0.684
+K5 wide T=0.7 top-p 0.9 pos 6: n=321 TV=0.0053 p=0.917
+K5 wide T=0.7 top-p 0.9 pos 7: n=0 too few, not tested
+.
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+../usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: 14 warnings
+  /usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+test_recipe_k5.py::test_wide_temperature07_top_p_k5_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+test_recipe_k5.py::test_wide_temperature07_top_p_k5_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: invalid value encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 3 deselected, 18 warnings in 1176.68s (0:19:36)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+rc=0

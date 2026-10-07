@@ -1,0 +1,1445 @@
+/usr/local/lib/python3.12/dist-packages/hypothesis/_settings.py:193: HypothesisWarning: The database setting is not configured, and the default location is unusable - falling back to an in-memory database for this session.  path=PosixPath('/t/.hypothesis/examples')
+  self, setting.name, getattr(defaults, setting.name)
+Running 63 items in this shard
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.....FFFFFFFFFFFFFFF          [100%]
+=================================== FAILURES ===================================
+_______________________ test_version_and_launcher_syntax _______________________
+
+    def test_version_and_launcher_syntax():
+>       assert pathlib.Path("/opt/uno-kit/release/VERSION").read_text().strip() == "0.4.4"
+E       AssertionError: assert '0.4.3' == '0.4.4'
+E         
+E         - 0.4.4
+E         ?     ^
+E         + 0.4.3
+E         ?     ^
+
+test_release_v044.py:51: AssertionError
+________________________ test_unset_is_the_v043_profile ________________________
+
+    def test_unset_is_the_v043_profile():
+        rc, s, out, _ = launch()
+>       assert rc == 0 and s["UNO_RECOMMENDED"] == "0" and s["UNO_K"] == "4" and s["num_spec"] == 4
+                           ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:57: TypeError
+__________________ test_recommended_sets_the_measured_recipe ___________________
+
+    def test_recommended_sets_the_measured_recipe():
+        rc, s, out, err = launch(UNO_RECOMMENDED="1")
+        assert rc == 0, err
+>       assert {k: s[k] for k in RECOMMENDED} == RECOMMENDED
+                   ^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:65: TypeError
+_____________ test_an_explicit_value_wins_over_the_recipe[UNO_K-4] _____________
+
+var = 'UNO_K', value = '4'
+
+    @pytest.mark.parametrize("var,value", [("UNO_K", "4"), ("UNO_PLOOKUP_L", "1"), ("UNO_PLOOKUP_MAX_CTX", "8192")])
+    def test_an_explicit_value_wins_over_the_recipe(var, value):
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", **{var: value})
+>       assert rc == 0 and s[var] == value
+                           ^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:73: TypeError
+_________ test_an_explicit_value_wins_over_the_recipe[UNO_PLOOKUP_L-1] _________
+
+var = 'UNO_PLOOKUP_L', value = '1'
+
+    @pytest.mark.parametrize("var,value", [("UNO_K", "4"), ("UNO_PLOOKUP_L", "1"), ("UNO_PLOOKUP_MAX_CTX", "8192")])
+    def test_an_explicit_value_wins_over_the_recipe(var, value):
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", **{var: value})
+>       assert rc == 0 and s[var] == value
+                           ^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:73: TypeError
+____ test_an_explicit_value_wins_over_the_recipe[UNO_PLOOKUP_MAX_CTX-8192] _____
+
+var = 'UNO_PLOOKUP_MAX_CTX', value = '8192'
+
+    @pytest.mark.parametrize("var,value", [("UNO_K", "4"), ("UNO_PLOOKUP_L", "1"), ("UNO_PLOOKUP_MAX_CTX", "8192")])
+    def test_an_explicit_value_wins_over_the_recipe(var, value):
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", **{var: value})
+>       assert rc == 0 and s[var] == value
+                           ^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:73: TypeError
+_______________________ test_empty_turns_one_setting_off _______________________
+
+    def test_empty_turns_one_setting_off():
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", UNO_DRAFT_MOE_TOPK="")
+>       assert rc == 0 and s["UNO_DRAFT_MOE_TOPK"] == "" and s["UNO_K"] == "5" and s["sizes"] == MULTI_SIZES
+                           ^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:79: TypeError
+_______________ test_multi_request_widths_up_to_9_start[env0-8] ________________
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': '6'}, num_spec = 8
+
+    @pytest.mark.parametrize("env,num_spec", [
+        (dict(UNO_RECOMMENDED="1", UNO_K="6"), 8),                     # 6 + 2 + 1 = 9 verify rows
+        (dict(UNO_RECOMMENDED="1", UNO_K="8", UNO_PLOOKUP_L=""), 8),   # 8 + 0 + 1 = 9
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K="8"), 8),
+    ])
+    def test_multi_request_widths_up_to_9_start(env, num_spec):
+        rc, s, _, err = launch(**env)
+        assert rc == 0, err
+>       assert s["num_spec"] == num_spec and s["sizes"] == MULTI_SIZES
+               ^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:97: TypeError
+_______________ test_multi_request_widths_up_to_9_start[env1-8] ________________
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': '8', 'UNO_PLOOKUP_L': ''}, num_spec = 8
+
+    @pytest.mark.parametrize("env,num_spec", [
+        (dict(UNO_RECOMMENDED="1", UNO_K="6"), 8),                     # 6 + 2 + 1 = 9 verify rows
+        (dict(UNO_RECOMMENDED="1", UNO_K="8", UNO_PLOOKUP_L=""), 8),   # 8 + 0 + 1 = 9
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K="8"), 8),
+    ])
+    def test_multi_request_widths_up_to_9_start(env, num_spec):
+        rc, s, _, err = launch(**env)
+        assert rc == 0, err
+>       assert s["num_spec"] == num_spec and s["sizes"] == MULTI_SIZES
+               ^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:97: TypeError
+_______________ test_multi_request_widths_up_to_9_start[env2-8] ________________
+
+env = {'UNO_GEMMA_SPLITKV_MULTI': '1', 'UNO_K': '8'}, num_spec = 8
+
+    @pytest.mark.parametrize("env,num_spec", [
+        (dict(UNO_RECOMMENDED="1", UNO_K="6"), 8),                     # 6 + 2 + 1 = 9 verify rows
+        (dict(UNO_RECOMMENDED="1", UNO_K="8", UNO_PLOOKUP_L=""), 8),   # 8 + 0 + 1 = 9
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K="8"), 8),
+    ])
+    def test_multi_request_widths_up_to_9_start(env, num_spec):
+        rc, s, _, err = launch(**env)
+        assert rc == 0, err
+>       assert s["num_spec"] == num_spec and s["sizes"] == MULTI_SIZES
+               ^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:97: TypeError
+______________ test_numeric_overrides_are_parsed_once[UNO_K- 5-5] ______________
+
+var = 'UNO_K', value = ' 5', parsed = '5'
+
+    @pytest.mark.parametrize("var,value,parsed", [("UNO_K", " 5", "5"), ("UNO_K", "5 ", "5"), ("UNO_K", "05", "05"),
+                                                  ("UNO_PLOOKUP_MAX_CTX", " 4096 ", "4096")])
+    def test_numeric_overrides_are_parsed_once(var, value, parsed):
+        # Surrounding spaces are stripped by the one parser; the settings line, the width check and the speculative config
+        # all see the parsed value.
+        rc, s, _, err = launch(UNO_RECOMMENDED="1", **{var: value})
+        assert rc == 0, err
+>       assert s[var] == parsed and s["num_spec"] == 7 and s["sizes"] == MULTI_SIZES
+               ^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:107: TypeError
+______________ test_numeric_overrides_are_parsed_once[UNO_K-5 -5] ______________
+
+var = 'UNO_K', value = '5 ', parsed = '5'
+
+    @pytest.mark.parametrize("var,value,parsed", [("UNO_K", " 5", "5"), ("UNO_K", "5 ", "5"), ("UNO_K", "05", "05"),
+                                                  ("UNO_PLOOKUP_MAX_CTX", " 4096 ", "4096")])
+    def test_numeric_overrides_are_parsed_once(var, value, parsed):
+        # Surrounding spaces are stripped by the one parser; the settings line, the width check and the speculative config
+        # all see the parsed value.
+        rc, s, _, err = launch(UNO_RECOMMENDED="1", **{var: value})
+        assert rc == 0, err
+>       assert s[var] == parsed and s["num_spec"] == 7 and s["sizes"] == MULTI_SIZES
+               ^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:107: TypeError
+_____________ test_numeric_overrides_are_parsed_once[UNO_K-05-05] ______________
+
+var = 'UNO_K', value = '05', parsed = '05'
+
+    @pytest.mark.parametrize("var,value,parsed", [("UNO_K", " 5", "5"), ("UNO_K", "5 ", "5"), ("UNO_K", "05", "05"),
+                                                  ("UNO_PLOOKUP_MAX_CTX", " 4096 ", "4096")])
+    def test_numeric_overrides_are_parsed_once(var, value, parsed):
+        # Surrounding spaces are stripped by the one parser; the settings line, the width check and the speculative config
+        # all see the parsed value.
+        rc, s, _, err = launch(UNO_RECOMMENDED="1", **{var: value})
+        assert rc == 0, err
+>       assert s[var] == parsed and s["num_spec"] == 7 and s["sizes"] == MULTI_SIZES
+               ^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:107: TypeError
+___ test_numeric_overrides_are_parsed_once[UNO_PLOOKUP_MAX_CTX- 4096 -4096] ____
+
+var = 'UNO_PLOOKUP_MAX_CTX', value = ' 4096 ', parsed = '4096'
+
+    @pytest.mark.parametrize("var,value,parsed", [("UNO_K", " 5", "5"), ("UNO_K", "5 ", "5"), ("UNO_K", "05", "05"),
+                                                  ("UNO_PLOOKUP_MAX_CTX", " 4096 ", "4096")])
+    def test_numeric_overrides_are_parsed_once(var, value, parsed):
+        # Surrounding spaces are stripped by the one parser; the settings line, the width check and the speculative config
+        # all see the parsed value.
+        rc, s, _, err = launch(UNO_RECOMMENDED="1", **{var: value})
+        assert rc == 0, err
+>       assert s[var] == parsed and s["num_spec"] == 7 and s["sizes"] == MULTI_SIZES
+               ^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:107: TypeError
+________________ test_capture_sizes_follow_the_multi_switch[0] _________________
+
+off = '0'
+
+    @pytest.mark.parametrize("off", ["0", "", "off", "false", "no"])
+    def test_capture_sizes_follow_the_multi_switch(off):
+        # The larger capture sizes come only with multi-request split-KV (alone they cost KV cache).
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV_MULTI=off)
+>       assert rc == 0 and s["sizes"] == DEFAULT_SIZES
+                           ^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:114: TypeError
+_________________ test_capture_sizes_follow_the_multi_switch[] _________________
+
+off = ''
+
+    @pytest.mark.parametrize("off", ["0", "", "off", "false", "no"])
+    def test_capture_sizes_follow_the_multi_switch(off):
+        # The larger capture sizes come only with multi-request split-KV (alone they cost KV cache).
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV_MULTI=off)
+>       assert rc == 0 and s["sizes"] == DEFAULT_SIZES
+                           ^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:114: TypeError
+_______________ test_capture_sizes_follow_the_multi_switch[off] ________________
+
+off = 'off'
+
+    @pytest.mark.parametrize("off", ["0", "", "off", "false", "no"])
+    def test_capture_sizes_follow_the_multi_switch(off):
+        # The larger capture sizes come only with multi-request split-KV (alone they cost KV cache).
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV_MULTI=off)
+>       assert rc == 0 and s["sizes"] == DEFAULT_SIZES
+                           ^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:114: TypeError
+______________ test_capture_sizes_follow_the_multi_switch[false] _______________
+
+off = 'false'
+
+    @pytest.mark.parametrize("off", ["0", "", "off", "false", "no"])
+    def test_capture_sizes_follow_the_multi_switch(off):
+        # The larger capture sizes come only with multi-request split-KV (alone they cost KV cache).
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV_MULTI=off)
+>       assert rc == 0 and s["sizes"] == DEFAULT_SIZES
+                           ^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:114: TypeError
+________________ test_capture_sizes_follow_the_multi_switch[no] ________________
+
+off = 'no'
+
+    @pytest.mark.parametrize("off", ["0", "", "off", "false", "no"])
+    def test_capture_sizes_follow_the_multi_switch(off):
+        # The larger capture sizes come only with multi-request split-KV (alone they cost KV cache).
+        rc, s, _, _ = launch(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV_MULTI=off)
+>       assert rc == 0 and s["sizes"] == DEFAULT_SIZES
+                           ^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+test_release_v044.py:114: TypeError
+_ test_launcher_refuses[env0-UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_GEMMA_SPLITKV': '0'}
+msg = 'UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env1-UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1] _
+
+env = {'UNO_GEMMA_SPLITKV_MULTI': '1', 'UNO_GEMMA_SPLITKV': ''}
+msg = 'UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+______ test_launcher_refuses[env2-UNO_GEMMA_SPLITKV_MULTI must be 1 or 0] ______
+
+env = {'UNO_GEMMA_SPLITKV_MULTI': '2'}
+msg = 'UNO_GEMMA_SPLITKV_MULTI must be 1 or 0'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+__________ test_launcher_refuses[env3-UNO_RECOMMENDED must be 0 or 1] __________
+
+env = {'UNO_RECOMMENDED': 'yes'}, msg = 'UNO_RECOMMENDED must be 0 or 1'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env4-UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_PROFILE': 'qwen3'}
+msg = 'UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env5-UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': ''}
+msg = 'UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env6-UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_PLOOKUP_MAX_CTX': ''}
+msg = 'UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env7-UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_PLOOKUP_MAX_CTX': ' ', 'UNO_PLOOKUP_L': '1'}
+msg = "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env8-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': ' 8'}
+msg = 'needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env9-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': '8 '}
+msg = 'needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_____ test_launcher_refuses[env10-UNO_K must be a whole number (got '+8')] _____
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': '+8'}
+msg = "UNO_K must be a whole number (got '+8')"
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_________________ test_launcher_refuses[env11-(got 8 + 2 + 1)] _________________
+
+env = {'UNO_GEMMA_SPLITKV_MULTI': '1', 'UNO_K': ' 8 ', 'UNO_PLOOKUP_L': ' 2'}
+msg = '(got 8 + 2 + 1)'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+__________ test_launcher_refuses[env12-UNO_K must be a whole number] ___________
+
+env = {'UNO_K': '+8'}, msg = 'UNO_K must be a whole number'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+______ test_launcher_refuses[env13-UNO_PLOOKUP_L must be a whole number] _______
+
+env = {'UNO_PLOOKUP_L': 'x'}, msg = 'UNO_PLOOKUP_L must be a whole number'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (1 == 2)
+
+test_release_v044.py:148: AssertionError
+____ test_launcher_refuses[env14-UNO_MAX_MODEL_LEN must be a whole number] _____
+
+env = {'UNO_MAX_MODEL_LEN': '8192 --enforce-eager'}
+msg = 'UNO_MAX_MODEL_LEN must be a whole number'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+______ test_launcher_refuses[env15-UNO_NOISE_SEED must be a whole number] ______
+
+env = {'UNO_NOISE_SEED': '-1'}, msg = 'UNO_NOISE_SEED must be a whole number'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+__________ test_launcher_refuses[env16-UNO_K must be a whole number] ___________
+
+env = {'UNO_PROFILE': 'qwen3', 'UNO_K': '+8'}
+msg = 'UNO_K must be a whole number'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env17-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': '7'}
+msg = 'needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env18-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)] _
+
+env = {'UNO_RECOMMENDED': '1', 'UNO_K': '9', 'UNO_PLOOKUP_L': ''}
+msg = 'needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+______ test_launcher_refuses[env19-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9] _______
+
+env = {'UNO_GEMMA_SPLITKV_MULTI': 'on', 'UNO_K': '6', 'UNO_PLOOKUP_L': '3'}
+msg = 'needs UNO_K + UNO_PLOOKUP_L + 1 <= 9'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_ test_launcher_refuses[env20-UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only] _
+
+env = {'UNO_GEMMA_SPLITKV_MULTI': '1', 'UNO_PROFILE': 'qwen3'}
+msg = 'UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+_____ test_launcher_refuses[env21-UNO_GEMMA_SPLITKV_MULTI must be 1 or 0] ______
+
+env = {'UNO_GEMMA_SPLITKV_MULTI': '2', 'UNO_PROFILE': 'qwen3'}
+msg = 'UNO_GEMMA_SPLITKV_MULTI must be 1 or 0'
+
+    @pytest.mark.parametrize("env,msg", [
+        (dict(UNO_RECOMMENDED="1", UNO_GEMMA_SPLITKV="0"), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_GEMMA_SPLITKV=""), "UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+        (dict(UNO_RECOMMENDED="yes"), "UNO_RECOMMENDED must be 0 or 1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PROFILE="qwen3"), "UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only"),
+        # An empty or wide override must mean what the documentation says, or be refused (fix round 1):
+        (dict(UNO_RECOMMENDED="1", UNO_K=""), "UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=""), "UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on"),
+        (dict(UNO_RECOMMENDED="1", UNO_PLOOKUP_MAX_CTX=" ", UNO_PLOOKUP_L="1"),
+         "UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')"),
+        # One parser for every numeric override (fix round 2): no spelling can skip the width check.
+        (dict(UNO_RECOMMENDED="1", UNO_K=" 8"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="8 "), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="+8"), "UNO_K must be a whole number (got '+8')"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_K=" 8 ", UNO_PLOOKUP_L=" 2"), "(got 8 + 2 + 1)"),
+        (dict(UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_PLOOKUP_L="x"), "UNO_PLOOKUP_L must be a whole number"),
+        (dict(UNO_MAX_MODEL_LEN="8192 --enforce-eager"), "UNO_MAX_MODEL_LEN must be a whole number"),
+        (dict(UNO_NOISE_SEED="-1"), "UNO_NOISE_SEED must be a whole number"),
+        (dict(UNO_PROFILE="qwen3", UNO_K="+8"), "UNO_K must be a whole number"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="7"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)"),
+        (dict(UNO_RECOMMENDED="1", UNO_K="9", UNO_PLOOKUP_L=""), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="on", UNO_K="6", UNO_PLOOKUP_L="3"), "needs UNO_K + UNO_PLOOKUP_L + 1 <= 9"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="1", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only"),
+        (dict(UNO_GEMMA_SPLITKV_MULTI="2", UNO_PROFILE="qwen3"), "UNO_GEMMA_SPLITKV_MULTI must be 1 or 0"),
+    ])
+    def test_launcher_refuses(env, msg):
+        rc, s, _, err = launch(**env)
+>       assert rc == 2 and s is None and msg in err
+E       assert (0 == 2)
+
+test_release_v044.py:148: AssertionError
+________ test_recommended_launch_is_byte_identical_to_the_measured_one _________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_recommended_launch_is_byt0')
+
+    def test_recommended_launch_is_byte_identical_to_the_measured_one(tmp_path):
+        fake = tmp_path / "fakepy"
+        fake.write_text(FAKE_PY)
+        fake.chmod(0o755)
+        ad = pathlib.Path("/tmp/ad")
+        ad.mkdir(exist_ok=True)
+        (ad / "adapter_config.json").write_text("{}")
+        args = ["cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit", str(ad), "--", "--enable-auto-tool-choice", "--tool-call-parser",
+                "gemma4", "--reasoning-parser", "gemma4"]
+        p = subprocess.run(["bash", SERVE, *args], env={**CLEAN_ENV, "UNO_PROFILE": "gemma4", "UNO_RECOMMENDED": "1",
+                                                       "PYTHON": str(fake)}, capture_output=True, text=True)
+        assert p.returncode == 0, p.stderr
+        lines = p.stdout.splitlines()
+>       assert lines[0] == "ARGV: " + MEASURED_ENGINE_ARGV
+E       assert 'ARGV: -m vll...parser gemma4' == 'ARGV: -m vll...parser gemma4'
+E         
+E         Skipping 778 identical leading characters in diff, use -v to show
+E         - 8\,32\,40\,48\,56\,64\]\} --speculative-config \{\"method\":\"uno\"\,\"uno_lora_path\":\"/tmp/ad\"\,\"uno_mask_token_id\":262144\,\"uno_noise_seed\":29\,\"num_speculative_tokens\":7\,\"uno_noise_low\":0\} --revision 0ef577a5710035bd2d3a3f27e4f5cb2e86a9a9ba --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4
+E         + 8\,32\,40\]\} --speculative-config \{\"method\":\"uno\"\,\"uno_lora_path\":\"/tmp/ad\"\,\"uno_mask_token_id\":262144\,\"uno_noise_seed\":29\,\"num_speculative_tokens\":4\,\"...
+E         
+E         ...Full output truncated (1 line hidden), use '-vv' to show
+
+test_release_v044.py:186: AssertionError
+_______________ test_patched_files_read_only_documented_switches _______________
+
+    def test_patched_files_read_only_documented_switches():
+        seen = set()
+        for rel in PATCHED:
+            names = _env_reads(ast.parse((VP / rel).read_text()))
+            assert None not in names, f"{rel} reads an environment variable by a computed name"
+            seen |= set(names)
+        assert seen <= DOCUMENTED_SWITCHES, sorted(seen - DOCUMENTED_SWITCHES)
+>       assert "UNO_GEMMA_SPLITKV_MULTI" in seen
+E       AssertionError: assert 'UNO_GEMMA_SPLITKV_MULTI' in {'UNO_DRAFT_VOCAB', 'UNO_GEMMA_SPLITKV', 'UNO_PLOOKUP_L', 'UNO_PLOOKUP_MAX_CTX'}
+
+test_release_v044.py:226: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[5-2] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c02c0>, num_reqs = 2
+width = 5
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 5
+E        +  where None = _width(2, 5)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[5-4] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c1c60>, num_reqs = 4
+width = 5
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 5
+E        +  where None = _width(4, 5)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[5-7] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c1e40>, num_reqs = 7
+width = 5
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 5
+E        +  where None = _width(7, 5)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[5-8] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c2020>, num_reqs = 8
+width = 5
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 5
+E        +  where None = _width(8, 5)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[6-2] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c0a40>, num_reqs = 2
+width = 6
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 6
+E        +  where None = _width(2, 6)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[6-4] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c0cc0>, num_reqs = 4
+width = 6
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 6
+E        +  where None = _width(4, 6)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[6-7] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c2700>, num_reqs = 7
+width = 6
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 6
+E        +  where None = _width(7, 6)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[6-8] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c28e0>, num_reqs = 8
+width = 6
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 6
+E        +  where None = _width(8, 6)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[8-2] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c2ac0>, num_reqs = 2
+width = 8
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 8
+E        +  where None = _width(2, 8)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[8-4] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c2ca0>, num_reqs = 4
+width = 8
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 8
+E        +  where None = _width(4, 8)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[8-7] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c13a0>, num_reqs = 7
+width = 8
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 8
+E        +  where None = _width(7, 8)
+
+test_release_v044.py:259: AssertionError
+____________ test_uniform_multi_request_step_needs_the_switch[8-8] _____________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c1080>, num_reqs = 8
+width = 8
+
+    @pytest.mark.parametrize("num_reqs", [2, 4, 7, 8])
+    @pytest.mark.parametrize("width", [5, 6, 8])
+    def test_uniform_multi_request_step_needs_the_switch(multi, num_reqs, width):
+        multi(False)
+        assert _width(num_reqs, width) is None  # v0.4.3 behaviour: 2D kernel
+        multi(True)
+>       assert _width(num_reqs, width) == width
+E       assert None == 8
+E        +  where None = _width(8, 8)
+
+test_release_v044.py:259: AssertionError
+___________ test_multi_request_admission_refuses_what_is_not_uniform ___________
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c2480>
+
+    def test_multi_request_admission_refuses_what_is_not_uniform(multi):
+        multi(True)
+        ragged = torch.tensor([0, 8, 14, 22], dtype=torch.int32)  # widths 8, 6, 8
+        assert _width(3, 8, qsl=ragged) is None
+        assert _width(3, 8, num_actual_tokens=22) is None
+>       assert _width(4, 8) == 8  # a uniform CPU query_start_loc is admitted
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert None == 8
+E        +  where None = _width(4, 8)
+
+test_release_v044.py:267: AssertionError
+___ test_kernel_admission_follows_the_switch_and_the_scratch[256-8-window0] ____
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c1260>, head = 256, kvh = 8
+window = (1023, 0)
+
+    @pytest.mark.parametrize("head,kvh,window", [(256, 8, (1023, 0)), (512, 2, (-1, -1))])
+    def test_kernel_admission_follows_the_switch_and_the_scratch(multi, head, kvh, window):
+        multi(False)
+        assert _admissible(1, 8, 16, False, head, kvh, window)
+        assert not _admissible(4, 8, 72, False, head, kvh, window)
+        multi(True)
+>       assert _admissible(4, 8, 72, True, head, kvh, window)
+E       assert False
+E        +  where False = _admissible(4, 8, 72, True, 256, 8, (1023, 0))
+
+test_release_v044.py:294: AssertionError
+___ test_kernel_admission_follows_the_switch_and_the_scratch[512-2-window1] ____
+
+multi = <function multi.<locals>.set_ at 0x7ae15f9c1bc0>, head = 512, kvh = 2
+window = (-1, -1)
+
+    @pytest.mark.parametrize("head,kvh,window", [(256, 8, (1023, 0)), (512, 2, (-1, -1))])
+    def test_kernel_admission_follows_the_switch_and_the_scratch(multi, head, kvh, window):
+        multi(False)
+        assert _admissible(1, 8, 16, False, head, kvh, window)
+        assert not _admissible(4, 8, 72, False, head, kvh, window)
+        multi(True)
+>       assert _admissible(4, 8, 72, True, head, kvh, window)
+E       assert False
+E        +  where False = _admissible(4, 8, 72, True, 512, 2, (-1, -1))
+
+test_release_v044.py:294: AssertionError
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+../usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: 14 warnings
+  /usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test_release_v044.py::test_version_and_launcher_syntax - AssertionErro...
+FAILED test_release_v044.py::test_unset_is_the_v043_profile - TypeError: 'Non...
+FAILED test_release_v044.py::test_recommended_sets_the_measured_recipe - Type...
+FAILED test_release_v044.py::test_an_explicit_value_wins_over_the_recipe[UNO_K-4]
+FAILED test_release_v044.py::test_an_explicit_value_wins_over_the_recipe[UNO_PLOOKUP_L-1]
+FAILED test_release_v044.py::test_an_explicit_value_wins_over_the_recipe[UNO_PLOOKUP_MAX_CTX-8192]
+FAILED test_release_v044.py::test_empty_turns_one_setting_off - TypeError: 'N...
+FAILED test_release_v044.py::test_multi_request_widths_up_to_9_start[env0-8]
+FAILED test_release_v044.py::test_multi_request_widths_up_to_9_start[env1-8]
+FAILED test_release_v044.py::test_multi_request_widths_up_to_9_start[env2-8]
+FAILED test_release_v044.py::test_numeric_overrides_are_parsed_once[UNO_K- 5-5]
+FAILED test_release_v044.py::test_numeric_overrides_are_parsed_once[UNO_K-5 -5]
+FAILED test_release_v044.py::test_numeric_overrides_are_parsed_once[UNO_K-05-05]
+FAILED test_release_v044.py::test_numeric_overrides_are_parsed_once[UNO_PLOOKUP_MAX_CTX- 4096 -4096]
+FAILED test_release_v044.py::test_capture_sizes_follow_the_multi_switch[0] - ...
+FAILED test_release_v044.py::test_capture_sizes_follow_the_multi_switch[] - T...
+FAILED test_release_v044.py::test_capture_sizes_follow_the_multi_switch[off]
+FAILED test_release_v044.py::test_capture_sizes_follow_the_multi_switch[false]
+FAILED test_release_v044.py::test_capture_sizes_follow_the_multi_switch[no]
+FAILED test_release_v044.py::test_launcher_refuses[env0-UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1]
+FAILED test_release_v044.py::test_launcher_refuses[env1-UNO_GEMMA_SPLITKV_MULTI=1 needs UNO_GEMMA_SPLITKV=1]
+FAILED test_release_v044.py::test_launcher_refuses[env2-UNO_GEMMA_SPLITKV_MULTI must be 1 or 0]
+FAILED test_release_v044.py::test_launcher_refuses[env3-UNO_RECOMMENDED must be 0 or 1]
+FAILED test_release_v044.py::test_launcher_refuses[env4-UNO_RECOMMENDED=1 applies to UNO_PROFILE=gemma4 only]
+FAILED test_release_v044.py::test_launcher_refuses[env5-UNO_K= (empty) has no meaning with UNO_RECOMMENDED=1]
+FAILED test_release_v044.py::test_launcher_refuses[env6-UNO_PLOOKUP_MAX_CTX= (empty) with prompt lookup on]
+FAILED test_release_v044.py::test_launcher_refuses[env7-UNO_PLOOKUP_MAX_CTX must be a whole number (got ' ')]
+FAILED test_release_v044.py::test_launcher_refuses[env8-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)]
+FAILED test_release_v044.py::test_launcher_refuses[env9-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 8 + 2 + 1)]
+FAILED test_release_v044.py::test_launcher_refuses[env10-UNO_K must be a whole number (got '+8')]
+FAILED test_release_v044.py::test_launcher_refuses[env11-(got 8 + 2 + 1)] - a...
+FAILED test_release_v044.py::test_launcher_refuses[env12-UNO_K must be a whole number]
+FAILED test_release_v044.py::test_launcher_refuses[env13-UNO_PLOOKUP_L must be a whole number]
+FAILED test_release_v044.py::test_launcher_refuses[env14-UNO_MAX_MODEL_LEN must be a whole number]
+FAILED test_release_v044.py::test_launcher_refuses[env15-UNO_NOISE_SEED must be a whole number]
+FAILED test_release_v044.py::test_launcher_refuses[env16-UNO_K must be a whole number]
+FAILED test_release_v044.py::test_launcher_refuses[env17-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 7 + 2 + 1)]
+FAILED test_release_v044.py::test_launcher_refuses[env18-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9 (got 9 + 0 + 1)]
+FAILED test_release_v044.py::test_launcher_refuses[env19-needs UNO_K + UNO_PLOOKUP_L + 1 <= 9]
+FAILED test_release_v044.py::test_launcher_refuses[env20-UNO_GEMMA_SPLITKV_MULTI=1 applies to UNO_PROFILE=gemma4 only]
+FAILED test_release_v044.py::test_launcher_refuses[env21-UNO_GEMMA_SPLITKV_MULTI must be 1 or 0]
+FAILED test_release_v044.py::test_recommended_launch_is_byte_identical_to_the_measured_one
+FAILED test_release_v044.py::test_patched_files_read_only_documented_switches
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[5-2]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[5-4]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[5-7]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[5-8]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[6-2]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[6-4]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[6-7]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[6-8]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[8-2]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[8-4]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[8-7]
+FAILED test_release_v044.py::test_uniform_multi_request_step_needs_the_switch[8-8]
+FAILED test_release_v044.py::test_multi_request_admission_refuses_what_is_not_uniform
+FAILED test_release_v044.py::test_kernel_admission_follows_the_switch_and_the_scratch[256-8-window0]
+FAILED test_release_v044.py::test_kernel_admission_follows_the_switch_and_the_scratch[512-2-window1]
+58 failed, 5 passed, 16 warnings in 3.18s
+rc=1

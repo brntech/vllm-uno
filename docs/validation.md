@@ -5,7 +5,7 @@
 v0.4.3 is the v0.4.1 release image plus the overlay in `patch/0004-v0.4.3/` (nine patched runtime files, hashes in
 `evidence/release-0.4.3/image-files.sha256`). The new settings are off by default; the recommended Gemma 4 settings
 are `UNO_K=5 UNO_PLOOKUP_L=2 UNO_PLOOKUP_MAX_CTX=4096 UNO_DRAFT_MOE_TOPK=4` with the 38,560-prompt adapter at
-`Broadnet/gemma-4-26B-A4B-uno-adapter` main (`adapter_model.safetensors` sha256
+`Broadnet/gemma-4-26B-A4B-uno-adapter` at Hub revision `s5` (`adapter_model.safetensors` sha256
 `e784e5df1c2235f354de2161894f9b244b0cd72930888a0600cdaccf7d842c60`, 75,627,016 bytes).
 
 - **CPU tests** (`tests/v0.4.3/`, results in `evidence/release-0.4.3/cpu/`): **96 passed, 0 failed, pytest rc 0 in
@@ -45,7 +45,7 @@ are `UNO_K=5 UNO_PLOOKUP_L=2 UNO_PLOOKUP_MAX_CTX=4096 UNO_DRAFT_MOE_TOPK=4` with
 ## v0.4.2 release status: 28,560-prompt Gemma 4 adapter validated
 
 v0.4.2 changes the adapter only: `Broadnet/gemma-4-26B-A4B-uno-adapter` at Hub revision `s3` (Hub's main branch
-holds the v0.4.3 adapter; download this one with `hf download Broadnet/gemma-4-26B-A4B-uno-adapter --revision s3`),
+holds a later adapter; download this one with `hf download Broadnet/gemma-4-26B-A4B-uno-adapter --revision s3`),
 first published at Hub commit `90e7186d225d7d0c5746e6f84ba5280e6d3077a0`, rank 16, `adapter_model.safetensors` sha256
 `abfdde5cfefad7bbbd8525ca38da4da2464b07aa0724beb65dca1fa7f592f2ee` (75,627,016 bytes), trained on 28,560 open prompts
 and published at its last stage's step 17,120. The P10K adapter measured in the v0.4.0 and v0.4.1 sections below stays
@@ -554,11 +554,11 @@ Strict greedy comparison is deliberately `NOT_A_RELEASE_GATE` for this RTX
 3090 CUDA-graph instrument. This release did not run a plain-versus-plain
 double run and did not convert a strict output difference into a correctness
 failure. The source attribution is the local MRV2 record
-`docs/lanes/mrv2-final-gates.md`: its graph-mode plain self controls showed
+(an internal record, not published): its graph-mode plain self controls showed
 the `p2/t31` and `p1/t31` self-flips, while the later separate-engine control
 with `VLLM_UNO_GREEDY_CONTROL_ENGINES=2` completed the seven matrix variants
 7/7. The warm-up fix in head `5da193...` covers served sampling modes before
-the first greedy request. This lane instead ran functional greedy requests and
+the first greedy request. This release instead ran functional greedy requests and
 the G2v2 + mixed lossless gates above, matching the v0.1.0 release convention.
 
 `release/verify.sh --strict-greedy` retains `compare.py` as an explicit

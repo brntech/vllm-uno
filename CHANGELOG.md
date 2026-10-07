@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-10-07
+
+### Added
+
+- Split-KV attention for steps with several requests in the Gemma 4 profile (`UNO_GEMMA_SPLITKV_MULTI=1`, needs `UNO_GEMMA_SPLITKV=1`). Uno's split-KV attention kernel, used for its draft and verify passes, ran only when one request was in the step; v0.4.4 admits a step to it when every request in the step has the same number of query rows, with one launch for the whole step. Each request's attention is computed exactly as when it runs alone: a GPU test on the release image checks the outputs are bit for bit equal for steps of 2, 4 and 8 requests and for steps of 2, 4 and 7 requests plus one padded request from a CUDA graph, both Gemma 4 attention layouts, widths 5, 6 and 8 (`evidence/release-0.4.4/gpu/`). Steps whose requests have different widths keep vLLM's general kernel. Against that general kernel, which v0.4.3 used for these steps, the attention output of a step with several requests can differ in the last bits (bfloat16).
+- With `UNO_GEMMA_SPLITKV_MULTI=1` the launcher adds CUDA graph capture sizes 48, 56 and 64, so steps with 6 to 8 requests at 8 verify rows each run in a captured graph. It refuses the switch without split-KV attention, on the Qwen3 profile, or with more than 9 verify rows per request (`UNO_K` + `UNO_PLOOKUP_L` + 1).
+- One switch for the recommended Gemma 4 settings, `UNO_RECOMMENDED=1`: `UNO_K=5`, `UNO_PLOOKUP_L=2`, `UNO_PLOOKUP_MAX_CTX=4096`, `UNO_DRAFT_MOE_TOPK=4` and `UNO_GEMMA_SPLITKV_MULTI=1`. A variable you set yourself wins; set to empty, `UNO_PLOOKUP_L=`, `UNO_DRAFT_MOE_TOPK=` and `UNO_GEMMA_SPLITKV_MULTI=` turn their part off, while an empty `UNO_K=`, or an empty `UNO_PLOOKUP_MAX_CTX=` with lookup on, is refused at startup. The launcher prints the settings it used (`Uno settings: ...`) and refuses `UNO_RECOMMENDED=1` with the Qwen3 profile. Numeric settings must be whole numbers (surrounding spaces are ignored).
+- Measured with the recommended settings and the new adapter on one RTX 3090, BroadNet's production traffic: 721 tokens per second with eight requests in flight (stock DFlash K8 in vLLM 0.30.0: 679), 523 with four (stock DFlash K8 in vLLM 0.30.0: 497); one request at a time 1.69x faster than plain decoding (stock DFlash K8 in vLLM 0.30.0: 1.56x); 14k and 28k-token documents decode 1.37x and 1.31x faster than plain. KV cache at 32k context: 75,731 to 75,768 tokens. `RELEASE-NOTES-0.4.4.md`, `evidence/release-0.4.4/`.
+- CPU tests in `tests/v0.4.4/` (the launcher, multi-request admission, the startup checks at both capture lists, and the multi-request kernel against the one-request kernel in Triton's interpreter); with the v0.4.3 suites, run unchanged, 174 CPU tests pass on the release image (`evidence/release-0.4.4/cpu/`).
+
+### Changed
+
+- Image `ghcr.io/brntech/vllm-uno:0.4.4` = the v0.4.3 release image plus the overlay in `patch/0005-v0.4.4/` (two attention files and the launcher), built from the repository root (`docker build -f patch/0005-v0.4.4/Dockerfile .`). Same vLLM build, profile defaults, draft vocabulary and LoRA kernel configs; with neither `UNO_RECOMMENDED` nor `UNO_GEMMA_SPLITKV_MULTI` set, a v0.4.4 server runs the v0.4.3 path.
+- The startup check for `UNO_DRAFT_MOE_TOPK=4` finds graphs for up to 8 requests with the recommended settings; `--max-num-seqs` above 8 still stops at startup.
+- The Gemma 4 instructions point at a new adapter on the main branch of `Broadnet/gemma-4-26B-A4B-uno-adapter`: the v0.4.3 adapter continued for 2,000 updates with five-row draft blocks and with the draft passes routed as they are served (4 of the 8 experts, the 64k draft vocabulary); same rank and `adapter_config.json`, `adapter_model.safetensors` sha256 `5eda8f7879489737246b86c56f2836e2d4cd359e0bc994ea193ac9f9f658e534` (75,627,016 bytes). The v0.4.3 adapter stays at Hub revision `s5`, the v0.4.2 adapter at `s3`, the 10k-prompt adapter at `p10k`; the v0.4.3 instructions now name revision `s5`.
+
 ## [0.4.3] - 2026-10-04
 
 ### Added
@@ -19,7 +35,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Image `ghcr.io/brntech/vllm-uno:0.4.3` = the v0.4.1 release image plus the overlay in `patch/0004-v0.4.3/`, built from the repository root (`docker build -f patch/0004-v0.4.3/Dockerfile .`). Uno's static-width verify attention covers up to 9 rows (K + L + 1). Same base image, vLLM build, profile defaults, draft vocabulary and LoRA kernel configs; an unconfigured v0.4.3 server runs the v0.4.2 path.
-- The Gemma 4 instructions point at a new adapter at `Broadnet/gemma-4-26B-A4B-uno-adapter` main, trained on 38,560 open prompts (`adapter_model.safetensors` sha256 `e784e5df1c2235f354de2161894f9b244b0cd72930888a0600cdaccf7d842c60`, 75,627,016 bytes, same `adapter_config.json`). The v0.4.2 adapter stays at Hub revision `s3`, the 10k-prompt adapter at `p10k`; the v0.4.2 instructions now download `--revision s3`.
+- The Gemma 4 instructions point at a new adapter at `Broadnet/gemma-4-26B-A4B-uno-adapter` (Hub revision `s5` since v0.4.4), trained on 38,560 open prompts (`adapter_model.safetensors` sha256 `e784e5df1c2235f354de2161894f9b244b0cd72930888a0600cdaccf7d842c60`, 75,627,016 bytes, same `adapter_config.json`). The v0.4.2 adapter stays at Hub revision `s3`, the 10k-prompt adapter at `p10k`; the v0.4.2 instructions now download `--revision s3`.
 
 ## [0.4.2] - 2026-10-01
 

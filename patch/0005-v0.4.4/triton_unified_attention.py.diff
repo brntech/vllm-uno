@@ -1,0 +1,46 @@
+--- a/triton_unified_attention.py
++++ b/triton_unified_attention.py
+@@ -39,6 +39,11 @@
+ NUM_PAR_SOFTMAX_SEGMENTS = 16
+ 
+ 
++def _uno_splitkv_multi_enabled() -> bool:
++    """Return the opt-in for split-KV on uniform multi-request Uno steps (UNO_GEMMA_SPLITKV_MULTI)."""
++    return os.environ.get("UNO_GEMMA_SPLITKV_MULTI", "").strip().lower() in {"1", "true", "yes", "on"}
++
++
+ def _uno_splitkv_env_enabled() -> bool:
+     """Return the explicit opt-in for Gemma Uno's small-query splitKV path."""
+     return os.environ.get("UNO_GEMMA_SPLITKV", "").strip().lower() in {
+@@ -87,7 +92,7 @@
+     width = uno_static_query_width
+     if width not in (2, 3, 4, 5, 6, 7, 8, 9):  # prompt lookup: verify widths up to K + L + 1
+         return False
+-    if num_seqs != 1 or max_seqlen_q != width:
++    if num_seqs < 1 or (num_seqs != 1 and not _uno_splitkv_multi_enabled()) or max_seqlen_q != width:
+         return False
+     if causal is not True or window_size not in ((1023, 0), (-1, -1)):
+         return False
+@@ -119,7 +124,7 @@
+         return False
+     if out.shape[1] != num_query_heads or out.shape[2] != head_size:
+         return False
+-    if q.shape[0] != width or k.device != q.device or v.device != q.device:
++    if q.shape[0] != width * num_seqs or k.device != q.device or v.device != q.device:
+         return False
+     if out.device != q.device:
+         return False
+@@ -1233,6 +1238,13 @@
+     )
+     if uno_splitkv and use_3d:
+         assert uno_static_query_width is not None
++        if num_seqs > 1:
++            logger.info_once(
++                "UNO_GEMMA_SPLITKV_MULTI engaged seqs=%d width=%d head_size=%d",
++                int(num_seqs),
++                int(uno_static_query_width),
++                int(head_size),
++            )
+         # Keep the once-key arguments scalar and hashable: the logger uses an
+         # LRU-backed ``info_once`` implementation, and tensor/dict arguments
+         # would make the engagement receipt fail before the kernel launch.
