@@ -1,0 +1,83 @@
+--- a/release/serve.sh
++++ b/release/serve.sh
+@@ -24,8 +24,9 @@
+         UNO_PLOOKUP_MAX_CTX= are refused at startup (no measured meaning).
+         With UNO_GEMMA_SPLITKV_MULTI=1, K + UNO_PLOOKUP_L + 1 above 9 is
+         refused (wider verify steps never reach the split-KV kernel).
+-        UNO_DRAFT_MOE_TOPK=4 needs an SM86 GPU (RTX 3090 class) and refuses
+-        to start elsewhere: there, add UNO_DRAFT_MOE_TOPK= (empty).
++        UNO_DRAFT_MOE_TOPK=4 needs an SM86 GPU (RTX 3090 class) or, in this
++        ROCm build, gfx1201 (R9700), and refuses to start elsewhere: there,
++        add UNO_DRAFT_MOE_TOPK= (empty).
+ Environment: UNO_PROFILE, UNO_K, UNO_MASK_TOKEN_ID, UNO_NOISE_SEED, UNO_NOISE_LOW,
+   MODEL_REVISION / UNO_ADAPTER_REVISION (recorded Qwen and Gemma model pins by
+   default), UNO_MAX_MODEL_LEN (gemma4 context, default 32768),
+@@ -33,13 +34,19 @@
+   Engine-side switches read by the runner: UNO_GEMMA_SPLITKV (split-KV draft
+   attention; gemma4 default 1, 0 turns it off), UNO_DRAFT_VOCAB (draft
+   vocabulary JSON; gemma4 default the shipped 64k list, empty turns it off),
+-  VLLM_TUNED_CONFIG_FOLDER (LoRA kernel configs; gemma4 default the shipped
+-  RTX 3090 files, empty turns them off), UNO_DRAFT_MOE_TOPK=4 (draft MoE
++  VLLM_TUNED_CONFIG_FOLDER (tuned kernel configs; in this ROCm build the
++  gemma4 default on gfx12 GPUs is the shipped Radeon AI PRO R9700 MoE file,
++  release/gfx12-moe; empty turns it off), UNO_DRAFT_MOE_TOPK=4 (draft MoE
+   top-k opt-in; gemma4 only), UNO_PLOOKUP_L / UNO_PLOOKUP_MAX_CTX (prompt
+   lookup after the K drafts, and the context length above which a request
+   skips it) and UNO_GEMMA_SPLITKV_MULTI=1 (split-KV attention also for steps
+   with several requests in flight; gemma4 only, needs UNO_GEMMA_SPLITKV=1).
+   UNO_RECOMMENDED=1 sets the recommended values of these (gemma4 only).
++ROCm gfx12 (every GPU gfx12, e.g. Radeon AI PRO R9700), gemma4 profile: the
++  adapter runs on the main stream (VLLM_LORA_ENABLE_DUAL_STREAM=1 restores
++  dual stream) and, before the server starts, release/gfx12_prefill_tiles.py
++  gives prefill-shaped attention launches larger tiles (R9700_PREFILL_TILES=0
++  skips it). UNO_GPU_ARCH=gfx12|other overrides the detection.
+ UNO_DRY_RUN=1 prints the command without importing vLLM/downloading weights.
+ Numeric settings (UNO_K, UNO_PLOOKUP_L, UNO_PLOOKUP_MAX_CTX, UNO_MASK_TOKEN_ID,
+   UNO_NOISE_SEED, UNO_NOISE_LOW, UNO_MAX_MODEL_LEN) must be whole numbers;
+@@ -133,10 +140,23 @@
+     elif [[ -n ${UNO_GEMMA_SPLITKV_MULTI:-} ]]; then
+       export UNO_GEMMA_SPLITKV_MULTI
+     fi
++    # ROCm gfx12 (RDNA4, e.g. Radeon AI PRO R9700), 2026-10-05: inside HIP graphs the adapter's dual-stream LoRA path
++    # leaves the GPU idle at every cross-stream fork/join (~10 ms per draft pass on the R9700), so the adapter runs on the
++    # main stream there. Only when every GPU the kernel driver lists is gfx12 (there is no /sys/class/kfd on a CUDA host);
++    # VLLM_LORA_ENABLE_DUAL_STREAM=1 restores it, UNO_GPU_ARCH=gfx12|other overrides detection. Any other device keeps
++    # dual stream on, as every earlier release.
++    rocm_arch=${UNO_GPU_ARCH:-$({ cat /sys/class/kfd/kfd/topology/nodes/*/properties 2>/dev/null || true; } | awk '
++      $1 == "gfx_target_version" && $2 > 0 { n++; if (int($2 / 10000) != 12) other = 1 }
++      END { print (n > 0 && !other) ? "gfx12" : "other" }')}
++    [[ $rocm_arch != gfx12 ]] || lora_dual_stream=${VLLM_LORA_ENABLE_DUAL_STREAM-0}
+     # v0.4.1: tuned Triton configs for the adapter's LoRA kernels on the RTX 3090 (Uno's draft-pass shapes, m 4-40).
+     # vLLM loads <GPU name>_SHRINK.json / _EXPAND_FALSE.json from this folder; any other GPU finds no file for its name
+     # and keeps vLLM's default configs. VLLM_TUNED_CONFIG_FOLDER= (empty) turns the tuned configs off.
+-    export VLLM_TUNED_CONFIG_FOLDER=${VLLM_TUNED_CONFIG_FOLDER-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lora-configs}
++    # ROCm gfx12: the folder is release/gfx12-moe, the tuned fused-MoE config of Gemma 4 26B A4B's AWQ experts on the
++    # Radeon AI PRO R9700 (E=128, N=704, int4_w4a16). It holds no LoRA file, so the adapter's kernels read the R9700
++    # configs this image ships inside vLLM (vllm/lora/ops/triton_ops/configs/).
++    tuned=lora-configs; [[ $rocm_arch != gfx12 ]] || tuned=gfx12-moe
++    export VLLM_TUNED_CONFIG_FOLDER=${VLLM_TUNED_CONFIG_FOLDER-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$tuned}
+     [[ -n $VLLM_TUNED_CONFIG_FOLDER ]] || unset VLLM_TUNED_CONFIG_FOLDER
+     flags=(--dtype bfloat16 --attention-backend TRITON_ATTN --language-model-only
+       --enable-prefix-caching --seed 29
+@@ -210,7 +230,7 @@
+ print(json.dumps(c,separators=(',',':')))
+ PY
+ )
+-cmd=(env VLLM_USE_V2_MODEL_RUNNER=1 VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_LORA_ENABLE_DUAL_STREAM=1
++cmd=(env VLLM_USE_V2_MODEL_RUNNER=1 VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_LORA_ENABLE_DUAL_STREAM=${lora_dual_stream:-1}
+   "$py" -m vllm.entrypoints.cli.main serve "$model"
+   --served-model-name "${SERVED_MODEL_NAME:-$served}"
+   --host "${HOST:-0.0.0.0}" --port "${PORT:-8000}"
+@@ -232,4 +252,12 @@
+   printf '%q ' "${cmd[@]}"; printf '\n'
+   exit 0
+ fi
++# ROCm gfx12, gemma4 profile: larger attention tiles for prefill-shaped launches, patched into this container's own
++# vLLM before the server starts (release/gfx12_prefill_tiles.py; it refuses, and the server does not start, if the file
++# it patches is not the one it was written for). Decode and verify launches keep vLLM's tiles. R9700_PREFILL_TILES=0
++# skips it.
++if [[ $profile == gemma4 && ${rocm_arch:-} == gfx12 ]]; then
++  "$py" "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/gfx12_prefill_tiles.py" >&2 \
++    || { echo 'The gfx12 prefill-tile patch refused (above); R9700_PREFILL_TILES=0 starts without it.' >&2; exit 2; }
++fi
+ exec "${cmd[@]}"

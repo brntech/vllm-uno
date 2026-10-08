@@ -10,6 +10,14 @@ is the model's own (see [RELEASE-NOTES-0.4.4.md](RELEASE-NOTES-0.4.4.md)). With 
 `UNO_GEMMA_SPLITKV_MULTI` set, a v0.4.4 server runs the v0.4.3 path; image `ghcr.io/brntech/vllm-uno:0.4.4`. The new
 adapter is on the Hub's main branch; the v0.4.3 adapter stays at Hub revision `s5`.
 
+**v0.4.4 on AMD Radeon**: the same release runs on the Radeon AI PRO R9700 (RDNA4, gfx1201) with ROCm, image
+`ghcr.io/brntech/vllm-uno:0.4.4-rocm`, built from the stock vLLM v0.30.0 ROCm image with R9700-tuned kernel configs on
+by default. On BroadNet's production traffic on one R9700 it serves **310 tokens per second with eight requests
+in flight** (stock DFlash K8 in vLLM 0.30.0 ROCm: 298); one request at a time it takes 25.0 % less time
+per token than stock DFlash K8 in vLLM 0.30.0 ROCm, and 68.4 % less on 28k-token documents. The
+output is the model's own (see
+[RELEASE-NOTES-0.4.4-rocm.md](RELEASE-NOTES-0.4.4-rocm.md) and [AMD Radeon (ROCm)](#amd-radeon-rocm) below).
+
 **v0.4.3** adds prompt lookup to the Gemma 4 profile: after Uno's drafts, two more candidates are copied from the
 request itself, and the model checks them all in the same pass. With the recommended settings (five Uno drafts, two
 lookup tokens, draft passes through 4 of the 8 experts) and a new adapter trained on 38,560 open prompts, on one RTX
@@ -174,6 +182,35 @@ curl --fail-with-body http://127.0.0.1:8000/v1/chat/completions \
 loading vLLM or downloading weights. Configuration overrides change the
 validated profile and require a new gate run.
 
+### AMD Radeon (ROCm)
+
+The ROCm image serves the Gemma 4 profile on a Radeon AI PRO R9700 (gfx1201,
+32 GB); Uno starts only on gfx1201 in this image. Use a Linux AMD64 host with
+the ROCm kernel driver (the image carries ROCm 7.2) and pass the GPU devices:
+
+```bash
+docker pull ghcr.io/brntech/vllm-uno:0.4.4-rocm
+docker run --rm --name vllm-uno-gemma --device /dev/kfd --device /dev/dri \
+  --group-add video --group-add render --security-opt seccomp=unconfined \
+  --ipc=host --shm-size 8g -p 127.0.0.1:8000:8000 \
+  -v /path/to/hf-cache:/root/.cache/huggingface \
+  -v /path/to/uno-adapter:/adapter:ro \
+  -e UNO_PROFILE=gemma4 -e UNO_RECOMMENDED=1 \
+  ghcr.io/brntech/vllm-uno:0.4.4-rocm \
+  cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit /adapter \
+  -- --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4
+```
+
+On gfx12 the launcher also points `VLLM_TUNED_CONFIG_FOLDER` at the image's
+R9700 fused-MoE config, patches larger attention tiles for prefill-shaped
+launches into the container's vLLM before the server starts
+(`R9700_PREFILL_TILES=0` skips it), and runs the adapter on the main stream
+(`VLLM_LORA_ENABLE_DUAL_STREAM=1` restores dual stream). The adapter's LoRA
+kernel configs and the dispatch table of the dense 4-bit layers for the R9700
+ship inside the image's vLLM and are read automatically. Measured numbers:
+[RELEASE-NOTES-0.4.4-rocm.md](RELEASE-NOTES-0.4.4-rocm.md),
+[`evidence/release-0.4.4-rocm/`](evidence/release-0.4.4-rocm/).
+
 ## Build from source
 
 From the checked-out release tag, audit and build the supported AMD64 image:
@@ -214,6 +251,20 @@ docker build -f patch/0005-v0.4.4/Dockerfile -t vllm-uno:0.4.4 .
 lists the hashes of its nine runtime files (`/opt/uno-runtime.sha256` in the
 image).
 
+The ROCm image starts from the stock `vllm/vllm-openai-rocm:v0.30.0` image
+(pinned by digest) and applies [`patch/rocm-0.4.4/`](patch/rocm-0.4.4/): one
+diff that ports the v0.4.4 patches onto vLLM v0.30.0 with the gfx1201
+admissions, the R9700 configs as data files, and the launcher changes. The
+build refuses any other base and checks every engine file against
+`patch/rocm-0.4.4/engine-files.sha256`:
+
+```bash
+docker build -f patch/rocm-0.4.4/Dockerfile -t vllm-uno:0.4.4-rocm .
+```
+
+[`evidence/release-0.4.4-rocm/image-files.sha256`](evidence/release-0.4.4-rocm/image-files.sha256)
+lists the hashes of its runtime files (`/opt/uno-runtime.sha256` in the image).
+
 ## Upstream contribution
 
 BroadNet is contributing native Uno support to vLLM through
@@ -248,7 +299,9 @@ The v0.4.4 checks are in [RELEASE-NOTES-0.4.4.md](RELEASE-NOTES-0.4.4.md) and
 [`evidence/release-0.4.4/`](evidence/release-0.4.4/): 174 CPU tests on the
 release image (the [`tests/v0.4.4/`](tests/v0.4.4/) suites and the v0.4.3 suites,
 run unchanged), and a GPU test that the multi-request attention path equals,
-bit for bit, running each request alone.
+bit for bit, running each request alone. The ROCm image's checks are in
+[RELEASE-NOTES-0.4.4-rocm.md](RELEASE-NOTES-0.4.4-rocm.md) and
+[`evidence/release-0.4.4-rocm/`](evidence/release-0.4.4-rocm/).
 [docs/validation.md](docs/validation.md) records the v0.4.3 checks (96 CPU tests
 in [`tests/v0.4.3/`](tests/v0.4.3/) on the release image, with vLLM's real
 rejection kernels; the measurement session in
@@ -266,9 +319,11 @@ path fixed in v0.4.0.
 
 - [`patch/`](patch/) - ordered patch series against the pinned vLLM commit, the
   v0.4.3 overlay on the v0.4.1 image ([`patch/0004-v0.4.3/`](patch/0004-v0.4.3/))
-  and the v0.4.4 overlay on the v0.4.3 image ([`patch/0005-v0.4.4/`](patch/0005-v0.4.4/))
+  the v0.4.4 overlay on the v0.4.3 image ([`patch/0005-v0.4.4/`](patch/0005-v0.4.4/))
+  and the ROCm build on the stock vLLM v0.30.0 ROCm image ([`patch/rocm-0.4.4/`](patch/rocm-0.4.4/))
 - [`tests/`](tests/) - release tests; [`tests/v0.4.3/`](tests/v0.4.3/) and
-  [`tests/v0.4.4/`](tests/v0.4.4/) run on the release image
+  [`tests/v0.4.4/`](tests/v0.4.4/) run on the release image, and on the ROCm
+  image through [`tests/rocm-0.4.4/`](tests/rocm-0.4.4/)
 - [`evidence/`](evidence/) - per-release measurement and validation evidence
 - [`release/stack.py`](release/stack.py) - audit and source assembly
 - [`release/apply.sh`](release/apply.sh) - apply or verify the patch in an

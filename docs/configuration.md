@@ -159,6 +159,35 @@ The v0.4.3 recommended settings, `-e UNO_K=5 -e UNO_PLOOKUP_L=2
 ([RELEASE-NOTES-0.4.3.md](../RELEASE-NOTES-0.4.3.md), `evidence/release-0.4.3/`),
 are `UNO_RECOMMENDED=1` with `UNO_GEMMA_SPLITKV_MULTI=0`.
 
+### AMD Radeon (ROCm image, v0.4.4)
+
+`ghcr.io/brntech/vllm-uno:0.4.4-rocm` serves the Gemma 4 profile with the same
+settings and switch on a Radeon AI PRO R9700 (gfx1201); Uno, the 4-expert drafts
+(`UNO_DRAFT_MOE_TOPK=4`) and the AWQ MoE path admit gfx1201 and refuse every
+other ROCm GPU. When every GPU the kernel driver lists is gfx12, the launcher
+also sets three defaults (`UNO_GPU_ARCH=gfx12|other` overrides the detection):
+
+- `VLLM_TUNED_CONFIG_FOLDER` defaults to `release/gfx12-moe`, the fused-MoE
+  config of Gemma 4 26B A4B's AWQ experts on the R9700 (E=128, N=704,
+  int4_w4a16); set it empty to use vLLM's default MoE config. The adapter's
+  LoRA kernel configs for the R9700 ship inside vLLM
+  (`vllm/lora/ops/triton_ops/configs/`) and are read whatever this folder holds.
+- Before the server starts, `release/gfx12_prefill_tiles.py` patches the
+  container's `triton_unified_attention.py` so that prefill-shaped launches
+  (longest query at least 32 rows and at least 16 rows per sequence on average)
+  use larger tiles (head 256: BLOCK_M 128, TILE 16, 8 warps; head 512: BLOCK_M 64,
+  TILE 16, 8 warps); decode and verify launches keep vLLM's. It refuses, and the
+  server does not start, if the file is not the one it was written for.
+  `R9700_PREFILL_TILES=0` skips it; `R9700_PREFILL_CFG_256`, `R9700_PREFILL_CFG_512`,
+  `R9700_PREFILL_MIN_Q` and `R9700_PREFILL_MIN_MEAN_Q` change its table and gates.
+- The adapter runs on the main stream (`VLLM_LORA_ENABLE_DUAL_STREAM=0`):
+  inside HIP graphs the dual-stream LoRA path leaves the GPU idle at every
+  cross-stream fork and join. `VLLM_LORA_ENABLE_DUAL_STREAM=1` restores it.
+
+The dense 4-bit layers read a measured gfx1201 dispatch table inside vLLM
+(`rdna_w4a16_gfx12_table.json`: which kernel and tile serve each row count);
+`VLLM_RDNA_W4A16_TABLE=off` restores vLLM's rule.
+
 ## Build settings
 
 Build AMD64 only:

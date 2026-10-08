@@ -1,0 +1,28 @@
+wide T=1 pos 0: n=1536 TV=0.0153 p=0.335
+wide T=1 pos 1: n=1453 TV=0.0192 p=0.398
+wide T=1 pos 2: n=1403 TV=0.0173 p=0.468
+wide T=1 pos 3: n=1293 TV=0.0189 p=0.395
+wide T=1 pos 4: n=1260 TV=0.0104 p=0.181
+wide T=1 pos 5: n=715 TV=0.0135 p=0.265
+wide T=1 pos 6: n=673 TV=0.0362 p=0.343
+.
+=============================== warnings summary ===============================
+test_plookup.py: 14 warnings
+  /usr/local/lib/python3.12/dist-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+test_plookup.py::test_wide_temperature1_k4_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+test_plookup.py::test_wide_temperature1_k4_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: invalid value encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+test_plookup.py::test_wide_temperature1_k4_l2_exact
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:594: RuntimeWarning: divide by zero encountered in log
+    return TensorHandle(op(arg.data), arg.dtype.scalar)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 29 deselected, 17 warnings in 1134.51s (0:18:54)
+rc=0

@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.4-rocm] - 2026-10-08
+
+### Added
+
+- A ROCm image of v0.4.4 for the AMD Radeon AI PRO R9700 (RDNA4, gfx1201), `ghcr.io/brntech/vllm-uno:0.4.4-rocm`, built from the stock `vllm/vllm-openai-rocm:v0.30.0` image (pinned by digest) with `patch/rocm-0.4.4/Dockerfile`: the v0.4.4 patches ported onto vLLM v0.30.0 as one diff (Python only; the build refuses any other base and checks every engine file against `engine-files.sha256`), and the launcher of v0.4.4 with gfx12 defaults. The proposal, acceptance and sampling code is v0.4.4's.
+- gfx1201 admission: Uno, its 4-expert drafts and the AWQ MoE path keep their CUDA condition first and, on ROCm, admit gfx1201 only; the 4-expert drafts run on vLLM's Triton MoE kernel there.
+- R9700 tuning, on by default on gfx12: a fused-MoE config for Gemma 4 26B A4B's AWQ experts (`release/gfx12-moe`, the launcher's default `VLLM_TUNED_CONFIG_FOLDER` on gfx12), a dispatch table for the dense 4-bit layers, the adapter's LoRA kernel configs, larger attention tiles for prefill-shaped launches (patched into the container's vLLM at start; `R9700_PREFILL_TILES=0` skips it), and the adapter on the main stream. `docs/configuration.md`.
+- Measured with the recommended settings and the v0.4.4 adapter on one Radeon AI PRO R9700, BroadNet's production traffic: 310 tokens per second with eight requests in flight (stock DFlash K8 in vLLM 0.30.0 ROCm: 298), 241 with four (stock DFlash K8 in vLLM 0.30.0 ROCm: 197); one request at a time 25.0 % less time per token than stock DFlash K8 in vLLM 0.30.0 ROCm; 14k and 28k-token documents 60.0 % and 68.4 % less time per token than stock DFlash K8 in vLLM 0.30.0 ROCm. KV cache at 32k context: 215,042 tokens on every Uno server. `RELEASE-NOTES-0.4.4-rocm.md`, `evidence/release-0.4.4-rocm/`.
+- `tests/rocm-0.4.4/`: the v0.4.4 CPU suites with the v0.4.3 exactness suites on the ROCm image (three test-side lines differ: the version string and a field vLLM v0.30.0 reads on a test double); 174 CPU tests pass, rc 0 in every group (`evidence/release-0.4.4-rocm/cpu/`).
+
 ## [0.4.4] - 2026-10-07
 
 ### Added

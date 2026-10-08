@@ -1,0 +1,34 @@
+diff -ruN tests/v0.4.3/test_startup_refusal.py tests-rocm/v0.4.3/test_startup_refusal.py
+--- tests/v0.4.3/test_startup_refusal.py
++++ tests-rocm/v0.4.3/test_startup_refusal.py
+@@ -99,6 +99,7 @@
+         cc.post_init_cudagraph_sizes()
+     spec = SimpleNamespace(
+         method="uno", num_speculative_tokens=num_spec, uno_lora_path="/adapter", draft_sample_method="probabilistic",
++        enable_adaptive_verification=False,  # vLLM v0.30.0 reads it (SpeculativeConfig default False)
+         use_local_argmax_reduction=False, use_uno=lambda: True, uses_dynamic_speculative_decoding=lambda: False,
+         draft_model_config=SimpleNamespace(get_hidden_size=lambda: 8, get_vocab_size=lambda: 64, hf_config=SimpleNamespace()),
+     )
+diff -ruN tests/v0.4.4/test_release_v044.py tests-rocm/v0.4.4/test_release_v044.py
+--- tests/v0.4.4/test_release_v044.py
++++ tests-rocm/v0.4.4/test_release_v044.py
+@@ -48,7 +48,7 @@
+ 
+ 
+ def test_version_and_launcher_syntax():
+-    assert pathlib.Path("/opt/uno-kit/release/VERSION").read_text().strip() == "0.4.4"
++    assert pathlib.Path("/opt/uno-kit/release/VERSION").read_text().strip() == "0.4.4-rocm"
+     assert subprocess.run(["bash", "-n", SERVE]).returncode == 0
+ 
+ 
+diff -ruN tests/v0.4.4/test_startup_refusal_v044.py tests-rocm/v0.4.4/test_startup_refusal_v044.py
+--- tests/v0.4.4/test_startup_refusal_v044.py
++++ tests-rocm/v0.4.4/test_startup_refusal_v044.py
+@@ -112,6 +112,7 @@
+         cc.post_init_cudagraph_sizes()
+     spec = SimpleNamespace(
+         method="uno", num_speculative_tokens=num_spec, uno_lora_path="/adapter", draft_sample_method="probabilistic",
++        enable_adaptive_verification=False,  # vLLM v0.30.0 reads it (SpeculativeConfig default False)
+         use_local_argmax_reduction=False, use_uno=lambda: True, uses_dynamic_speculative_decoding=lambda: False,
+         draft_model_config=SimpleNamespace(get_hidden_size=lambda: 8, get_vocab_size=lambda: 64, hf_config=SimpleNamespace()),
+     )

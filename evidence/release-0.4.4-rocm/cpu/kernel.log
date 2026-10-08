@@ -1,0 +1,69 @@
+INFO 10-08 07:07:47 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=5 head_size=256
+INFO 10-08 07:07:47 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=5 head_size=256 q_heads=16 kv_heads=8 segments=16
+head 256 width 5 B 2 ctx [205, 282]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:08:04 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=5 head_size=512
+INFO 10-08 07:08:04 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=5 head_size=512 q_heads=16 kv_heads=2 segments=16
+head 512 width 5 B 2 ctx [251, 157]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:08:21 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=6 head_size=256
+INFO 10-08 07:08:21 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=6 head_size=256 q_heads=16 kv_heads=8 segments=16
+head 256 width 6 B 2 ctx [242, 100]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:08:37 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=6 head_size=512
+INFO 10-08 07:08:37 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=6 head_size=512 q_heads=16 kv_heads=2 segments=16
+head 512 width 6 B 2 ctx [141, 299]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:09:02 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=8 head_size=256
+INFO 10-08 07:09:02 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=8 head_size=256 q_heads=16 kv_heads=8 segments=16
+head 256 width 8 B 2 ctx [233, 146]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:09:29 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=2 width=8 head_size=512
+INFO 10-08 07:09:29 [triton_unified_attention.py:1251] UNO_GEMMA_SPLITKV engaged width=8 head_size=512 q_heads=16 kv_heads=2 segments=16
+head 512 width 8 B 2 ctx [220, 223]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:09:57 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=5 head_size=256
+head 256 width 5 B 4 ctx [45, 177, 176, 73]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:10:23 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=5 head_size=512
+head 512 width 5 B 4 ctx [269, 110, 194, 290]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:11:00 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=6 head_size=256
+head 256 width 6 B 4 ctx [212, 26, 34, 281]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:11:37 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=6 head_size=512
+head 512 width 6 B 4 ctx [77, 88, 97, 108]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:12:02 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=8 head_size=256
+head 256 width 8 B 4 ctx [168, 43, 149, 259]: max|multi - 2D| 0.000e+00
+.INFO 10-08 07:12:37 [triton_unified_attention.py:1242] UNO_GEMMA_SPLITKV_MULTI engaged seqs=4 width=8 head_size=512
+head 512 width 8 B 4 ctx [134, 292, 86, 191]: max|multi - 2D| 0.000e+00
+.head 256 width 6 ctx [0, 3, 66] + 1 padded request: multi == single on the real rows
+.head 512 width 6 ctx [0, 3, 212] + 1 padded request: multi == single on the real rows
+.head 256 width 8 ctx [0, 3, 217] + 1 padded request: multi == single on the real rows
+.head 512 width 8 ctx [0, 3, 128] + 1 padded request: multi == single on the real rows
+.
+=============================== warnings summary ===============================
+test_splitkv_multi_cpu.py::test_multi_request_split_kv_equals_one_request_split_kv[2-5-256-8-window0]
+test_splitkv_multi_cpu.py::test_multi_request_split_kv_equals_one_request_split_kv[2-5-512-2-window1]
+test_splitkv_multi_cpu.py::test_multi_request_split_kv_equals_one_request_split_kv[2-6-256-8-window0]
+test_splitkv_multi_cpu.py::test_multi_request_split_kv_equals_one_request_split_kv[4-5-256-8-window0]
+test_splitkv_multi_cpu.py::test_multi_request_split_kv_equals_one_request_split_kv[4-5-512-2-window1]
+test_splitkv_multi_cpu.py::test_multi_request_split_kv_equals_one_request_split_kv[4-6-256-8-window0]
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in divide
+    output = op(lhs.data, rhs.data)
+
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-512-2-window1]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-512-2-window1]
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:555: RuntimeWarning: divide by zero encountered in fmod
+    return TensorHandle((lhs.data - np.fmod(lhs.data, rhs.data)) // rhs.data, lhs.dtype.scalar)
+
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-512-2-window1]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-512-2-window1]
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:555: RuntimeWarning: divide by zero encountered in floor_divide
+    return TensorHandle((lhs.data - np.fmod(lhs.data, rhs.data)) // rhs.data, lhs.dtype.scalar)
+
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[6-512-2-window1]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-256-8-window0]
+test_splitkv_multi_cpu.py::test_padded_request_and_prompt_chunk_rows_equal_one_request_split_kv[8-512-2-window1]
+  /usr/local/lib/python3.12/dist-packages/triton/runtime/interpreter.py:491: RuntimeWarning: invalid value encountered in subtract
+    output = op(lhs.data, rhs.data)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+16 passed, 18 warnings in 429.38s (0:07:09)
+rc=0
