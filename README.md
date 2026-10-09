@@ -14,8 +14,9 @@ adapter is on the Hub's main branch; the v0.4.3 adapter stays at Hub revision `s
 `ghcr.io/brntech/vllm-uno:0.4.4-rocm`, built from the stock vLLM v0.30.0 ROCm image with R9700-tuned kernel configs on
 by default. On BroadNet's production traffic on one R9700 it serves **310 tokens per second with eight requests
 in flight** (stock DFlash K8 in vLLM 0.30.0 ROCm: 298); one request at a time it takes 25.0 % less time
-per token than stock DFlash K8 in vLLM 0.30.0 ROCm, and 68.4 % less on 28k-token documents. The
-output is the model's own (see
+per token than stock DFlash K8 in vLLM 0.30.0 ROCm, and 68.4 % less on 28k-token documents.
+Against plain decoding in vLLM 0.30.0 ROCm it decodes 1.40x faster one request at a time, and 1.25x, 1.23x and 1.18x faster on 2k, 14k and 28k-token documents.
+The output is the model's own (see
 [RELEASE-NOTES-0.4.4-rocm.md](RELEASE-NOTES-0.4.4-rocm.md) and [AMD Radeon (ROCm)](#amd-radeon-rocm) below).
 
 **v0.4.3** adds prompt lookup to the Gemma 4 profile: after Uno's drafts, two more candidates are copied from the

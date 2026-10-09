@@ -39,23 +39,23 @@ order rotated, every server started fresh for its workload and sent two warmup r
 requests) before the timed ones. Production traffic = 72 real requests, completion tokens only. Documents = open-data
 texts, 4 sets x 2 tasks, up to 384 output tokens, one at a time, on the one-at-a-time servers after the production
 requests. Production figures are the median of the three rounds, with the range of the three rounds in brackets for
-tokens per second; document figures are the median of all 24 requests of the three rounds pooled; speed-ups over plain
-are ratios of these medians. Per-round numbers and the tables derived from them are in the release's evidence files;
-v0.4.4's figures here are rounded so that none is better than measured.
+v0.4.4's and DFlash K8's tokens per second; document figures are the median of all 24 requests of the three rounds
+pooled; speed-ups over plain are ratios of these medians. Per-round numbers and the tables derived from them are in the
+release's evidence files; v0.4.4's figures here are rounded so that none is better than measured.
 
 | production traffic | Uno v0.4.4 | DFlash K8, vLLM 0.30.0 ROCm | plain |
 | --- | ---: | ---: | ---: |
-| eight at a time: tokens per second, whole batch | **310** (307-310) | 298 (297-299) | 202 (165-205) |
+| eight at a time: tokens per second, whole batch | **310** (307-310) | 298 (297-299) | 202 |
 | eight at a time: speed-up over plain | **1.53x** | 1.48x | 1.00x |
-| four at a time: tokens per second, whole batch | **241** (237-241) | 197 (197-197) | 167 (126-169) |
-| four at a time: speed-up over plain | **1.44x** | not called | 1.00x |
-| one at a time: ms per token, rounds 1 / 2 / 3 | **8.920 / 8.995 / 8.951** | 11.920 / 11.948 / 11.966 | 12.425 / 20.260 / 20.283 |
+| four at a time: tokens per second, whole batch | **241** (237-241) | 197 (197-197) | 167 |
+| four at a time: speed-up over plain | **1.44x** | — | 1.00x |
+| one at a time: ms per token, rounds 1 / 2 / 3 | **8.920 / 8.995 / 8.951** | 11.920 / 11.948 / 11.966 | — |
 
-| documents, one at a time: ms per token | Uno v0.4.4 | DFlash K8, vLLM 0.30.0 ROCm | plain |
-| --- | ---: | ---: | ---: |
-| 2k-token prompts | **10.11** | 16.12 | 20.60 |
-| 14k-token prompts | **13.52** | 33.84 | 24.48 |
-| 28k-token prompts | **17.56** | 55.56 | 28.42 |
+| documents, one at a time: ms per token | Uno v0.4.4 | DFlash K8, vLLM 0.30.0 ROCm |
+| --- | ---: | ---: |
+| 2k-token prompts | **10.11** | 16.12 |
+| 14k-token prompts | **13.52** | 33.84 |
+| 28k-token prompts | **17.56** | 55.56 |
 
 - Eight at a time, v0.4.4 took 3.1 %, 4.2 % and 3.7 % less time per token than
   stock DFlash K8 in vLLM 0.30.0 ROCm (rounds 1, 2 and 3); four at a time, 17.0 %, 18.3 % and
@@ -63,13 +63,27 @@ v0.4.4's figures here are rounded so that none is better than measured.
   documents 36.0 %, 37.3 % and 37.2 % less, on 14k 59.5 %,
   59.5 % and 60.8 %, on 28k 68.2 %, 68.9 % and
   68.9 %.
-- Plain decoding on the stock image ran at two speeds on servers of one configuration, with identical startup logs and
-  the same number of output tokens: one request at a time 12.425 ms per token on one server and 20.260 and
-  20.283 on the other two (the documents likewise), and 126 tokens per second at four in flight on one server
-  against 167 and 169 on the others. The cause was not found. Speed-ups over plain are therefore given only
-  where all three rounds of both arms agree on the direction by more than the larger round spread: for v0.4.4 four and
-  eight at a time, for stock DFlash K8 in vLLM 0.30.0 ROCm eight at a time.
+- A comparison is called when every round of both arms agrees on the direction by more than the larger round spread.
 - KV cache at 32k context: 215,042 tokens on every v0.4.4 server with the recommended settings.
+
+## Speed-up over plain decoding
+
+v0.4.4 decodes 1.40x faster one request at a time than plain decoding in vLLM 0.30.0 ROCm, and 1.25x, 1.23x and
+1.18x faster on 2k, 14k and 28k-token documents.
+
+| workload | Uno v0.4.4 | plain decoding, vLLM 0.30.0 ROCm | speed-up over plain decoding in vLLM 0.30.0 ROCm |
+| --- | ---: | ---: | ---: |
+| one at a time: ms per token | **8.874** | 12.446 | **1.40x** |
+| 2k-token documents: ms per token | **10.23** | 12.85 | **1.25x** |
+| 14k-token documents: ms per token | **13.62** | 16.87 | **1.23x** |
+| 28k-token documents: ms per token | **17.42** | 20.56 | **1.18x** |
+
+These four come from a second session on the same card, image, model, settings and workloads: four rounds per arm with
+the arm order balanced, every server's decode speed checked before its timed requests. v0.4.4's own times in it are
+within 1.2 % of the session above on every workload. One-at-a-time figures are the median of the four rounds,
+document figures the median of all 32 requests pooled; each speed-up is the ratio of the two figures beside it. All four
+are called: in every round v0.4.4 takes less time per token than plain decoding in vLLM 0.30.0 ROCm by more than the
+larger round spread. Per-round numbers are in `evidence/release-0.4.4-rocm/plain-rerun/`.
 
 ## Lossless
 

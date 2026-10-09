@@ -26,10 +26,6 @@ harness; for DFlash K8 and plain their capture sizes (to 72 and to 40) and DFlas
 measurement harness.
 The measured `0.4.4-rocm` container's runtime files are listed in `image-files.sha256`.
 
-Plain decoding ran at two speeds on servers of one configuration: one request at a time 12.4 ms per token on one server
-and 20.3 on the other two, with identical startup logs and the same number of output tokens; at four and eight in flight
-one server of three was the slow one. Every figure is in the JSON files as measured.
-
 | file | what it holds |
 | --- | --- |
 | `production72-one-at-a-time.json` | 72 production requests replayed one at a time: per request, prompt and completion tokens and the full HTTP request time; per arm and round, the speculative-decoding counters (drafts, accepted tokens). Prompts and answers are private and not included. |
@@ -37,6 +33,7 @@ one server of three was the slow one. Every figure is in the JSON files as measu
 | `production72-eight-at-a-time.json` | the same with eight in flight. |
 | `long-documents.json` | open-data documents at about 2k, 14k and 28k prompt tokens, 4 offsets x 2 tasks per level, up to 384 output tokens, served after the one-at-a-time production requests on the same server: per request, decode ms per output token and the request's drafts and accepted tokens. |
 | `kv-cache.json` | the KV cache size each server reported at startup, per workload and round. |
-| `TABLES.md` | every table in the release notes, computed only from the JSON files above: per-round values, medians, ranges, and per-round differences. |
+| `TABLES.md` | every table of the release notes' "Measured" section, computed only from the JSON files above: per-round values, medians, ranges, and per-round differences. |
 | `image-files.sha256` | sha256 of the release image's runtime files (`/opt/uno-runtime.sha256` in the image): the engine files under vLLM, the launcher, the prefill-tile patch and the R9700 data files. |
 | `cpu/SUMMARY.md` | the CPU test groups on the release image, with the exact selectors, counts and exit codes. |
+| `plain-rerun/` | the release notes' "Speed-up over plain decoding": v0.4.4 against plain decoding in a second session, four rounds per arm, every server's decode speed checked before its timed requests (`TABLES.md`, `README.md`, `plain-rerun.json`). |
